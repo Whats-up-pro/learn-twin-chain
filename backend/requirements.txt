@@ -1,0 +1,10 @@
+Flask>=2.3.0,<3.1.0
+python-dotenv>=1.0.0
+web3>=6.0.0,<7.0.0
+Flask-CORS>=4.0.0
+pydantic>=2.0.0,<3.0.0
+py-solc-x>=1.1.1 
+requests>=2.20.0 # For potential external API calls by backend itself
+Werkzeug>=2.3.0,<3.1.0 # Flask dependency, ensure compatibility
+jsonschema>=4.0.0 # For schema validation if not using Pydantic everywhere
+eth-tester[py-evm]>=0.8.0b1 # For local testing of blockchain interactions (optional)
