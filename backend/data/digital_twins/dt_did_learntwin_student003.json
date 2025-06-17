@@ -1,0 +1,44 @@
+{
+  "twin_id": "did:learntwin:student003",
+  "owner_did": "did:learner:0x789GhI",
+  "profile": {
+    "full_name": "Phạm Văn Hậu",
+    "birth_year": 2000,
+    "institution": "HCMUS",
+    "program": "Cybersecurity",
+    "enrollment_date": "2019-09-01"
+  },
+  "learning_state": {
+    "progress": {
+      "Mạng máy tính": 0.7,
+      "Python cơ bản": 0.9
+    },
+    "checkpoint_history": [
+      {
+        "module": "Python cơ bản",
+        "completed_at": "2025-06-01",
+        "tokenized": true,
+        "nft_cid": "QmPQR987..."
+      }
+    ],
+    "current_modules": [
+      "Mạng máy tính"
+    ]
+  },
+  "skill_profile": {
+    "programming_languages": {
+      "Python": 0.9
+    },
+    "soft_skills": {
+      "critical_thinking": 0.75
+    }
+  },
+  "interaction_logs": {
+    "last_llm_session": "2025-06-14T17:45:00Z",
+    "most_asked_topics": [
+      "OSI model",
+      "socket programming"
+    ],
+    "preferred_learning_style": "theory-then-practice"
+  }
+}

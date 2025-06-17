@@ -1,0 +1,46 @@
+{
+  "twin_id": "did:learntwin:student002",
+  "owner_did": "did:learner:0xDeF456",
+  "profile": {
+    "full_name": "Phan The Duy",
+    "birth_year": 2001,
+    "institution": "UIT",
+    "program": "Information Systems",
+    "enrollment_date": "2020-09-01"
+  },
+  "learning_state": {
+    "progress": {
+      "HTML & CSS": 0.85,
+      "Python cơ bản": 0.6
+    },
+    "checkpoint_history": [
+      {
+        "module": "HTML & CSS",
+        "completed_at": "2025-06-05",
+        "tokenized": true,
+        "nft_cid": "Qm456def..."
+      }
+    ],
+    "current_modules": [
+      "Python cơ bản"
+    ]
+  },
+  "skill_profile": {
+    "programming_languages": {
+      "Python": 0.6,
+      "HTML": 0.8,
+      "CSS": 0.75
+    },
+    "soft_skills": {
+      "communication": 0.8
+    }
+  },
+  "interaction_logs": {
+    "last_llm_session": "2025-06-10T09:30:00Z",
+    "most_asked_topics": [
+      "CSS selector",
+      "input validation"
+    ],
+    "preferred_learning_style": "visual-examples"
+  }
+}

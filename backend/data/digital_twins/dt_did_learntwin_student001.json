@@ -2,9 +2,9 @@
   "twin_id": "did:learntwin:student001",
   "owner_did": "did:learner:0xAbC123",
   "profile": {
-    "full_name": "Nguyen Van A",
+    "full_name": "Doan Minh Trung",
     "birth_year": 2002,
-    "institution": "HUST",
+    "institution": "BKU",
     "program": "Computer Science",
     "enrollment_date": "2021-09-01"
   },

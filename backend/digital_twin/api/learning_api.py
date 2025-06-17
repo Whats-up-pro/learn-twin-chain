@@ -10,4 +10,8 @@ def create_student_twin(twin_id: str, config: dict, profile: dict):
 
 @router.get("/students/{twin_id}")
 def get_student_twin(twin_id: str):
-    return learning_service.get_student_twin(twin_id) 
+    return learning_service.get_student_twin(twin_id)
+
+@router.get("/students")
+def list_student_twins():
+    return learning_service.list_student_twins() 
