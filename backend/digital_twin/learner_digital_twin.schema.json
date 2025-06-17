@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LearnerDigitalTwin",
+  "type": "object",
+  "required": ["twin_id", "owner_did", "profile", "learning_state", "skill_profile"],
+  "properties": {
+    "twin_id": {
+      "type": "string",
+      "pattern": "^did:learntwin:[a-zA-Z0-9\\-]{1,64}$"
+    },
+    "owner_did": {
+      "type": "string",
+      "pattern": "^did:[a-zA-Z0-9]+:[a-zA-Z0-9\\-]{1,64}$"
+    },
+    "profile": {
+      "type": "object",
+      "required": ["full_name", "birth_year", "institution", "program", "enrollment_date"],
+      "properties": {
+        "full_name": { "type": "string" },
+        "birth_year": { "type": "integer", "minimum": 1900, "maximum": 2100 },
+        "institution": { "type": "string" },
+        "program": { "type": "string" },
+        "enrollment_date": { "type": "string", "format": "date" }
+      }
+    },
+    "learning_state": {
+      "type": "object",
+      "required": ["current_modules", "progress"],
+      "properties": {
+        "current_modules": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "progress": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        },
+        "checkpoint_history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["module", "tokenized"],
+            "properties": {
+              "module": { "type": "string" },
+              "completed_at": { "type": ["string", "null"], "format": "date" },
+              "tokenized": { "type": "boolean" },
+              "nft_cid": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "skill_profile": {
+      "type": "object",
+      "properties": {
+        "programming_languages": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        },
+        "soft_skills": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        }
+      }
+    },
+    "interaction_logs": {
+      "type": "object",
+      "properties": {
+        "last_llm_session": { "type": "string", "format": "date-time" },
+        "most_asked_topics": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "preferred_learning_style": { "type": "string" }
+      }
+    },
+    "blockchain_status": {
+      "type": "object",
+      "properties": {
+        "nft_issued": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["title", "cid", "issued_at"],
+            "properties": {
+              "title": { "type": "string" },
+              "cid": { "type": "string" },
+              "issued_at": { "type": "string", "format": "date" }
+            }
+          }
+        },
+        "last_updated": { "type": "string", "format": "date-time" }
+      }
+    },
+    "privacy_controls": {
+      "type": "object",
+      "properties": {
+        "allow_share_with_employer": { "type": "boolean" },
+        "allow_public_progress_view": { "type": "boolean" }
+      }
+    }
+  }
+}

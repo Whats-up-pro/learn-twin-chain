@@ -1,0 +1,43 @@
+{
+  "twin_id": "did:learntwin:student001",
+  "owner_did": "did:learner:0xAbC123",
+  "profile": {
+    "full_name": "Nguyen Van A",
+    "birth_year": 2002,
+    "institution": "HUST",
+    "program": "Computer Science",
+    "enrollment_date": "2021-09-01"
+  },
+  "learning_state": {
+    "progress": {
+      "Python cơ bản": 0.95
+    },
+    "checkpoint_history": [
+      {
+        "module": "Python cơ bản",
+        "completed_at": "2025-06-08",
+        "tokenized": true,
+        "nft_cid": "QmXYZabc..."
+      }
+    ],
+    "current_modules": [
+      "Python cơ bản"
+    ]
+  },
+  "skill_profile": {
+    "programming_languages": {
+      "Python": 0.8
+    },
+    "soft_skills": {
+      "teamwork": 0.7
+    }
+  },
+  "interaction_logs": {
+    "last_llm_session": "2025-06-08T14:15:00Z",
+    "most_asked_topics": [
+      "đệ quy",
+      "for loop"
+    ],
+    "preferred_learning_style": "code-first"
+  }
+}
