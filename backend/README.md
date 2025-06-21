@@ -97,3 +97,13 @@ uvicorn digital_twin.main:app --reload
 ## 8. Liên hệ & hỗ trợ
 - Nếu gặp lỗi, kiểm tra log, kiểm tra schema, kiểm tra các trường required.
 - Nếu cần hỗ trợ thêm, liên hệ nhóm phát triển hoặc gửi log lỗi chi tiết. 
+
+## 9. Test CID voi Pinata Cloud
+- Tao tai khoan tren Pinata Cloud
+- Create new API Key
+- Tao file .env trong folder backend
+- Dan thong tin sau vao
+```
+PINATA_API_KEY="YOUR_PINATA_API_KEY"
+PINATA_SECRET_API_KEY="YOUR_PINATA_SECRET_API_KEY"
+```

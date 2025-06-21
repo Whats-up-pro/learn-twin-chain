@@ -123,6 +123,18 @@ export default function StudentCard({ student }) {
                 <Grid item xs={6} sx={{ display: 'flex', flexDirection: 'column' }}>
                   <Typography variant="subtitle1" fontWeight={500}>Interaction Logs</Typography>
                   <Box sx={{ mt: 1, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px', flexGrow: 1 }}>
+                    {student.latest_cid && (
+                      <Typography>
+                        <strong>Latest CID:</strong>{' '}
+                        <a 
+                          href={`https://gateway.pinata.cloud/ipfs/${student.latest_cid}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          {student.latest_cid.substring(0, 15)}...
+                        </a>
+                      </Typography>
+                    )}
                     <Typography><strong>Last LLM Session:</strong> {interaction.last_llm_session || 'N/A'}</Typography>
                     <Typography><strong>Most Asked Topics:</strong> {(interaction.most_asked_topics && interaction.most_asked_topics.join(', ')) || 'N/A'}</Typography>
                     <Typography><strong>Preferred Learning Style:</strong> {interaction.preferred_learning_style || 'N/A'}</Typography>

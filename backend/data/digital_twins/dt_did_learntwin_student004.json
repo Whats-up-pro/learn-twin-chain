@@ -35,7 +35,7 @@
     }
   },
   "interaction_logs": {
-    "last_llm_session": "2025-06-15T09:30:00Z",
+    "last_llm_session": "2025-06-15T16:30:00+07:00",
     "most_asked_topics": [
       "inheritance in OOP",
       "array vs linked list"

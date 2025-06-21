@@ -2,16 +2,94 @@ import json
 import jsonschema
 from datetime import datetime
 from typing import Dict, Any
+import os
+import requests
+from dotenv import load_dotenv
+from ..utils.date_utils import get_current_vietnam_time_iso
+
 from ..services.digital_twin_storage import save_digital_twin, load_digital_twin
 
+# Tải biến môi trường từ .env
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '../../.env'))
+
+PINATA_API_KEY = os.getenv("PINATA_API_KEY")
+PINATA_SECRET_API_KEY = os.getenv("PINATA_SECRET_API_KEY")
+PINATA_API_URL = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
+
 # Load schema một lần khi khởi động
-import os
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), '../learner_digital_twin.schema.json')
 with open(SCHEMA_PATH, 'r', encoding='utf-8') as f:
     TWIN_SCHEMA = json.load(f)
 
 def validate_twin_data(data: Dict[str, Any]):
     jsonschema.validate(instance=data, schema=TWIN_SCHEMA)
+
+def _pin_json_to_ipfs(json_data: Dict[str, Any]) -> str:
+    """Pins a JSON object to IPFS using Pinata and returns the CID."""
+    if not PINATA_API_KEY or not PINATA_SECRET_API_KEY:
+        raise ValueError("Pinata API keys are not configured in .env file.")
+
+    headers = {
+        "Content-Type": "application/json",
+        "pinata_api_key": PINATA_API_KEY,
+        "pinata_secret_api_key": PINATA_SECRET_API_KEY,
+    }
+    
+    body = {
+        "pinataMetadata": {
+            "name": f"DigitalTwin_{json_data.get('twin_id', 'unknown')}_{get_current_vietnam_time_iso()}"
+        },
+        "pinataContent": json_data
+    }
+
+    try:
+        response = requests.post(PINATA_API_URL, json=body, headers=headers)
+        response.raise_for_status()  # Ném lỗi nếu status code là 4xx hoặc 5xx
+        return response.json()["IpfsHash"]
+    except requests.exceptions.RequestException as e:
+        print(f"Error pinning to IPFS: {e}")
+        # Cân nhắc việc log lỗi chi tiết hơn ở đây
+        raise
+
+def update_twin_and_pin_to_ipfs(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Updates a digital twin, pins the new state to IPFS, adds the new CID
+    to the state, and then saves it locally.
+    """
+    # 1. Validate schema before doing anything
+    validate_twin_data(data)
+    twin_id = data['twin_id']
+    
+    # 2. Pin the current state (without the new CID yet) to IPFS
+    print(f"Pinning data for {twin_id} to IPFS...")
+    new_cid = _pin_json_to_ipfs(data)
+    print(f"Successfully pinned. New CID: {new_cid}")
+
+    # 3. Add the new CID to the data
+    data['latest_cid'] = new_cid
+
+    # 4. Save the final state (with the CID) locally
+    ordered_data = {
+        "twin_id": data.get("twin_id"),
+        "owner_did": data.get("owner_did"),
+        "latest_cid": new_cid,
+        "profile": data.get("profile"),
+        "learning_state": data.get("learning_state"),
+        "skill_profile": data.get("skill_profile"),
+        "interaction_logs": data.get("interaction_logs")
+    }
+
+    # 5. Save the final, ordered state locally
+    print(f"Saving final state for {twin_id} with new CID...")
+    save_digital_twin(twin_id, ordered_data)
+    
+    # 6. Return a success response
+    return {
+        "status": "success",
+        "twin_id": twin_id,
+        "updated_at": get_current_vietnam_time_iso(),
+        "ipfs_cid": new_cid
+    }
 
 def update_digital_twin(data: Dict[str, Any]) -> Dict[str, Any]:
     # Validate schema
@@ -25,7 +103,7 @@ def update_digital_twin(data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "status": "success",
         "twin_id": twin_id,
-        "updated_at": datetime.now().isoformat(),
+        "updated_at": get_current_vietnam_time_iso(),
         "analytics": analytics,
         "recommendations": recommendations
     }

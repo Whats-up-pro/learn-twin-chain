@@ -35,7 +35,7 @@
     }
   },
   "interaction_logs": {
-    "last_llm_session": "2025-06-16T10:00:00Z",
+    "last_llm_session": "2025-06-16T17:00:00+07:00",
     "most_asked_topics": [
       "AES",
       "hash functions"

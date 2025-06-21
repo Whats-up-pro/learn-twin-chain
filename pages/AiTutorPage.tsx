@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { sendMessageToGemini, startChatSession } from '../services/geminiService';
 import { ChatMessage } from '../types';
@@ -9,7 +8,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'; // For GitHub Flavored Markdown (tables, etc.)
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
-
+import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 const AiTutorPage: React.FC = () => {
   const { digitalTwin, updateBehavior, learnerProfile } = useAppContext();
@@ -49,10 +48,9 @@ const AiTutorPage: React.FC = () => {
       const aiResponseText = await sendMessageToGemini(userMessage.text, messages);
       const aiMessage: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'ai', text: aiResponseText, timestamp: new Date() };
       setMessages(prev => [...prev, aiMessage]);
-      updateBehavior({ 
-        lastLlmSession: new Date().toISOString(),
-        // A simple way to track asked topics, could be more sophisticated
-        mostAskedTopics: Array.from(new Set([...(digitalTwin.behavior.mostAskedTopics || []), ...input.toLowerCase().split(' ').filter(word => word.length > 3 && !['python', 'code', 'help'].includes(word) ) ])).slice(-5) // Keep last 5 unique keywords
+      updateBehavior({
+        lastLlmSession: getCurrentVietnamTimeISO(),
+        mostAskedTopics: [...(digitalTwin.behavior.mostAskedTopics || []), ...input.toLowerCase().split(' ').filter(word => word.length > 3 && !['python', 'code', 'help'].includes(word))]
       });
     } catch (error) {
       console.error("Error sending message:", error);
@@ -86,7 +84,7 @@ const AiTutorPage: React.FC = () => {
               <Markdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  code({ node, inline, className, children, ...props }) {
+                  code({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '');
                     return !inline && match ? (
                       <SyntaxHighlighter

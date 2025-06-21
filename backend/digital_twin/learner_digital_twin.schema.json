@@ -1,18 +1,26 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "LearnerDigitalTwin",
+  "title": "Learner Digital Twin",
+  "description": "A schema for a learner's digital twin, capturing their profile, learning state, and skill profile.",
   "type": "object",
   "required": ["twin_id", "owner_did", "profile", "learning_state", "skill_profile"],
   "properties": {
     "twin_id": {
+      "description": "The unique identifier for the digital twin, following a DID format.",
       "type": "string",
       "pattern": "^did:learntwin:[a-zA-Z0-9\\-]{1,64}$"
     },
     "owner_did": {
+      "description": "The DID of the learner who owns this digital twin.",
       "type": "string",
       "pattern": "^did:[a-zA-Z0-9]+:[a-zA-Z0-9\\-]{1,64}$"
     },
+    "latest_cid": {
+      "description": "The IPFS Content Identifier (CID) of the latest version of this digital twin data.",
+      "type": "string"
+    },
     "profile": {
+      "description": "The learner's personal and academic profile.",
       "type": "object",
       "required": ["full_name", "birth_year", "institution", "program", "enrollment_date"],
       "properties": {
@@ -76,6 +84,7 @@
       }
     },
     "interaction_logs": {
+      "description": "Logs of the learner's interactions with the learning system.",
       "type": "object",
       "properties": {
         "last_llm_session": { "type": "string", "format": "date-time" },

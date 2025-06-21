@@ -1,5 +1,5 @@
-
 import { LearningModule, LearnerProfile, DigitalTwin } from './types';
+import { getCurrentVietnamTimeISO } from './utils/dateUtils';
 
 export const GEMINI_MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
 export const APP_NAME = 'LearnTwinChain';
@@ -12,27 +12,25 @@ export const DEFAULT_LEARNER_PROFILE: LearnerProfile = {
 
 export const INITIAL_DIGITAL_TWIN: DigitalTwin = {
   learnerDid: DEFAULT_LEARNER_PROFILE.did,
+  version: 1,
   knowledge: {
-    'Introduction to Python': 0,
-    'Variables and Data Types': 0,
-    'Control Flow': 0,
-    'Functions': 0,
+    "Python cơ bản": 0.8,
+    "Data Structures": 0.6
   },
   skills: {
-    problemSolving: 0.2,
-    logicalThinking: 0.25,
-    selfLearning: 0.15,
+    problemSolving: 0.7,
+    logicalThinking: 0.8,
+    selfLearning: 0.6
   },
   behavior: {
-    timeSpent: '0h 0m',
-    quizAccuracy: 0,
-    lastLlmSession: new Date().toISOString(),
-    mostAskedTopics: [],
-    preferredLearningStyle: 'interactive'
+    timeSpent: "5h 30m",
+    quizAccuracy: 0.75,
+    lastLlmSession: getCurrentVietnamTimeISO(),
+    preferredLearningStyle: "hands-on",
+    mostAskedTopics: ["recursion", "loops"]
   },
   checkpoints: [],
-  version: 1,
-  lastUpdated: new Date().toISOString(),
+  lastUpdated: getCurrentVietnamTimeISO()
 };
 
 export const LEARNING_MODULES: LearningModule[] = [

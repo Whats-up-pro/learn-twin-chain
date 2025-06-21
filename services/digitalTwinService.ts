@@ -1,6 +1,6 @@
-
 import { DigitalTwin, UpdateTwinPayload, VerificationResult } from '../types';
 import toast from 'react-hot-toast';
+import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 // This service simulates backend operations for the Digital Twin.
 // In a real application, these would be API calls.
@@ -42,7 +42,7 @@ export const simulateUpdateTwin = async (
   }
 
   updatedTwin.version += 1;
-  updatedTwin.lastUpdated = new Date().toISOString();
+  updatedTwin.lastUpdated = getCurrentVietnamTimeISO();
 
   toast.success('Digital Twin update simulated successfully!', { id: 'sim-dt-update' });
   return updatedTwin;

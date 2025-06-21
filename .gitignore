@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Custom
+.env
+*.env
+.vscode/

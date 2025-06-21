@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { UpdateTwinPayload, VerificationResult, KnowledgeArea, LearningCheckpoint, DigitalTwin } from '../types';
@@ -6,6 +5,7 @@ import { simulateUpdateTwin, simulateVerifyTwinData, simulateFetchTwinByDid } fr
 import Modal from '../components/Modal';
 import toast from 'react-hot-toast';
 import { DocumentDuplicateIcon, CheckBadgeIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 const ProfilePage: React.FC = () => {
   const { learnerProfile, digitalTwin, updateDigitalTwin: contextUpdateDigitalTwin } = useAppContext();
@@ -15,8 +15,10 @@ const ProfilePage: React.FC = () => {
   
   // Example update payload structure - simplified for demo
   const [mockProgressUpdate, setMockProgressUpdate] = useState<KnowledgeArea>({ 'Functions': 0.8 });
-  const [mockLogUpdate, setMockLogUpdate] = useState({ last_llm_session: new Date().toISOString(), preferred_learning_style: 'hands-on' });
-
+  const [mockLogUpdate, setMockLogUpdate] = useState({ 
+    last_llm_session: getCurrentVietnamTimeISO(), 
+    preferred_learning_style: 'hands-on' 
+  });
 
   const handleCopyDid = () => {
     navigator.clipboard.writeText(learnerProfile.did);
@@ -73,6 +75,49 @@ const ProfilePage: React.FC = () => {
     navigator.clipboard.writeText(shareableLink);
     toast.success("Mock 'Shareable Profile Link' copied! (Simulated ZKP/VC)", {duration: 4000});
   }
+
+  const mockUpdatePayload = {
+    twin_id: digitalTwin.learnerDid,
+    owner_did: digitalTwin.learnerDid,
+    learning_state: {
+      progress: { "Advanced Python": 0.9 },
+      checkpoint_history: [
+        // checkpoint_history: digitalTwin.checkpoints // or provide a new history
+      ]
+    },
+    interaction_logs: mockLogUpdate
+  };
+
+  const mockNFTs = [
+    {
+      id: "nft-1",
+      name: "Python Basics Completion",
+      description: "Completed Python fundamentals",
+      imageUrl: "https://picsum.photos/seed/python/300/200",
+      moduleId: "python-basics",
+      earnedAt: getCurrentVietnamTimeISO(),
+      cid: "QmPythonBasics123"
+    },
+    {
+      id: "nft-2", 
+      name: "Data Structures Master",
+      description: "Mastered data structures concepts",
+      imageUrl: "https://picsum.photos/seed/ds/300/200",
+      moduleId: "data-structures",
+      earnedAt: getCurrentVietnamTimeISO(),
+      cid: "QmDataStructures456"
+    }
+  ];
+
+  const mockAchievements = [
+    {
+      id: "ach-1",
+      title: "First Module Complete",
+      description: "Completed your first learning module",
+      unlockedAt: getCurrentVietnamTimeISO(),
+      icon: "🎯"
+    }
+  ];
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">

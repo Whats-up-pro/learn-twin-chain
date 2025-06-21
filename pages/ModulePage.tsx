@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import QuizComponent from '../components/QuizComponent';
 import { LightBulbIcon, CodeBracketIcon, PhotoIcon, PlayCircleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 const ModulePage: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -18,7 +19,7 @@ const ModulePage: React.FC = () => {
       const foundModule = getModuleById(moduleId);
       setModule(foundModule);
       if(foundModule) {
-        updateBehavior({lastLlmSession: new Date().toISOString()}); // Update interaction log
+        updateBehavior({lastLlmSession: getCurrentVietnamTimeISO()}); // Update interaction log
       }
     }
   }, [moduleId, getModuleById, updateBehavior]);
@@ -42,11 +43,19 @@ const ModulePage: React.FC = () => {
       );
 
       if (score === 1) { // 100% correct
-        completeCheckpoint({ module: module.title, moduleId: module.id, completedAt: new Date().toISOString() });
+        completeCheckpoint({ 
+          module: module.title, 
+          moduleId: module.id, 
+          completedAt: getCurrentVietnamTimeISO() 
+        });
         mintNftForModule(module.id, module.title);
         toast.success(`Module "${module.title}" completed and NFT minted!`, { duration: 4000 });
       } else if (score >= 0.7) { // Partially completed
-         completeCheckpoint({ module: module.title, moduleId: module.id, completedAt: new Date().toISOString() });
+         completeCheckpoint({ 
+           module: module.title, 
+           moduleId: module.id, 
+           completedAt: getCurrentVietnamTimeISO() 
+         });
          toast(`Module "${module.title}" marked as substantially covered. Keep practicing!`, { icon: '👍' });
       }
     }

@@ -1,6 +1,7 @@
 {
   "twin_id": "did:learntwin:student001",
   "owner_did": "did:learner:0xAbC123",
+  "latest_cid": "QmPC3VFtrfBRYueiukA9ySpg5JGDmpiAkCwUTyqESUepDt",
   "profile": {
     "full_name": "Đoàn Minh Trung",
     "birth_year": 2002,
@@ -10,7 +11,8 @@
   },
   "learning_state": {
     "progress": {
-      "Python cơ bản": 0.95
+      "Python cơ bản": 0.95,
+      "Data Structures": 1.0
     },
     "checkpoint_history": [
       {
@@ -18,6 +20,12 @@
         "completed_at": "2025-06-08",
         "tokenized": true,
         "nft_cid": "QmXyZa12bCdEf345GhIjKL678MnopQr9StUvWxYzA1BcDe"
+      },
+      {
+        "module": "Data Structures",
+        "completed_at": "2025-07-21T17:30:00+07:00",
+        "tokenized": false,
+        "nft_cid": null
       }
     ],
     "current_modules": [
@@ -33,7 +41,7 @@
     }
   },
   "interaction_logs": {
-    "last_llm_session": "2025-06-08T14:15:00Z",
+    "last_llm_session": "2025-06-08T21:15:00+07:00",
     "most_asked_topics": [
       "đệ quy",
       "for loop"

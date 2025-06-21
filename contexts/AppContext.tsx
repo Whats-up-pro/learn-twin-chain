@@ -1,8 +1,8 @@
-
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import { LearnerProfile, DigitalTwin, Nft, LearningModule, UpdateTwinPayload, LearningCheckpoint, KnowledgeArea } from '../types';
 import { DEFAULT_LEARNER_PROFILE, INITIAL_DIGITAL_TWIN, LEARNING_MODULES } from '../constants';
 import toast from 'react-hot-toast';
+import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 interface AppContextType {
   learnerProfile: LearnerProfile;
@@ -50,7 +50,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateDigitalTwinState = useCallback((updater: (prevTwin: DigitalTwin) => DigitalTwin) => {
     setDigitalTwin(prevTwin => {
       const newTwin = updater(prevTwin);
-      return { ...newTwin, version: newTwin.version + 1, lastUpdated: new Date().toISOString() };
+      return { ...newTwin, version: newTwin.version + 1, lastUpdated: getCurrentVietnamTimeISO() };
     });
   }, []);
 
@@ -98,7 +98,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       description: `Certificate of completion for the learning module: ${moduleName}.`,
       imageUrl: `https://picsum.photos/seed/${moduleId}/300/200`,
       moduleId: moduleId,
-      issuedDate: new Date().toISOString(),
+      issuedDate: getCurrentVietnamTimeISO(),
       cid: `QmSimulatedNFT${moduleId}${Date.now().toString(36)}` // Simulated IPFS CID
     };
     setNfts(prevNfts => [...prevNfts, newNft]);
@@ -124,14 +124,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return {
           ...prevTwin,
           checkpoints: prevTwin.checkpoints.map(cp => 
-            cp.moduleId === checkpointData.moduleId ? { ...cp, ...checkpointData, completedAt: new Date().toISOString() } : cp
+            cp.moduleId === checkpointData.moduleId ? { ...cp, ...checkpointData, completedAt: getCurrentVietnamTimeISO() } : cp
           )
         };
       }
       // Add new checkpoint
       const newCheckpoint: LearningCheckpoint = {
         ...checkpointData,
-        completedAt: new Date().toISOString(),
+        completedAt: getCurrentVietnamTimeISO(),
         tokenized: false, 
       };
       return { ...prevTwin, checkpoints: [...prevTwin.checkpoints, newCheckpoint] };
