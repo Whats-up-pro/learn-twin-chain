@@ -1,0 +1,45 @@
+{
+  "twin_id": "did:learntwin:student004",
+  "owner_did": "did:learner:0x456AbC",
+  "profile": {
+    "full_name": "Lê Hoàng Giang",
+    "birth_year": 2004,
+    "institution": "UIT",
+    "program": "Computer Science",
+    "enrollment_date": "2024-09-01"
+  },
+  "learning_state": {
+    "progress": {
+      "Lập trình hướng đối tượng": 0.8,
+      "Python cơ bản": 0.85
+    },
+    "checkpoint_history": [
+      {
+        "module": "Lập trình hướng đối tượng",
+        "completed_at": "2025-05-20",
+        "tokenized": true,
+        "nft_cid": "QmAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIjKlMnOpQr"
+      }
+    ],
+    "current_modules": [
+      "Nghiên cứu khoa học"
+    ]
+  },
+  "skill_profile": {
+    "programming_languages": {
+      "Java": 0.8,
+      "Python": 0.85
+    },
+    "soft_skills": {
+      "teamwork": 0.8
+    }
+  },
+  "interaction_logs": {
+    "last_llm_session": "2025-06-15T09:30:00Z",
+    "most_asked_topics": [
+      "inheritance in OOP",
+      "array vs linked list"
+    ],
+    "preferred_learning_style": "practice-first"
+  }
+}

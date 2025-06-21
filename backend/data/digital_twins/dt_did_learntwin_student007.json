@@ -1,0 +1,45 @@
+{
+  "twin_id": "did:learntwin:student007",
+  "owner_did": "did:learner:0x987Mno",
+  "profile": {
+    "full_name": "Nguyễn Anh Khoa",
+    "birth_year": 2006,
+    "institution": "UIT",
+    "program": "Computer Science",
+    "enrollment_date": "2025-09-01"
+  },
+  "learning_state": {
+    "progress": {
+      "Hệ điều hành": 0.6,
+      "Python cơ bản": 0.8
+    },
+    "checkpoint_history": [
+      {
+        "module": "Python cơ bản",
+        "completed_at": "2025-03-30",
+        "tokenized": true,
+        "nft_cid": "QmLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBc"
+      }
+    ],
+    "current_modules": [
+      "Nghiên cứu khoa học"
+    ]
+  },
+  "skill_profile": {
+    "programming_languages": {
+      "Python": 0.8,
+      "C++": 0.65
+    },
+    "soft_skills": {
+      "self_learning": 0.85
+    }
+  },
+  "interaction_logs": {
+    "last_llm_session": "2025-06-18T11:20:00Z",
+    "most_asked_topics": [
+      "process management",
+      "memory allocation"
+    ],
+    "preferred_learning_style": "practice-first"
+  }
+}

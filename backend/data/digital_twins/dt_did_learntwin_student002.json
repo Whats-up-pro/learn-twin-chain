@@ -2,7 +2,7 @@
   "twin_id": "did:learntwin:student002",
   "owner_did": "did:learner:0xDeF456",
   "profile": {
-    "full_name": "Phan The Duy",
+    "full_name": "Phan Thế Duy",
     "birth_year": 2001,
     "institution": "UIT",
     "program": "Information Systems",
@@ -18,7 +18,7 @@
         "module": "HTML & CSS",
         "completed_at": "2025-06-05",
         "tokenized": true,
-        "nft_cid": "Qm456def..."
+        "nft_cid": "QmPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFg"
       }
     ],
     "current_modules": [

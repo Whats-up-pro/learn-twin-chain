@@ -1,0 +1,45 @@
+{
+  "twin_id": "did:learntwin:student008",
+  "owner_did": "did:learner:0x654Pqr",
+  "profile": {
+    "full_name": "Võ Nguyễn Gia Quốc",
+    "birth_year": 2005,
+    "institution": "UIT",
+    "program": "Information Security",
+    "enrollment_date": "2025-09-01"
+  },
+  "learning_state": {
+    "progress": {
+      "Xử lý dữ liệu": 0.75,
+      "Python cơ bản": 0.88
+    },
+    "checkpoint_history": [
+      {
+        "module": "Xử lý dữ liệu",
+        "completed_at": "2025-05-05",
+        "tokenized": true,
+        "nft_cid": "QmEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIjKlMnOpQrStUv"
+      }
+    ],
+    "current_modules": [
+      "Nghiên cứu khoa học"
+    ]
+  },
+  "skill_profile": {
+    "programming_languages": {
+      "Python": 0.88,
+      "SQL": 0.7
+    },
+    "soft_skills": {
+      "data_analysis": 0.85
+    }
+  },
+  "interaction_logs": {
+    "last_llm_session": "2025-06-19T16:00:00Z",
+    "most_asked_topics": [
+      "pandas",
+      "matplotlib"
+    ],
+    "preferred_learning_style": "theory-then-practice"
+  }
+}

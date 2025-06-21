@@ -1,0 +1,45 @@
+{
+  "twin_id": "did:learntwin:student005",
+  "owner_did": "did:learner:0x123Def",
+  "profile": {
+    "full_name": "Trần Dương Minh Đại",
+    "birth_year": 2004,
+    "institution": "UIT",
+    "program": "Computer Science",
+    "enrollment_date": "2024-09-01"
+  },
+  "learning_state": {
+    "progress": {
+      "An toàn hệ thống": 0.6,
+      "Python cơ bản": 0.95
+    },
+    "checkpoint_history": [
+      {
+        "module": "Python cơ bản",
+        "completed_at": "2025-04-15",
+        "tokenized": true,
+        "nft_cid": "QmHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXy"
+      }
+    ],
+    "current_modules": [
+      "Nghiên cứu khoa học"
+    ]
+  },
+  "skill_profile": {
+    "programming_languages": {
+      "Python": 0.95,
+      "C": 0.6
+    },
+    "soft_skills": {
+      "problem_solving": 0.7
+    }
+  },
+  "interaction_logs": {
+    "last_llm_session": "2025-06-16T10:00:00Z",
+    "most_asked_topics": [
+      "AES",
+      "hash functions"
+    ],
+    "preferred_learning_style": "theory-then-practice"
+  }
+}

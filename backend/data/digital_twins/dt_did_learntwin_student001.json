@@ -2,7 +2,7 @@
   "twin_id": "did:learntwin:student001",
   "owner_did": "did:learner:0xAbC123",
   "profile": {
-    "full_name": "Doan Minh Trung",
+    "full_name": "Đoàn Minh Trung",
     "birth_year": 2002,
     "institution": "BKU",
     "program": "Computer Science",
@@ -17,7 +17,7 @@
         "module": "Python cơ bản",
         "completed_at": "2025-06-08",
         "tokenized": true,
-        "nft_cid": "QmXYZabc..."
+        "nft_cid": "QmXyZa12bCdEf345GhIjKL678MnopQr9StUvWxYzA1BcDe"
       }
     ],
     "current_modules": [

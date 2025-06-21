@@ -1,4 +1,4 @@
-import { Grid, CircularProgress, Alert } from '@mui/material';
+import { Stack, Box, CircularProgress, Alert } from '@mui/material';
 import StudentCard from './StudentCard';
 import { useEffect, useState } from 'react';
 import { fetchStudents } from '../services/studentService';
@@ -19,12 +19,22 @@ export default function StudentTwinOverview() {
   if (error) return <Alert severity="error">{error}</Alert>;
 
   return (
-    <Grid container spacing={3}>
+    <Stack direction="row" flexWrap="wrap" sx={{ gap: 3 }}>
       {students.map(student => (
-        <Grid item xs={12} md={6} lg={4} key={student.twin_id}>
+        <Box 
+          key={student.twin_id}
+          sx={{
+            width: { 
+              xs: '100%', 
+              sm: 'calc(50% - 12px)', 
+              md: 'calc(33.333% - 16px)', 
+              lg: 'calc(20% - 20px)' 
+            }
+          }}
+        >
           <StudentCard student={student} />
-        </Grid>
+        </Box>
       ))}
-    </Grid>
+    </Stack>
   );
 } 

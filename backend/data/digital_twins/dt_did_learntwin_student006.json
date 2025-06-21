@@ -1,0 +1,45 @@
+{
+  "twin_id": "did:learntwin:student006",
+  "owner_did": "did:learner:0x321Xyz",
+  "profile": {
+    "full_name": "Huỳnh Quốc Khánh",
+    "birth_year": 2005,
+    "institution": "UIT",
+    "program": "Information Security",
+    "enrollment_date": "2025-09-01"
+  },
+  "learning_state": {
+    "progress": {
+      "Machine Learning cơ bản": 0.7,
+      "Python cơ bản": 0.9
+    },
+    "checkpoint_history": [
+      {
+        "module": "Machine Learning cơ bản",
+        "completed_at": "2025-05-10",
+        "tokenized": true,
+        "nft_cid": "QmStUvWxYzAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIj"
+      }
+    ],
+    "current_modules": [
+      "Nghiên cứu khoa học"
+    ]
+  },
+  "skill_profile": {
+    "programming_languages": {
+      "Python": 0.9,
+      "R": 0.5
+    },
+    "soft_skills": {
+      "critical_thinking": 0.8
+    }
+  },
+  "interaction_logs": {
+    "last_llm_session": "2025-06-17T14:45:00Z",
+    "most_asked_topics": [
+      "linear regression",
+      "neural networks"
+    ],
+    "preferred_learning_style": "theory-then-practice"
+  }
+}

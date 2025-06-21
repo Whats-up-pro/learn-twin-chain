@@ -25,7 +25,7 @@ def update_digital_twin(data: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "status": "success",
         "twin_id": twin_id,
-        "updated_at": datetime.utcnow().isoformat(),
+        "updated_at": datetime.now().isoformat(),
         "analytics": analytics,
         "recommendations": recommendations
     }
