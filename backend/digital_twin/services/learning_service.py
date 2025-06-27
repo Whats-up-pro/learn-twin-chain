@@ -41,4 +41,8 @@ class LearningService:
         """Trả về danh sách tất cả student twins"""
         # Reload dữ liệu trước khi trả về để đảm bảo cập nhật
         self.reload_students()
-        return list(self.students.values()) 
+        students_list = list(self.students.values())
+        return {
+            "total": len(students_list),
+            "students": students_list
+        } 
