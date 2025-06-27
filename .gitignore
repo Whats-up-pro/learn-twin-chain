@@ -34,3 +34,6 @@ Desktop.ini
 
 # virtual environment
 myenv/
+
+# python cache
+**/*.pyc
