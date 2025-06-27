@@ -1,13 +1,20 @@
+<<<<<<< HEAD
 import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+=======
+import React, { useState } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+>>>>>>> employer-teacher
 import { APP_NAME } from '../constants';
 import { useAppContext } from '../contexts/AppContext';
+import { UserRole } from '../types';
 
 interface NavbarProps {
   onToggleSidebar?: () => void; // Optional: if you add a sidebar later
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
+<<<<<<< HEAD
   const { learnerProfile, logout } = useAppContext();
   const navigate = useNavigate();
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
@@ -16,17 +23,50 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     ? learnerProfile.avatarUrl
     : 'https://ui-avatars.com/api/?background=fff&color=888&name=U';
   const displayName = learnerProfile && learnerProfile.name ? learnerProfile.name : 'User';
+=======
+  const { learnerProfile } = useAppContext();
+  const [currentRole, setCurrentRole] = useState<UserRole>(UserRole.LEARNER);
+>>>>>>> employer-teacher
 
   const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
       isActive ? 'bg-sky-600 text-white' : 'text-sky-100 hover:bg-sky-500 hover:text-white'
     }`;
 
+<<<<<<< HEAD
   const handleLogout = () => {
     console.log('Logout button clicked');
     logout();
     console.log('Logout function called, navigating to login');
     navigate('/login', { replace: true });
+=======
+  const getRoleBasedNavLinks = () => {
+    switch (currentRole) {
+      case UserRole.EMPLOYER:
+        return (
+          <>
+            <NavLink to="/employer" className={navLinkClasses}>Employer Dashboard</NavLink>
+            <NavLink to="/employer/jobs" className={navLinkClasses}>Job Postings</NavLink>
+            <NavLink to="/employer/candidates" className={navLinkClasses}>Candidates</NavLink>
+          </>
+        );
+      case UserRole.TEACHER:
+        return (
+          <>
+            <NavLink to="/teacher" className={navLinkClasses}>Teacher Dashboard</NavLink>
+            <NavLink to="/teacher/courses" className={navLinkClasses}>My Courses</NavLink>
+            <NavLink to="/teacher/learners" className={navLinkClasses}>Learners</NavLink>
+          </>
+        );
+      default:
+        return (
+          <>
+            <NavLink to="/dashboard" className={navLinkClasses}>Dashboard</NavLink>
+            <NavLink to="/tutor" className={navLinkClasses}>AI Tutor</NavLink>
+          </>
+        );
+    }
+>>>>>>> employer-teacher
   };
 
   return (
@@ -49,13 +89,26 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               {APP_NAME}
             </Link>
           </div>
+          
+          {/* Role Selector */}
+          <div className="hidden md:flex items-center space-x-2 mr-4">
+            <select
+              value={currentRole}
+              onChange={(e) => setCurrentRole(e.target.value as UserRole)}
+              className="bg-sky-600 text-white text-sm rounded px-2 py-1 border border-sky-500"
+            >
+              <option value={UserRole.LEARNER}>Learner</option>
+              <option value={UserRole.TEACHER}>Teacher</option>
+              <option value={UserRole.EMPLOYER}>Employer</option>
+            </select>
+          </div>
+
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
-              <NavLink to="/dashboard" className={navLinkClasses}>Dashboard</NavLink>
-              <NavLink to="/tutor" className={navLinkClasses}>AI Tutor</NavLink>
-              {/* <NavLink to="/modules" className={navLinkClasses}>Modules</NavLink> */}
+              {getRoleBasedNavLinks()}
             </div>
           </div>
+          
           <div className="flex items-center">
             {isLoggedIn ? (
               <>
