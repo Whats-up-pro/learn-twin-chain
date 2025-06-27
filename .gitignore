@@ -31,3 +31,6 @@ Desktop.ini
 .env
 *.env
 .vscode/
+
+# virtual environment
+myenv/

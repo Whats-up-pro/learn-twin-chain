@@ -23,3 +23,7 @@ python-decouple
 python-dotenv
 requests
 pytz>=2023.3 # For timezone handling
+
+web3>=6.0.0
+eth-account>=0.11.0
+ipfshttpclient>=0.8.0
