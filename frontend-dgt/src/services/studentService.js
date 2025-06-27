@@ -1,7 +1,9 @@
 export async function fetchStudents() {
+  console.log('Fetching students from API...');
   const res = await fetch('http://localhost:8000/api/v1/learning/students');
   if (!res.ok) throw new Error('Failed to fetch students');
   const data = await res.json();
+  console.log('Raw API response:', data);
   
   // Handle both formats: array directly or object with students property
   let studentsArray;
@@ -15,8 +17,10 @@ export async function fetchStudents() {
     throw new Error('Invalid data format from API');
   }
   
+  console.log('Students array:', studentsArray);
+  
   // Transform data to match expected format
-  return studentsArray.map(student => ({
+  const transformedStudents = studentsArray.map(student => ({
     twin_id: student.twin_id || student.user_id,
     name: student.profile?.full_name || student.name || 'Unknown',
     avatar_url: student.avatar_url || '',
@@ -26,8 +30,17 @@ export async function fetchStudents() {
     progress: student.learning_state?.progress || {},
     checkpoints: student.learning_state?.checkpoint_history || [],
     skills: student.skill_profile || {},
-    last_updated: student.last_updated || new Date().toISOString()
+    last_updated: student.last_updated || new Date().toISOString(),
+    // Add direct access to nested data
+    profile: student.profile || {},
+    learning_state: student.learning_state || {},
+    skill_profile: student.skill_profile || {},
+    interaction_logs: student.interaction_logs || {},
+    latest_cid: student.latest_cid
   }));
+  
+  console.log('Transformed students:', transformedStudents);
+  return transformedStudents;
 }
 
 export async function fetchStudentDetail(twin_id) {

@@ -189,16 +189,36 @@ async def get_all_students():
                 except Exception as e:
                     logger.error(f"Error reading twin file {twin_filename}: {str(e)}")
             
-            # Kết hợp dữ liệu user và digital twin
-            student_info = {
-                "user_id": user['did'],
-                "name": user['name'],
-                "avatar_url": user.get('avatarUrl', ''),
-                "digital_twin": twin_data,
-                "has_digital_twin": twin_data is not None
-            }
+            # Nếu không có digital twin, tạo dữ liệu mặc định từ user info
+            if not twin_data:
+                twin_data = {
+                    "twin_id": user['did'],
+                    "owner_did": f"did:learner:{identifier}",
+                    "latest_cid": None,
+                    "profile": {
+                        "full_name": user['name'],
+                        "birth_year": None,
+                        "institution": "BKU",
+                        "program": "Computer Science",
+                        "enrollment_date": datetime.now().strftime("%Y-%m-%d")
+                    },
+                    "learning_state": {
+                        "progress": {},
+                        "checkpoint_history": [],
+                        "current_modules": []
+                    },
+                    "skill_profile": {
+                        "programming_languages": {},
+                        "soft_skills": {}
+                    },
+                    "interaction_logs": {
+                        "last_llm_session": None,
+                        "most_asked_topics": [],
+                        "preferred_learning_style": "code-first"
+                    }
+                }
             
-            students_data.append(student_info)
+            students_data.append(twin_data)
         
         return {
             "total": len(students_data),

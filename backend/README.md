@@ -8,8 +8,8 @@ Hệ thống Digital Twin cho giáo dục, tích hợp blockchain và AI để t
 - **Backend**: FastAPI + Uvicorn
 - **Frontend**: React + TypeScript + Vite
 - **Database**: JSON files (có thể mở rộng sang SQLite/PostgreSQL)
-- **Blockchain**: Web3 + Solidity
-- **IPFS**: Pinata Cloud
+- **Blockchain**: Web3 + Solidity (cho tương lai)
+- **IPFS**: Pinata Cloud (cho tương lai)
 
 ## Cấu trúc hệ thống
 
@@ -32,7 +32,7 @@ Hệ thống Digital Twin cho giáo dục, tích hợp blockchain và AI để t
 ### Digital Twin Management
 - `GET /api/v1/learning/students` - Lấy danh sách tất cả Digital Twin
 - `GET /api/v1/learning/students/{twin_id}` - Lấy chi tiết Digital Twin
-- `POST /api/v1/twins/{twin_id}/complete-module` - Hoàn thành module và cập nhật Digital Twin
+- `POST /api/v1/sync-users-twins` - Đồng bộ users và digital twins
 
 ## Quy trình hoạt động
 
@@ -51,7 +51,6 @@ Khi sinh viên đăng ký tài khoản mới:
 - Hiển thị danh sách tất cả Digital Twin
 - Xem chi tiết từng sinh viên
 - Theo dõi tiến độ học tập
-- Quản lý credentials và NFT
 
 ## Format Digital Twin File
 
@@ -159,12 +158,12 @@ npm run dev
 - [x] School Dashboard hiển thị danh sách sinh viên
 - [x] Cập nhật Digital Twin khi hoàn thành module
 - [x] Đồng bộ dữ liệu với file JSON
-- [x] Tích hợp IPFS cho lưu trữ dữ liệu
-- [x] Dọn dẹp Flask, chỉ sử dụng FastAPI + Vite
+- [x] **Dọn dẹp hoàn toàn Flask, chỉ sử dụng FastAPI**
+- [x] **Loại bỏ các thư viện không sử dụng (ipfshttpclient, etc.)**
 
 ### 🔄 Đang phát triển
-- [ ] Blockchain integration cho credentials
 - [ ] AI Tutor integration
+- [ ] Blockchain integration cho credentials
 - [ ] Real-time updates
 - [ ] Advanced analytics
 
@@ -178,7 +177,7 @@ npm run dev
    - Student Frontend: 5173 (Vite dev server)
    - School Dashboard: 5180 (Vite dev server)
    - Backend API: 8000 (FastAPI + Uvicorn)
-6. **Tech Stack**: Đã dọn dẹp hoàn toàn Flask, chỉ sử dụng FastAPI + Vite
+6. **Tech Stack**: **Đã dọn dẹp hoàn toàn Flask, chỉ sử dụng FastAPI + Vite**
 
 ## Troubleshooting
 
