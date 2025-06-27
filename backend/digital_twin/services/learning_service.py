@@ -24,6 +24,11 @@ class LearningService:
                     if twin_id:
                         self.students[twin_id] = data
 
+    def reload_students(self):
+        """Reload dữ liệu từ files"""
+        self.students = {}
+        self.load_students_from_files()
+
     def create_student_twin(self, twin_id: str, config: dict, profile: dict):
         twin = StudentTwin(twin_id, config, profile)
         self.students[twin_id] = twin
@@ -34,4 +39,6 @@ class LearningService:
 
     def list_student_twins(self):
         """Trả về danh sách tất cả student twins"""
+        # Reload dữ liệu trước khi trả về để đảm bảo cập nhật
+        self.reload_students()
         return list(self.students.values()) 

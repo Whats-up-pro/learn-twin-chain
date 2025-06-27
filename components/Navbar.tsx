@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../constants';
 import { useAppContext } from '../contexts/AppContext';
 
@@ -9,12 +8,26 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
-  const { learnerProfile } = useAppContext();
+  const { learnerProfile, logout } = useAppContext();
+  const navigate = useNavigate();
+  const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
+
+  const avatarUrl = learnerProfile && learnerProfile.avatarUrl && learnerProfile.avatarUrl.trim() !== ''
+    ? learnerProfile.avatarUrl
+    : 'https://ui-avatars.com/api/?background=fff&color=888&name=U';
+  const displayName = learnerProfile && learnerProfile.name ? learnerProfile.name : 'User';
 
   const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
       isActive ? 'bg-sky-600 text-white' : 'text-sky-100 hover:bg-sky-500 hover:text-white'
     }`;
+
+  const handleLogout = () => {
+    console.log('Logout button clicked');
+    logout();
+    console.log('Logout function called, navigating to login');
+    navigate('/login', { replace: true });
+  };
 
   return (
     <nav className="bg-sky-700 shadow-lg">
@@ -44,14 +57,33 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             </div>
           </div>
           <div className="flex items-center">
-             <Link to="/profile" className="flex items-center text-sky-100 hover:text-white">
+            {isLoggedIn ? (
+              <>
+                <Link to="/profile" className="flex items-center text-sky-100 hover:text-white">
+                  <img 
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
+                  />
+                  <span className="hidden sm:inline text-sm">{displayName}</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="ml-4 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 transition text-sm"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center text-sky-100">
                 <img 
-                  src={learnerProfile.avatarUrl || 'https://picsum.photos/seed/defaultuser/40/40'} 
-                  alt={learnerProfile.name} 
+                  src={'https://picsum.photos/seed/defaultuser/40/40'} 
+                  alt="Guest"
                   className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
                 />
-                <span className="hidden sm:inline text-sm">{learnerProfile.name}</span>
-              </Link>
+                <span className="hidden sm:inline text-sm">Guest</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -21,7 +21,7 @@ class LearningBehavior(BaseModel):
     total_study_time: int = 0 # Tổng thời gian học (phút)
     average_session_length: Optional[int] = None # Thời gian trung bình mỗi phiên học (phút)
     quiz_accuracy: Dict[str, float] = {} # Tỷ lệ đúng các bài quiz theo chủ đề
-    average_overall_quiz_accuracy = Field(default=0.0, ge=0.0, le=1.0) # Tỷ lệ đúng trung bình các bài quiz
+    average_overall_quiz_accuracy: float = Field(default=0.0, ge=0.0, le=1.0) # Tỷ lệ đúng trung bình các bài quiz
     preferred_learning_times: List[str] = [] # Thời gian trong ngày học hiệu quả nhất
     # ... thêm các chỉ số hành vi khác
 

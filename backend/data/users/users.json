@@ -1,0 +1,20 @@
+[
+  {
+    "did": "did:learntwin:student099",
+    "name": "testaccount",
+    "password": "test1234",
+    "avatarUrl": ""
+  },
+  {
+    "did": "did:learntwin:student100",
+    "name": "test2",
+    "password": "test1234",
+    "avatarUrl": ""
+  },
+  {
+    "did": "did:learntwin:student101",
+    "name": "test3",
+    "password": "test1234",
+    "avatarUrl": ""
+  }
+]

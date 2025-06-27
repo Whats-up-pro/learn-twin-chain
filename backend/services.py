@@ -8,21 +8,25 @@ import requests
 import os
 from datetime import datetime
 # Cần thư viện cho DID và xác thực chữ ký (tùy thuộc vào chuẩn DID bạn dùng)
-import did_resolver
-import digital_signature_verifier
+# import did_resolver
+# import digital_signature_verifier
+# import ipfshttpclient  # Không dùng nữa
 
 # Cấu hình (đọc từ environment variables hoặc config file)
 INFURA_URL = os.getenv("INFURA_URL") # Hoặc RPC endpoint khác
 DIGITAL_TWIN_REGISTRY_CONTRACT_ADDRESS = os.getenv("DIGITAL_TWIN_REGISTRY_CONTRACT_ADDRESS")
 LEARN_TWIN_NFT_CONTRACT_ADDRESS = os.getenv("LEARN_TWIN_NFT_CONTRACT_ADDRESS")
-DIGITAL_TWIN_REGISTRY_ABI = [...] # ABI của DigitalTwinRegistry.sol
-LEARN_TWIN_NFT_ABI = [...] # ABI của LearnTwinNFT.sol
+DIGITAL_TWIN_REGISTRY_ABI = [] # ABI của DigitalTwinRegistry.sol
+LEARN_TWIN_NFT_ABI = [] # ABI của LearnTwinNFT.sol
 LLM_API_KEY = os.getenv("LLM_API_KEY")
 IPFS_HOST = os.getenv("IPFS_HOST", "/dns/localhost/tcp/5001/http")
 
+PINATA_API_KEY = os.getenv('PINATA_API_KEY', 'your_pinata_api_key')
+PINATA_SECRET_API_KEY = os.getenv('PINATA_SECRET_API_KEY', 'your_pinata_secret_api_key')
+
 # Khởi tạo kết nối
 w3 = Web3(Web3.HTTPProvider(INFURA_URL))
-ipfs_client = ipfshttpclient.connect(IPFS_HOST)
+# ipfs_client = ipfshttpclient.connect(IPFS_HOST)
 digital_twin_registry_contract = w3.eth.contract(address=DIGITAL_TWIN_REGISTRY_CONTRACT_ADDRESS, abi=DIGITAL_TWIN_REGISTRY_ABI)
 learn_twin_nft_contract = w3.eth.contract(address=LEARN_TWIN_NFT_CONTRACT_ADDRESS, abi=LEARN_TWIN_NFT_ABI)
 
@@ -44,9 +48,9 @@ def get_digital_twin(twin_id: str) -> Optional[DigitalTwin]:
 def update_digital_twin(update_data: UpdateTwinRequest) -> bool:
     """Updates the digital twin data."""
     # 1. Verify DID signature: Cần triển khai logic xác thực chữ ký DID
-    is_signature_valid = digital_signature_verifier.verify(update_data.owner_did, update_data.json(), signature_from_header) # Cần lấy chữ ký từ header request
-    if not is_signature_valid:
-        return False
+    # is_signature_valid = digital_signature_verifier.verify(update_data.owner_did, update_data.json(), signature_from_header) # Cần lấy chữ ký từ header request
+    # if not is_signature_valid:
+    #     return False
 
     # 2. Retrieve the current twin data
     current_twin = get_digital_twin(update_data.twin_id)
@@ -329,3 +333,16 @@ def resolve_did_to_ethereum_address(did: str) -> str:
     # if did == "did:learntwin:student001":
     #     return "0xAbC123..." # Địa chỉ Ethereum tương ứng
     pass # Placeholder
+
+def pin_json_to_ipfs(json_data):
+    url = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
+    headers = {
+        "pinata_api_key": PINATA_API_KEY,
+        "pinata_secret_api_key": PINATA_SECRET_API_KEY,
+        "Content-Type": "application/json"
+    }
+    response = requests.post(url, json=json_data, headers=headers)
+    if response.status_code == 200:
+        return response.json()["IpfsHash"]
+    else:
+        raise Exception("Failed to pin JSON to IPFS: " + response.text)
