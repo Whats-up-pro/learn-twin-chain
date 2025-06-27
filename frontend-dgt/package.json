@@ -4,6 +4,7 @@
     "dev:5180": "vite --port 5180"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.6.0",
     "vite": "^6.3.5"
   },
   "dependencies": {
