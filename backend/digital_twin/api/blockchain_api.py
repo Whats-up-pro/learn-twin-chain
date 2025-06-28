@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from ..services.blockchain_service import BlockchainService
 
-router = APIRouter(prefix="/api/v1/blockchain", tags=["blockchain"])
+router = APIRouter(tags=["blockchain"])
 
 # Initialize blockchain service
 blockchain_service = BlockchainService()
