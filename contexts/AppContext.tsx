@@ -5,10 +5,12 @@ import toast from 'react-hot-toast';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 interface AppContextType {
-  learnerProfile: LearnerProfile;
+  learnerProfile: LearnerProfile | null;
   digitalTwin: DigitalTwin;
   nfts: Nft[];
   learningModules: LearningModule[];
+  updateLearnerProfile: (profile: LearnerProfile) => void;
+  logout: () => void;
   updateDigitalTwin: (payload: Partial<UpdateTwinPayload>, description: string) => Promise<void>;
   mintNftForModule: (moduleId: string, moduleName: string) => void;
   getModuleById: (moduleId: string) => LearningModule | undefined;
@@ -21,9 +23,9 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [learnerProfile, setLearnerProfile] = useState<LearnerProfile>(() => {
+  const [learnerProfile, setLearnerProfile] = useState<LearnerProfile | null>(() => {
     const savedProfile = localStorage.getItem('learnerProfile');
-    return savedProfile ? JSON.parse(savedProfile) : DEFAULT_LEARNER_PROFILE;
+    return savedProfile ? JSON.parse(savedProfile) : null;
   });
   const [digitalTwin, setDigitalTwin] = useState<DigitalTwin>(() => {
     const savedTwin = localStorage.getItem('digitalTwin');
@@ -36,7 +38,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [learningModules] = useState<LearningModule[]>(LEARNING_MODULES);
 
   useEffect(() => {
-    localStorage.setItem('learnerProfile', JSON.stringify(learnerProfile));
+    if (learnerProfile) {
+      localStorage.setItem('learnerProfile', JSON.stringify(learnerProfile));
+    } else {
+      localStorage.removeItem('learnerProfile');
+    }
   }, [learnerProfile]);
 
   useEffect(() => {
@@ -46,6 +52,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     localStorage.setItem('nfts', JSON.stringify(nfts));
   }, [nfts]);
+
+  // Sync learnerProfile with localStorage changes (e.g., after login)
+  useEffect(() => {
+    const syncProfile = () => {
+      const savedProfile = localStorage.getItem('learnerProfile');
+      setLearnerProfile(savedProfile ? JSON.parse(savedProfile) : null);
+    };
+    window.addEventListener('storage', syncProfile);
+    return () => window.removeEventListener('storage', syncProfile);
+  }, []);
 
   const updateDigitalTwinState = useCallback((updater: (prevTwin: DigitalTwin) => DigitalTwin) => {
     setDigitalTwin(prevTwin => {
@@ -159,13 +175,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
   }, [updateDigitalTwinState]);
 
+  const updateLearnerProfile = useCallback((profile: LearnerProfile) => {
+    setLearnerProfile(profile);
+  }, []);
+
+  const logout = useCallback(() => {
+    // Clear all state
+    setLearnerProfile(null);
+    setDigitalTwin(INITIAL_DIGITAL_TWIN);
+    setNfts([]);
+    
+    // Clear localStorage
+    localStorage.removeItem('learnerProfile');
+    localStorage.removeItem('digitalTwin');
+    localStorage.removeItem('nfts');
+    
+    console.log('Logout successful - all data cleared');
+  }, []);
 
   return (
     <AppContext.Provider value={{ 
-      learnerProfile, 
+      learnerProfile,
       digitalTwin, 
       nfts, 
       learningModules, 
+      updateLearnerProfile,
+      logout,
       updateDigitalTwin, 
       mintNftForModule,
       getModuleById,

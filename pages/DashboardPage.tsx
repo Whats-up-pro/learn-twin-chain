@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import ModuleItem from '../components/ModuleItem';
@@ -23,6 +22,13 @@ const DashboardPage: React.FC = () => {
   
   const overallProgress = totalModules > 0 ? (completedModulesCount / totalModules) * 100 : 0;
 
+  const avatarUrl = learnerProfile && learnerProfile.avatarUrl && learnerProfile.avatarUrl.trim() !== ''
+    ? learnerProfile.avatarUrl
+    : 'https://ui-avatars.com/api/?background=fff&color=888&name=U';
+
+  const displayName = learnerProfile && learnerProfile.name ? learnerProfile.name : 'User';
+  const displayDid = learnerProfile && learnerProfile.did ? learnerProfile.did : '';
+
   const handleVerifyNft = async (nftCid: string) => {
     // In a real app, you'd fetch the NFT metadata from IPFS using the CID, then verify.
     // Here, we simulate verification of the digital twin state that led to this NFT.
@@ -45,10 +51,10 @@ const DashboardPage: React.FC = () => {
     <div className="space-y-8">
       <header className="bg-white shadow-md rounded-lg p-6">
         <div className="flex items-center space-x-4">
-          <img src={learnerProfile.avatarUrl} alt={learnerProfile.name} className="h-20 w-20 rounded-full border-4 border-sky-500" />
+          <img src={avatarUrl} alt={displayName} className="h-20 w-20 rounded-full border-4 border-sky-500" />
           <div>
-            <h1 className="text-3xl font-bold text-sky-700">Welcome back, {learnerProfile.name}!</h1>
-            <p className="text-gray-600">Your learning journey continues here. DID: <span className="font-mono text-xs">{learnerProfile.did}</span></p>
+            <h1 className="text-3xl font-bold text-sky-700">Welcome back, {displayName}!</h1>
+            <p className="text-gray-600">Your learning journey continues here. DID: <span className="font-mono text-xs">{displayDid}</span></p>
           </div>
         </div>
       </header>

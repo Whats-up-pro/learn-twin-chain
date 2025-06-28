@@ -34,6 +34,15 @@ Desktop.ini
 
 # virtual environment
 myenv/
+.idx/
+.venv/
 
 # python cache
 **/*.pyc
+/.vs
+
+# Hardhat files
+cache/
+artifacts/
+typechain/ 
+__pycache__/

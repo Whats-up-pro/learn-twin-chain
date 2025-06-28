@@ -1,139 +1,229 @@
+#!/usr/bin/env python3
+"""
+Deploy smart contracts for LearnTwinChain
+"""
+
 import os
 import json
+import sys
 from web3 import Web3
 from eth_account import Account
 from dotenv import load_dotenv
-from py_solc_x import compile_files
 
 # Load environment variables
 load_dotenv()
 
 class ContractDeployer:
     def __init__(self):
-        self.w3 = Web3(Web3.HTTPProvider(os.getenv('BLOCKCHAIN_RPC_URL')))
-        self.account = Account.from_key(os.getenv('BLOCKCHAIN_PRIVATE_KEY'))
-        self.contracts_dir = 'contracts'
+        self.rpc_url = os.getenv('BLOCKCHAIN_RPC_URL')
+        self.private_key = os.getenv('BLOCKCHAIN_PRIVATE_KEY')
         
-    def compile_contracts(self):
-        """Compile all Solidity contracts"""
-        print("🔨 Compiling contracts...")
+        if not self.rpc_url or not self.private_key:
+            print("Error: BLOCKCHAIN_RPC_URL and BLOCKCHAIN_PRIVATE_KEY must be set in .env file")
+            sys.exit(1)
         
-        # Compile contracts
-        compiled_contracts = compile_files([
-            f'{self.contracts_dir}/LearnTwinNFT.sol',
-            f'{self.contracts_dir}/DigitalTwinRegistry.sol'
-        ])
+        self.w3 = Web3(Web3.HTTPProvider(self.rpc_url))
+        self.account = Account.from_key(self.private_key)
         
-        return compiled_contracts
+        print(f"Connected to network: {self.w3.eth.chain_id}")
+        print(f"Deployer address: {self.account.address}")
+        print(f"Balance: {self.w3.from_wei(self.w3.eth.get_balance(self.account.address), 'ether')} ETH")
     
-    def deploy_contract(self, contract_name, compiled_contracts, *args):
-        """Deploy a single contract"""
-        print(f"🚀 Deploying {contract_name}...")
-        
-        # Get contract bytecode and ABI
-        contract_key = f'{self.contracts_dir}/{contract_name}.sol:{contract_name}'
-        contract_interface = compiled_contracts[contract_key]
-        
-        # Create contract instance
-        contract = self.w3.eth.contract(
-            abi=contract_interface['abi'],
-            bytecode=contract_interface['bin']
-        )
-        
-        # Build transaction
-        tx = contract.constructor(*args).build_transaction({
-            'from': self.account.address,
-            'gas': 3000000,
-            'gasPrice': self.w3.eth.gas_price,
-            'nonce': self.w3.eth.get_transaction_count(self.account.address)
-        })
-        
-        # Sign and send transaction
-        signed_tx = self.w3.eth.account.sign_transaction(tx, self.account.key)
-        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        
-        # Wait for confirmation
-        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
-        
-        print(f"✅ {contract_name} deployed at: {receipt.contractAddress}")
-        return receipt.contractAddress
-    
-    def save_deployment_info(self, addresses):
-        """Save deployment addresses to file"""
-        deployment_info = {
-            'network': 'sepolia',
-            'deployer': self.account.address,
-            'contracts': addresses,
-            'deployment_date': str(self.w3.eth.get_block('latest').timestamp)
-        }
-        
-        with open('deployment_info.json', 'w') as f:
-            json.dump(deployment_info, f, indent=2)
-        
-        print("📄 Deployment info saved to deployment_info.json")
-    
-    def deploy_all(self):
-        """Deploy all contracts"""
+    def compile_contract(self, contract_path: str) -> dict:
+        """Compile a Solidity contract"""
         try:
-            # Check connection
-            if not self.w3.is_connected():
-                raise Exception("❌ Cannot connect to blockchain network")
+            import solcx
             
-            print(f"🔗 Connected to network: {self.w3.eth.chain_id}")
-            print(f"👤 Deployer address: {self.account.address}")
+            # Install and use 0.8.30 for OpenZeppelin v5
+            try:
+                solcx.install_solc('0.8.30')
+                solcx.set_solc_version('0.8.30')
+                print("Using Solidity version: 0.8.30")
+            except Exception as e:
+                print(f"Warning: Could not set Solidity 0.8.30: {e}")
+                # Use latest available
+                versions = solcx.get_installed_solc_versions()
+                if versions:
+                    latest = max(versions)
+                    solcx.set_solc_version(latest)
+                    print(f"Using Solidity version: {latest}")
             
-            # Check balance
-            balance = self.w3.eth.get_balance(self.account.address)
-            balance_eth = self.w3.from_wei(balance, 'ether')
-            print(f" Balance: {balance_eth} ETH")
+            # Check if OpenZeppelin is installed
+            if not os.path.exists('node_modules/@openzeppelin/contracts'):
+                print("❌ OpenZeppelin contracts not found!")
+                print("Please run: npm install @openzeppelin/contracts")
+                sys.exit(1)
             
-            if balance_eth < 0.01:
-                raise Exception("❌ Insufficient balance for deployment")
+            # Use relative paths for Windows compatibility
+            current_dir = os.getcwd()
+            remappings = [
+                f"@openzeppelin/={os.path.join(current_dir, 'node_modules/@openzeppelin/')}",
+                f"@openzeppelin/contracts/={os.path.join(current_dir, 'node_modules/@openzeppelin/contracts/')}"
+            ]
             
-            # Compile contracts
-            compiled_contracts = self.compile_contracts()
+            print(f"Remappings: {remappings}")
             
-            # Deploy contracts
-            addresses = {}
-            
-            # Deploy LearnTwinNFT
-            addresses['LearnTwinNFT'] = self.deploy_contract(
-                'LearnTwinNFT', 
-                compiled_contracts
+            # Compile with remappings
+            compiled = solcx.compile_files(
+                [contract_path],
+                import_remappings=remappings,
+                output_values=['abi', 'bin']
             )
             
-            # Deploy DigitalTwinRegistry
-            addresses['DigitalTwinRegistry'] = self.deploy_contract(
-                'DigitalTwinRegistry', 
-                compiled_contracts
-            )
+            # Get the contract interface - handle both path separators
+            contract_name = os.path.basename(contract_path).replace('.sol', '')
             
-            # Save deployment info
-            self.save_deployment_info(addresses)
+            # Find the contract key by searching for contract name
+            contract_key = None
+            for key in compiled.keys():
+                if contract_name in key:
+                    contract_key = key
+                    break
             
-            return addresses
+            if contract_key is None:
+                print(f"❌ Contract key not found for: {contract_name}")
+                print(f"Available keys: {list(compiled.keys())}")
+                sys.exit(1)
+            
+            print(f"✅ Found contract key: {contract_key}")
+            contract_interface = compiled[contract_key]
+            
+            return {
+                'abi': contract_interface['abi'],
+                'bytecode': contract_interface['bin']
+            }
+        except ImportError:
+            print("Error: solcx not installed. Install with: pip install solcx")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error compiling contract {contract_path}: {e}")
+            print(f"Error type: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
+    
+    def deploy_contract(self, contract_name: str, contract_path: str, *args) -> str:
+        """Deploy a contract and return the address"""
+        print(f"\nDeploying {contract_name}...")
+        
+        try:
+            # Compile contract
+            contract_data = self.compile_contract(contract_path)
+            
+            # Create contract instance
+            contract = self.w3.eth.contract(abi=contract_data['abi'], bytecode=contract_data['bytecode'])
+            
+            # Build transaction
+            construct_txn = contract.constructor(*args).build_transaction({
+                'from': self.account.address,
+                'nonce': self.w3.eth.get_transaction_count(self.account.address),
+                'gas': 5000000,
+                'gasPrice': self.w3.eth.gas_price
+            })
+            
+            # Sign and send transaction
+            signed_txn = self.w3.eth.account.sign_transaction(construct_txn, self.private_key)
+            tx_hash = self.w3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            
+            # Wait for transaction receipt
+            tx_receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+            
+            contract_address = tx_receipt.contractAddress
+            print(f"✅ {contract_name} deployed at: {contract_address}")
+            print(f"Transaction hash: {tx_hash.hex()}")
+            
+            # Save ABI to file
+            abi_dir = os.path.join('contracts', 'abi')
+            os.makedirs(abi_dir, exist_ok=True)
+            
+            abi_file = os.path.join(abi_dir, f'{contract_name}.json')
+            with open(abi_file, 'w') as f:
+                json.dump(contract_data['abi'], f, indent=2)
+            
+            print(f"ABI saved to: {abi_file}")
+            
+            return contract_address
             
         except Exception as e:
-            print(f"❌ Deployment failed: {str(e)}")
-            return None
+            print(f"❌ Error deploying {contract_name}: {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
+    
+    def deploy_all_contracts(self):
+        """Deploy all contracts"""
+        print("🚀 Starting contract deployment...")
+        
+        contracts_dir = 'contracts'
+        deployed_addresses = {}
+        
+        # Deploy ModuleProgressNFT (ERC-1155)
+        module_progress_path = os.path.join(contracts_dir, 'ModuleProgressNFT.sol')
+        if os.path.exists(module_progress_path):
+            deployed_addresses['MODULE_PROGRESS_CONTRACT_ADDRESS'] = self.deploy_contract(
+                'ModuleProgressNFT',
+                module_progress_path
+            )
+        
+        # Deploy LearningAchievementNFT (ERC-721)
+        achievement_path = os.path.join(contracts_dir, 'LearningAchievementNFT.sol')
+        if os.path.exists(achievement_path):
+            deployed_addresses['ACHIEVEMENT_CONTRACT_ADDRESS'] = self.deploy_contract(
+                'LearningAchievementNFT',
+                achievement_path
+            )
+        
+        # Deploy DigitalTwinRegistry
+        registry_path = os.path.join(contracts_dir, 'DigitalTwinRegistry.sol')
+        if os.path.exists(registry_path):
+            deployed_addresses['REGISTRY_CONTRACT_ADDRESS'] = self.deploy_contract(
+                'DigitalTwinRegistry',
+                registry_path
+            )
+        
+        # Save deployment addresses
+        self.save_deployment_addresses(deployed_addresses)
+        
+        print("\n🎉 All contracts deployed successfully!")
+        return deployed_addresses
+    
+    def save_deployment_addresses(self, addresses: dict):
+        """Save deployment addresses to file"""
+        deployment_file = 'deployment_addresses.json'
+        
+        deployment_data = {
+            'network': self.w3.eth.chain_id,
+            'deployer': self.account.address,
+            'contracts': addresses,
+            'timestamp': self.w3.eth.get_block('latest').timestamp
+        }
+        
+        with open(deployment_file, 'w') as f:
+            json.dump(deployment_data, f, indent=2)
+        
+        print(f"\n📝 Deployment addresses saved to: {deployment_file}")
+        
+        # Generate .env template
+        env_template = "# Blockchain Contract Addresses\n"
+        for key, address in addresses.items():
+            env_template += f"{key}={address}\n"
+        
+        env_file = 'deployment.env'
+        with open(env_file, 'w') as f:
+            f.write(env_template)
+        
+        print(f"📝 Environment template saved to: {env_file}")
 
 def main():
-    print("🚀 Starting contract deployment...")
+    print("LearnTwinChain Smart Contract Deployment")
+    print("=" * 50)
     
     deployer = ContractDeployer()
-    addresses = deployer.deploy_all()
+    deployed_addresses = deployer.deploy_all_contracts()
     
-    if addresses:
-        print("\n🎉 Deployment successful!")
-        print("Contract addresses:")
-        for name, address in addresses.items():
-            print(f"  {name}: {address}")
-        
-        print("\n📝 Update your .env file with these addresses:")
-        print(f"NFT_CONTRACT_ADDRESS={addresses['LearnTwinNFT']}")
-        print(f"REGISTRY_CONTRACT_ADDRESS={addresses['DigitalTwinRegistry']}")
-    else:
-        print("❌ Deployment failed!")
+    print("\n🎉 Deployment Summary:")
+    for contract_name, address in deployed_addresses.items():
+        print(f"  {contract_name}: {address}")
 
 if __name__ == "__main__":
     main()

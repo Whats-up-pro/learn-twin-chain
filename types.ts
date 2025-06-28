@@ -1,4 +1,3 @@
-
 export interface LearnerProfile {
   did: string;
   name: string;
@@ -116,4 +115,134 @@ export enum LoadingState {
   LOADING = 'loading',
   SUCCEEDED = 'succeeded',
   FAILED = 'failed',
+}
+
+// New types for Employer and Teacher roles
+export enum UserRole {
+  LEARNER = 'learner',
+  TEACHER = 'teacher',
+  EMPLOYER = 'employer'
+}
+
+export interface User {
+  id: string;
+  did: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
+export interface Employer {
+  id: string;
+  did: string;
+  name: string;
+  email: string;
+  company: string;
+  position: string;
+  avatarUrl?: string;
+  verified: boolean;
+}
+
+export interface Teacher {
+  id: string;
+  did: string;
+  name: string;
+  email: string;
+  institution: string;
+  subjects: string[];
+  avatarUrl?: string;
+  verified: boolean;
+  rating: number;
+}
+
+export interface JobPosting {
+  id: string;
+  title: string;
+  company: string;
+  description: string;
+  requirements: string[];
+  skills: string[];
+  location: string;
+  salary?: string;
+  type: 'full-time' | 'part-time' | 'contract' | 'internship';
+  postedAt: string;
+  employerId: string;
+  isActive: boolean;
+}
+
+export interface Course {
+  id: string;
+  title: string;
+  description: string;
+  modules: LearningModule[];
+  enrolledLearners: number;
+  createdAt: string;
+  teacherId: string;
+  isPublished: boolean;
+}
+
+export interface Application {
+  id: string;
+  jobId: string;
+  learnerId: string;
+  learnerDid: string;
+  status: 'pending' | 'reviewed' | 'accepted' | 'rejected';
+  appliedDate: string;
+  digitalTwin?: DigitalTwin;
+  coverLetter?: string;
+}
+
+export interface Enrollment {
+  id: string;
+  courseId: string;
+  learnerId: string;
+  learnerDid: string;
+  status: 'enrolled' | 'completed' | 'dropped';
+  enrolledDate: string;
+  completedDate?: string;
+  progress: number; // 0-1
+  digitalTwin?: DigitalTwin;
+}
+
+export interface Candidate {
+  id: string;
+  learnerDid: string;
+  name: string;
+  avatarUrl?: string;
+  digitalTwin: DigitalTwin;
+  matchScore: number; // 0-100
+  appliedAt: string;
+  status: 'pending' | 'reviewed' | 'shortlisted' | 'rejected' | 'hired';
+}
+
+export interface EmployerDashboard {
+  totalJobPostings: number;
+  activeJobPostings: number;
+  totalCandidates: number;
+  recentApplications: Candidate[];
+  topSkills: { skill: string; count: number }[];
+}
+
+export interface LearnerProgress {
+  learnerId: string;
+  learnerName: string;
+  avatarUrl?: string;
+  digitalTwin: DigitalTwin;
+  courseProgress: {
+    courseId: string;
+    completedModules: number;
+    totalModules: number;
+    averageScore: number;
+    lastActivity: string;
+  };
+}
+
+export interface TeacherDashboard {
+  totalCourses: number;
+  totalLearners: number;
+  activeLearners: number;
+  recentLearnerActivity: LearnerProgress[];
+  popularModules: { moduleId: string; title: string; completionRate: number }[];
 }

@@ -110,3 +110,49 @@ export const simulateFetchTwinByDid = async (did: string, expectedTwinData: Digi
   toast.error(`No Digital Twin found for DID: ${did} (Simulated).`, { id: 'sim-fetch-did' });
   return null;
 }
+
+// API functions for backend integration
+export const fetchStudentData = async (did: string) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/v1/learning/students/${did}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch student data');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching student data:', error);
+    throw error;
+  }
+};
+
+export const fetchAllStudents = async () => {
+  try {
+    const response = await fetch('http://localhost:8000/api/v1/learning/students');
+    if (!response.ok) {
+      throw new Error('Failed to fetch students');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching students:', error);
+    throw error;
+  }
+};
+
+export const updateDigitalTwinData = async (did: string, updates: any) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/v1/twins/${did}/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update digital twin');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating digital twin:', error);
+    throw error;
+  }
+};

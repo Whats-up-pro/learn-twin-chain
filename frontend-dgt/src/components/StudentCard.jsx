@@ -7,6 +7,10 @@ import BlockchainNFTTable from './BlockchainNFTTable';
 
 export default function StudentCard({ student }) {
   const [open, setOpen] = useState(false);
+  
+  // Debug logging
+  console.log('StudentCard received student data:', student);
+  
   const profile = student.profile || {};
   const learningState = student.learning_state || {};
   const skillProfile = student.skill_profile || {};
