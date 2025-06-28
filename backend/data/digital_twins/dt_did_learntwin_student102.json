@@ -1,0 +1,26 @@
+{
+  "twin_id": "did:learntwin:student102",
+  "owner_did": "did:learner:student102",
+  "latest_cid": null,
+  "profile": {
+    "full_name": "testttt",
+    "birth_year": null,
+    "institution": "BKU",
+    "program": "Computer Science",
+    "enrollment_date": "2025-06-28"
+  },
+  "learning_state": {
+    "progress": {},
+    "checkpoint_history": [],
+    "current_modules": []
+  },
+  "skill_profile": {
+    "programming_languages": {},
+    "soft_skills": {}
+  },
+  "interaction_logs": {
+    "last_llm_session": null,
+    "most_asked_topics": [],
+    "preferred_learning_style": "code-first"
+  }
+}
