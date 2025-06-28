@@ -763,7 +763,7 @@ const TeacherDashboardPage: React.FC = () => {
         title="Student Details"
         size="full"
       >
-        <div className="p-8 max-h-[85vh] overflow-y-auto">
+        <div className="p-8">
           {selectedLearner && (
             <div className="space-y-8">
               {/* Header Section */}
