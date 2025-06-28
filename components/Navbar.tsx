@@ -1,45 +1,46 @@
-<<<<<<< HEAD
-import React from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
-=======
 import React, { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
->>>>>>> employer-teacher
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { APP_NAME } from '../constants';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole } from '../types';
+import toast from 'react-hot-toast';
 
 interface NavbarProps {
-  onToggleSidebar?: () => void; // Optional: if you add a sidebar later
+  onToggleSidebar?: () => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
-<<<<<<< HEAD
   const { learnerProfile, logout } = useAppContext();
   const navigate = useNavigate();
+  const [currentRole, setCurrentRole] = useState<UserRole>(UserRole.LEARNER);
+  
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
 
   const avatarUrl = learnerProfile && learnerProfile.avatarUrl && learnerProfile.avatarUrl.trim() !== ''
     ? learnerProfile.avatarUrl
     : 'https://ui-avatars.com/api/?background=fff&color=888&name=U';
+  
   const displayName = learnerProfile && learnerProfile.name ? learnerProfile.name : 'User';
-=======
-  const { learnerProfile } = useAppContext();
-  const [currentRole, setCurrentRole] = useState<UserRole>(UserRole.LEARNER);
->>>>>>> employer-teacher
 
   const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
       isActive ? 'bg-sky-600 text-white' : 'text-sky-100 hover:bg-sky-500 hover:text-white'
     }`;
 
-<<<<<<< HEAD
   const handleLogout = () => {
     console.log('Logout button clicked');
     logout();
     console.log('Logout function called, navigating to login');
     navigate('/login', { replace: true });
-=======
+  };
+
+  const handleCopyAddress = () => {
+    if (learnerProfile?.address) {
+      navigator.clipboard.writeText(learnerProfile.address);
+      toast.success('Address copied to clipboard!');
+    }
+  };
+
   const getRoleBasedNavLinks = () => {
     switch (currentRole) {
       case UserRole.EMPLOYER:
@@ -63,10 +64,10 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
           <>
             <NavLink to="/dashboard" className={navLinkClasses}>Dashboard</NavLink>
             <NavLink to="/tutor" className={navLinkClasses}>AI Tutor</NavLink>
+            <NavLink to="/modules" className={navLinkClasses}>Modules</NavLink>
           </>
         );
     }
->>>>>>> employer-teacher
   };
 
   return (
@@ -90,36 +91,59 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             </Link>
           </div>
           
-          {/* Role Selector */}
-          <div className="hidden md:flex items-center space-x-2 mr-4">
-            <select
-              value={currentRole}
-              onChange={(e) => setCurrentRole(e.target.value as UserRole)}
-              className="bg-sky-600 text-white text-sm rounded px-2 py-1 border border-sky-500"
-            >
-              <option value={UserRole.LEARNER}>Learner</option>
-              <option value={UserRole.TEACHER}>Teacher</option>
-              <option value={UserRole.EMPLOYER}>Employer</option>
-            </select>
-          </div>
+          {/* Role Selector - chỉ hiển thị khi đã login */}
+          {isLoggedIn && (
+            <div className="hidden md:flex items-center space-x-2 mr-4">
+              <select
+                value={currentRole}
+                onChange={(e) => setCurrentRole(e.target.value as UserRole)}
+                className="bg-sky-600 text-white text-sm rounded px-2 py-1 border border-sky-500"
+              >
+                <option value={UserRole.LEARNER}>Learner</option>
+                <option value={UserRole.TEACHER}>Teacher</option>
+                <option value={UserRole.EMPLOYER}>Employer</option>
+              </select>
+            </div>
+          )}
 
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
-              {getRoleBasedNavLinks()}
+              {isLoggedIn ? getRoleBasedNavLinks() : (
+                <>
+                  <NavLink to="/login" className={navLinkClasses}>Login</NavLink>
+                  <NavLink to="/register" className={navLinkClasses}>Register</NavLink>
+                </>
+              )}
             </div>
           </div>
           
           <div className="flex items-center">
             {isLoggedIn ? (
               <>
-                <Link to="/profile" className="flex items-center text-sky-100 hover:text-white">
-                  <img 
-                    src={avatarUrl}
-                    alt={displayName}
-                    className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
-                  />
-                  <span className="hidden sm:inline text-sm">{displayName}</span>
-                </Link>
+                {/* User Profile Section */}
+                <div className="flex items-center text-sky-100 hover:text-white">
+                  <Link to="/profile" className="flex items-center">
+                    <img 
+                      src={avatarUrl}
+                      alt={displayName}
+                      className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
+                    />
+                    <div className="hidden sm:block text-sm">
+                      <div>{displayName}</div>
+                      {learnerProfile?.address && (
+                        <div 
+                          className="text-xs text-sky-200 cursor-pointer hover:text-white"
+                          onClick={handleCopyAddress}
+                          title="Click to copy address"
+                        >
+                          {learnerProfile.address.substring(0, 6)}...{learnerProfile.address.substring(38)}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                </div>
+                
+                {/* Logout Button */}
                 <button
                   onClick={handleLogout}
                   className="ml-4 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 transition text-sm"
