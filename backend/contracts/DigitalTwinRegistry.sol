@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol"; // Or use a DID-based access control
 
@@ -24,6 +24,8 @@ contract DigitalTwinRegistry is Ownable {
         string ipfsCid,
         uint256 timestamp
     );
+
+    constructor() Ownable(msg.sender) {}
 
     // For this example, only contract owner can log.
     // In a real DID system, this would be restricted to the DID controller.
