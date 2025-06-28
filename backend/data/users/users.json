@@ -1,20 +1,32 @@
 [
   {
+    "id": "did:learntwin:student099",
     "did": "did:learntwin:student099",
     "name": "testaccount",
+    "email": "testaccount@example.com",
+    "role": "learner",
     "password": "test1234",
-    "avatarUrl": ""
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z"
   },
   {
+    "id": "did:learntwin:student100",
     "did": "did:learntwin:student100",
     "name": "test2",
+    "email": "test2@example.com",
+    "role": "teacher",
     "password": "test1234",
-    "avatarUrl": ""
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z"
   },
   {
+    "id": "did:learntwin:student101",
     "did": "did:learntwin:student101",
     "name": "test3",
+    "email": "test3@example.com",
+    "role": "employer",
     "password": "test1234",
-    "avatarUrl": ""
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z"
   }
 ]

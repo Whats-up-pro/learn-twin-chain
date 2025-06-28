@@ -23,3 +23,4 @@ web3>=6.0.0,<7.0.0
 eth-account>=0.11.0
 py-solc-x>=1.1.1
 eth-tester[py-evm]>=0.8.0b1
+python-multipart

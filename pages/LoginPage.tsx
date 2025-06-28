@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
+import { UserRole } from '../types';
 
 const LoginPage: React.FC = () => {
-  const { updateLearnerProfile } = useAppContext();
+  const { updateLearnerProfile, setRole } = useAppContext();
   const [did, setDid] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -40,17 +41,20 @@ const LoginPage: React.FC = () => {
       }
       
       const user = await res.json();
-      
-      // Update context with user profile
+      const userRole: UserRole = user.role || UserRole.LEARNER;
       updateLearnerProfile({
         did: user.did,
         name: user.name,
         avatarUrl: user.avatarUrl || ''
-      });
-      
-      // Navigate to dashboard
-      navigate('/dashboard', { replace: true });
-      
+      }, userRole);
+      setRole(userRole);
+      if (userRole === UserRole.TEACHER) {
+        navigate('/teacher', { replace: true });
+      } else if (userRole === UserRole.EMPLOYER) {
+        navigate('/employer', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
       console.error('Login error:', err);
       setError('Network error! Please check your connection.');

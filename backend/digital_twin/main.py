@@ -161,7 +161,12 @@ async def login(user: UserLogin):
     found = next((u for u in users if u['did'] == user.did and u['password'] == user.password), None)
     if not found:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {"did": found['did'], "name": found['name'], "avatarUrl": found.get('avatarUrl', '')}
+    return {
+        "did": found['did'],
+        "name": found['name'],
+        "avatarUrl": found.get('avatarUrl', ''),
+        "role": found.get('role', 'learner')
+    }
 
 @app.get("/api/v1/learning/students")
 async def get_all_students():

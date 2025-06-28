@@ -1,73 +1,33 @@
-<<<<<<< HEAD
 import React from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
-=======
-import React, { useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
->>>>>>> employer-teacher
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { APP_NAME } from '../constants';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole } from '../types';
 
 interface NavbarProps {
-  onToggleSidebar?: () => void; // Optional: if you add a sidebar later
+  onToggleSidebar?: () => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
-<<<<<<< HEAD
-  const { learnerProfile, logout } = useAppContext();
+  const { learnerProfile, logout, role } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
 
   const avatarUrl = learnerProfile && learnerProfile.avatarUrl && learnerProfile.avatarUrl.trim() !== ''
     ? learnerProfile.avatarUrl
     : 'https://ui-avatars.com/api/?background=fff&color=888&name=U';
   const displayName = learnerProfile && learnerProfile.name ? learnerProfile.name : 'User';
-=======
-  const { learnerProfile } = useAppContext();
-  const [currentRole, setCurrentRole] = useState<UserRole>(UserRole.LEARNER);
->>>>>>> employer-teacher
 
-  const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-    `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
-      isActive ? 'bg-sky-600 text-white' : 'text-sky-100 hover:bg-sky-500 hover:text-white'
-    }`;
-
-<<<<<<< HEAD
   const handleLogout = () => {
-    console.log('Logout button clicked');
     logout();
-    console.log('Logout function called, navigating to login');
     navigate('/login', { replace: true });
-=======
-  const getRoleBasedNavLinks = () => {
-    switch (currentRole) {
-      case UserRole.EMPLOYER:
-        return (
-          <>
-            <NavLink to="/employer" className={navLinkClasses}>Employer Dashboard</NavLink>
-            <NavLink to="/employer/jobs" className={navLinkClasses}>Job Postings</NavLink>
-            <NavLink to="/employer/candidates" className={navLinkClasses}>Candidates</NavLink>
-          </>
-        );
-      case UserRole.TEACHER:
-        return (
-          <>
-            <NavLink to="/teacher" className={navLinkClasses}>Teacher Dashboard</NavLink>
-            <NavLink to="/teacher/courses" className={navLinkClasses}>My Courses</NavLink>
-            <NavLink to="/teacher/learners" className={navLinkClasses}>Learners</NavLink>
-          </>
-        );
-      default:
-        return (
-          <>
-            <NavLink to="/dashboard" className={navLinkClasses}>Dashboard</NavLink>
-            <NavLink to="/tutor" className={navLinkClasses}>AI Tutor</NavLink>
-          </>
-        );
-    }
->>>>>>> employer-teacher
   };
+
+  const navLinkClasses = (path: string) =>
+    `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
+      location.pathname === path ? 'bg-sky-600 text-white' : 'text-sky-100 hover:bg-sky-500 hover:text-white'
+    }`;
 
   return (
     <nav className="bg-sky-700 shadow-lg">
@@ -77,7 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             {onToggleSidebar && (
               <button
                 onClick={onToggleSidebar}
-                className="mr-2 text-sky-100 hover:text-white focus:outline-none md:hidden" 
+                className="mr-2 text-sky-100 hover:text-white focus:outline-none md:hidden"
                 aria-label="Toggle sidebar"
               >
                 <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -88,32 +48,19 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             <Link to="/dashboard" className="flex-shrink-0 text-white text-xl font-bold">
               {APP_NAME}
             </Link>
+            {/* Student navigation */}
+            {role === UserRole.LEARNER && isLoggedIn && (
+              <div className="ml-8 flex items-center space-x-2">
+                <Link to="/dashboard" className={navLinkClasses('/dashboard')}>Main Dashboard</Link>
+                <Link to="/tutor" className={navLinkClasses('/tutor')}>AI Tutor</Link>
+              </div>
+            )}
           </div>
-          
-          {/* Role Selector */}
-          <div className="hidden md:flex items-center space-x-2 mr-4">
-            <select
-              value={currentRole}
-              onChange={(e) => setCurrentRole(e.target.value as UserRole)}
-              className="bg-sky-600 text-white text-sm rounded px-2 py-1 border border-sky-500"
-            >
-              <option value={UserRole.LEARNER}>Learner</option>
-              <option value={UserRole.TEACHER}>Teacher</option>
-              <option value={UserRole.EMPLOYER}>Employer</option>
-            </select>
-          </div>
-
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
-              {getRoleBasedNavLinks()}
-            </div>
-          </div>
-          
           <div className="flex items-center">
             {isLoggedIn ? (
               <>
                 <Link to="/profile" className="flex items-center text-sky-100 hover:text-white">
-                  <img 
+                  <img
                     src={avatarUrl}
                     alt={displayName}
                     className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
@@ -129,8 +76,8 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               </>
             ) : (
               <div className="flex items-center text-sky-100">
-                <img 
-                  src={'https://picsum.photos/seed/defaultuser/40/40'} 
+                <img
+                  src={'https://picsum.photos/seed/defaultuser/40/40'}
                   alt="Guest"
                   className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
                 />

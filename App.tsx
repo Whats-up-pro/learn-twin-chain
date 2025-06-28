@@ -7,12 +7,27 @@ import AiTutorPage from './pages/AiTutorPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
+import TeacherDashboardPage from './pages/TeacherDashboardPage';
+import EmployerDashboardPage from './pages/EmployerDashboardPage';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
+import { UserRole } from './types';
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: UserRole[] }> = ({ children, allowedRoles }) => {
+  const { role } = useAppContext();
+  if (!role) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(role)) {
+    // Redirect về dashboard đúng role
+    if (role === UserRole.TEACHER) return <Navigate to="/teacher" replace />;
+    if (role === UserRole.EMPLOYER) return <Navigate to="/employer" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
 
 const AppContent: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { learnerProfile, updateLearnerProfile } = useAppContext();
+  const { learnerProfile, updateLearnerProfile, role } = useAppContext();
   const location = useLocation();
   
   // Check localStorage on mount to restore session
@@ -39,24 +54,41 @@ const AppContent: React.FC = () => {
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
         <Routes>
           <Route path="/login" element={
-            isLoggedIn ? <Navigate to="/dashboard" replace /> : <LoginPage />
+            isLoggedIn ? <Navigate to={role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard"} replace /> : <LoginPage />
           } />
           <Route path="/register" element={
-            isLoggedIn ? <Navigate to="/dashboard" replace /> : <RegisterPage />
+            isLoggedIn ? <Navigate to={role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard"} replace /> : <RegisterPage />
           } />
-          <Route path="/" element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} />} />
+          <Route path="/" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/login"} />} />
           <Route path="/dashboard" element={
-            isLoggedIn ? <DashboardPage /> : <Navigate to="/login" replace />
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <DashboardPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/teacher" element={
+            <ProtectedRoute allowedRoles={[UserRole.TEACHER]}>
+              <TeacherDashboardPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/employer" element={
+            <ProtectedRoute allowedRoles={[UserRole.EMPLOYER]}>
+              <EmployerDashboardPage />
+            </ProtectedRoute>
           } />
           <Route path="/module/:moduleId" element={
-            isLoggedIn ? <ModulePage /> : <Navigate to="/login" replace />
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <ModulePage />
+            </ProtectedRoute>
           } />
           <Route path="/tutor" element={
-            isLoggedIn ? <AiTutorPage /> : <Navigate to="/login" replace />
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <AiTutorPage />
+            </ProtectedRoute>
           } />
           <Route path="/profile" element={
             isLoggedIn ? <ProfilePage /> : <Navigate to="/login" replace />
           } />
+          <Route path="*" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/login"} />} />
         </Routes>
       </main>
       <footer className="bg-slate-800 text-white text-center p-4 shadow-md">
