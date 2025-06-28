@@ -1,6 +1,6 @@
 {
-  "twin_id": "did:learntwin:student100",
-  "owner_did": "did:learner:student100",
+  "twin_id": "did:learntwin:teacher001",
+  "owner_did": "did:learner:teacher001",
   "latest_cid": null,
   "profile": {
     "full_name": "test2",

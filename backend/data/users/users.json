@@ -10,8 +10,8 @@
     "createdAt": "2024-06-28T00:00:00Z"
   },
   {
-    "id": "did:learntwin:student100",
-    "did": "did:learntwin:student100",
+    "id": "did:learntwin:teacher001",
+    "did": "did:learntwin:teacher001",
     "name": "test2",
     "email": "test2@example.com",
     "role": "teacher",
@@ -20,8 +20,8 @@
     "createdAt": "2024-06-28T00:00:00Z"
   },
   {
-    "id": "did:learntwin:student101",
-    "did": "did:learntwin:student101",
+    "id": "did:learntwin:employer001",
+    "did": "did:learntwin:employer001",
     "name": "test3",
     "email": "test3@example.com",
     "role": "employer",

@@ -6,7 +6,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
@@ -38,30 +38,59 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    '2xl': 'max-w-4xl',
+    'full': 'max-w-7xl',
   };
 
   return (
-    <div 
-      className={`fixed inset-0 bg-black flex justify-center items-center z-50 p-4 transition-opacity duration-300 ease-in-out ${internalVisible ? 'bg-opacity-50 backdrop-blur-sm opacity-100' : 'bg-opacity-0 backdrop-filter-none opacity-0 pointer-events-none'}`}
-      onClick={onClose}
-    >
-      <div
-        className={`bg-white rounded-lg shadow-xl p-6 relative ${sizeClasses[size]} w-full transform transition-all duration-300 ease-in-out ${internalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
-      >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-sky-700">{title}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="Close modal"
+    <>
+      {/* Backdrop phủ toàn bộ màn hình, chỉ làm mờ không có màu đen */}
+      {isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'transparent',
+            backdropFilter: 'blur(4px)',
+            zIndex: 99999,
+            transition: 'opacity 0.3s',
+            opacity: internalVisible ? 1 : 0,
+            pointerEvents: internalVisible ? 'auto' : 'none',
+          }}
+          onClick={onClose}
+        />
+      )}
+      {/* Modal content */}
+      {isOpen && (
+        <div
+          className={`fixed inset-0 flex justify-center items-center z-[100000]`}
+          style={{ pointerEvents: internalVisible ? 'auto' : 'none' }}
+        >
+          <div
+            className={`bg-white rounded-xl shadow-2xl p-8 relative ${sizeClasses[size]} w-full transform transition-all duration-300 ease-in-out ${internalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxHeight: '90vh', overflowY: 'auto' }}
           >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-sky-700">{title}</h2>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
+                aria-label="Close modal"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div>{children}</div>
+          </div>
         </div>
-        <div>{children}</div>
-      </div>
-    </div>
+      )}
+    </>
   );
 };
 

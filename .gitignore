@@ -38,3 +38,7 @@ myenv/
 # python cache
 **/*.pyc
 /.vs
+
+# backend directories and files
+backend/venv/
+backend/logs/

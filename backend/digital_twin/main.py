@@ -1,6 +1,6 @@
 import os
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from contextlib import asynccontextmanager
@@ -28,6 +28,13 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     did: str
     password: str
+
+class TeacherFeedback(BaseModel):
+    student_did: str
+    teacher_id: str
+    content: str
+    score: float = None
+    created_at: str = None
 
 def read_users():
     if not os.path.exists(USERS_FILE):
@@ -271,6 +278,35 @@ async def sync_users_and_twins():
     except Exception as e:
         logger.error(f"Error syncing users and twins: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/api/v1/feedback")
+async def add_teacher_feedback(feedback: TeacherFeedback = Body(...)):
+    # Xác định file twin
+    if feedback.student_did.startswith('did:learntwin:'):
+        identifier = feedback.student_did.replace('did:learntwin:', '')
+    else:
+        identifier = feedback.student_did
+    twin_filename = f"dt_did_learntwin_{identifier}.json"
+    twin_filepath = os.path.join(DIGITAL_TWINS_DIR, twin_filename)
+    if not os.path.exists(twin_filepath):
+        raise HTTPException(status_code=404, detail="Digital Twin not found")
+    # Đọc file twin
+    with open(twin_filepath, 'r', encoding='utf-8') as f:
+        twin_data = json.load(f)
+    # Thêm feedback
+    if 'teacher_feedback' not in twin_data:
+        twin_data['teacher_feedback'] = []
+    feedback_entry = {
+        "teacher_id": feedback.teacher_id,
+        "content": feedback.content,
+        "score": feedback.score,
+        "created_at": feedback.created_at or datetime.now().isoformat()
+    }
+    twin_data['teacher_feedback'].append(feedback_entry)
+    # Ghi lại file
+    with open(twin_filepath, 'w', encoding='utf-8') as f:
+        json.dump(twin_data, f, ensure_ascii=False, indent=2)
+    return {"message": "Feedback added successfully", "feedback": feedback_entry}
 
 def main():
     try:
