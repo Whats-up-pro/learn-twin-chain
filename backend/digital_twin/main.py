@@ -7,11 +7,19 @@ from contextlib import asynccontextmanager
 from digital_twin.api.twin_api import router as twin_router
 from digital_twin.api.learning_api import router as learning_router
 from digital_twin.api.analytics_api import router as analytics_router
+from digital_twin.api.blockchain_api import router as blockchain_router
 from .config.config import config
 from .utils import Logger
 from pydantic import BaseModel
 import json
 from datetime import datetime
+import sys
+
+# Add backend directory to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from digital_twin.services.learning_service import LearningService
+from digital_twin.services.analytics_service import AnalyticsService
 
 # Khởi tạo logger
 logger = Logger("main")
@@ -111,8 +119,8 @@ async def lifespan(app: FastAPI):
 # Khởi tạo FastAPI app
 app = FastAPI(
     title="LearnTwinChain",
-    description="API for Digital Twin in Education",
-    version="1.0.0",
+    description="API for managing learning digital twins with blockchain integration",
+    version="2.0.0",
     openapi_url=f"{config.API_V1_STR}/openapi.json",
     lifespan=lifespan
 )
@@ -120,7 +128,7 @@ app = FastAPI(
 # Cấu hình CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Cho phép tất cả origins trong development
+    allow_origins=["http://localhost:5180"],  # Chỉ cho phép localhost:5180
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -130,14 +138,42 @@ app.add_middleware(
 app.include_router(twin_router, prefix="/api/v1")
 app.include_router(learning_router, prefix="/api/v1/learning")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
+app.include_router(blockchain_router, prefix="/api/v1/blockchain")
+
+# Initialize services
+learning_service = LearningService()
+analytics_service = AnalyticsService()
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to LearnTwinChain API"}
+    return {
+        "message": "LearnTwinChain Digital Twin API",
+        "version": "2.0.0",
+        "features": [
+            "Digital Twin Management",
+            "Learning Analytics", 
+            "Blockchain Integration",
+            "ERC-1155 Module Progress NFTs",
+            "ERC-721 Achievement NFTs",
+            "ZKP Certificate Generation"
+        ],
+        "endpoints": {
+            "learning": "/api/v1/learning",
+            "analytics": "/api/v1/analytics", 
+            "blockchain": "/api/v1/blockchain"
+        }
+    }
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "services": {
+            "learning": "active",
+            "analytics": "active",
+            "blockchain": "active"
+        }
+    }
 
 @app.post("/register")
 async def register(user: UserRegister):
@@ -266,6 +302,13 @@ async def sync_users_and_twins():
     except Exception as e:
         logger.error(f"Error syncing users and twins: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"error": f"Internal server error: {str(exc)}"}
+    )
 
 def main():
     try:
