@@ -12,7 +12,7 @@ from .config.config import config
 from .utils import Logger
 from pydantic import BaseModel
 import json
-from datetime import datetime
+from datetime import datetime   
 import sys
 
 # Add backend directory to path
@@ -32,6 +32,7 @@ class UserRegister(BaseModel):
     name: str
     password: str
     avatarUrl: str = ""
+    address: str = ""   #add address to user
 
 class UserLogin(BaseModel):
     did: str
@@ -50,7 +51,7 @@ def write_users(users):
     with open(USERS_FILE, 'w', encoding='utf-8') as f:
         json.dump(users, f, ensure_ascii=False, indent=2)
 
-def create_digital_twin_file(did: str, name: str):
+def create_digital_twin_file(did: str, name: str, address: str = ""):
     """Tạo file Digital Twin mới cho user đăng ký"""
     try:
         # Đảm bảo thư mục tồn tại
@@ -71,6 +72,7 @@ def create_digital_twin_file(did: str, name: str):
         
         # Tạo dữ liệu Digital Twin mẫu
         digital_twin_data = {
+            "address": address,
             "twin_id": twin_id,
             "owner_did": f"did:learner:{identifier}",
             "latest_cid": None,
@@ -180,13 +182,38 @@ async def register(user: UserRegister):
     users = read_users()
     if any(u['did'] == user.did for u in users):
         raise HTTPException(status_code=409, detail="User already exists")
+
+    if not user.address:
+        # Sử dụng Hardhat test accounts
+        hardhat_accounts = [
+            "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+            "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+            "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+            "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+            "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65"
+        ]
+        
+        # Tìm account chưa được sử dụng
+        used_addresses = [u.get('address', '') for u in users]
+        available_address = None
+        for addr in hardhat_accounts:
+            if addr not in used_addresses:
+                available_address = addr
+                break
+        
+        if available_address:
+            user.address = available_address
+        else:
+            # Fallback: tạo address ngẫu nhiên
+            import secrets
+            user.address = f"0x{secrets.token_hex(20)}"
     
     # Thêm user vào danh sách
     users.append(user.dict())
     write_users(users)
     
     # Tạo file Digital Twin
-    if create_digital_twin_file(user.did, user.name):
+    if create_digital_twin_file(user.did, user.name, user.address):
         return {"message": "Registered successfully and Digital Twin created"}
     else:
         return {"message": "Registered successfully but failed to create Digital Twin"}
