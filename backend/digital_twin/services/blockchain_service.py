@@ -1,4 +1,6 @@
 # backend/digital_twin/services/blockchain_service.py
+from blockchain_utils import BlockchainManager
+from typing import Dict, Any, Optional
 import os
 import json
 import time

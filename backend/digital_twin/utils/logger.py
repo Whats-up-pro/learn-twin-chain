@@ -5,6 +5,11 @@ from datetime import datetime
 
 class Logger:
     def __init__(self, name: str):
+        # Tạo thư mục logs nếu chưa tồn tại
+        log_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, f'digital_twin_{datetime.now().strftime("%Y%m%d")}.log')
+
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.INFO)
         
@@ -19,9 +24,7 @@ class Logger:
         self.logger.addHandler(console_handler)
         
         # Handler cho file
-        file_handler = logging.FileHandler(
-            f'logs/digital_twin_{datetime.now().strftime("%Y%m%d")}.log'
-        )
+        file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
     

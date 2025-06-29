@@ -1,6 +1,6 @@
 import os
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from contextlib import asynccontextmanager
@@ -8,6 +8,7 @@ from digital_twin.api.twin_api import router as twin_router
 from digital_twin.api.learning_api import router as learning_router
 from digital_twin.api.analytics_api import router as analytics_router
 from digital_twin.api.blockchain_api import router as blockchain_router
+from digital_twin.api.ipfs_api import router as ipfs_router
 from .config.config import config
 from .utils import Logger
 from pydantic import BaseModel
@@ -36,6 +37,13 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     did: str
     password: str
+
+class TeacherFeedback(BaseModel):
+    student_did: str
+    teacher_id: str
+    content: str
+    score: float = None
+    created_at: str = None
 
 def read_users():
     if not os.path.exists(USERS_FILE):
@@ -138,11 +146,7 @@ app.add_middleware(
 app.include_router(twin_router, prefix="/api/v1")
 app.include_router(learning_router, prefix="/api/v1/learning")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
-app.include_router(blockchain_router, prefix="/api/v1/blockchain")
-
-# Initialize services
-learning_service = LearningService()
-analytics_service = AnalyticsService()
+app.include_router(ipfs_router, prefix="/api/v1/ipfs")
 
 @app.get("/")
 async def root():
@@ -197,7 +201,12 @@ async def login(user: UserLogin):
     found = next((u for u in users if u['did'] == user.did and u['password'] == user.password), None)
     if not found:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    return {"did": found['did'], "name": found['name'], "avatarUrl": found.get('avatarUrl', '')}
+    return {
+        "did": found['did'],
+        "name": found['name'],
+        "avatarUrl": found.get('avatarUrl', ''),
+        "role": found.get('role', 'learner')
+    }
 
 @app.get("/api/v1/learning/students")
 async def get_all_students():
@@ -303,12 +312,34 @@ async def sync_users_and_twins():
         logger.error(f"Error syncing users and twins: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    return JSONResponse(
-        status_code=500,
-        content={"error": f"Internal server error: {str(exc)}"}
-    )
+@app.post("/api/v1/feedback")
+async def add_teacher_feedback(feedback: TeacherFeedback = Body(...)):
+    # Xác định file twin
+    if feedback.student_did.startswith('did:learntwin:'):
+        identifier = feedback.student_did.replace('did:learntwin:', '')
+    else:
+        identifier = feedback.student_did
+    twin_filename = f"dt_did_learntwin_{identifier}.json"
+    twin_filepath = os.path.join(DIGITAL_TWINS_DIR, twin_filename)
+    if not os.path.exists(twin_filepath):
+        raise HTTPException(status_code=404, detail="Digital Twin not found")
+    # Đọc file twin
+    with open(twin_filepath, 'r', encoding='utf-8') as f:
+        twin_data = json.load(f)
+    # Thêm feedback
+    if 'teacher_feedback' not in twin_data:
+        twin_data['teacher_feedback'] = []
+    feedback_entry = {
+        "teacher_id": feedback.teacher_id,
+        "content": feedback.content,
+        "score": feedback.score,
+        "created_at": feedback.created_at or datetime.now().isoformat()
+    }
+    twin_data['teacher_feedback'].append(feedback_entry)
+    # Ghi lại file
+    with open(twin_filepath, 'w', encoding='utf-8') as f:
+        json.dump(twin_data, f, ensure_ascii=False, indent=2)
+    return {"message": "Feedback added successfully", "feedback": feedback_entry}
 
 def main():
     try:

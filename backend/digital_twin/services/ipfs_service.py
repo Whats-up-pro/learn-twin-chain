@@ -1,6 +1,9 @@
 import os
+import time
 import requests
 import json
+from datetime import datetime
+import pytz
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 
@@ -51,12 +54,18 @@ class IPFSService:
             'Content-Type': 'application/json'
         }
         
+        # Get current time in Vietnam timezone
+        vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+        now_vn = datetime.now(vn_tz)
+        timestamp_vn = int(now_vn.timestamp())
+        
         metadata = {
             'pinataMetadata': {
-                'name': name or f'data_{int(time.time())}',
+                'name': name or f'data_{timestamp_vn}',
                 'keyvalues': {
                     'type': 'json_data',
-                    'timestamp': str(int(time.time()))
+                    'timestamp': str(timestamp_vn),
+                    'timezone': 'Asia/Ho_Chi_Minh'
                 }
             },
             'pinataContent': data

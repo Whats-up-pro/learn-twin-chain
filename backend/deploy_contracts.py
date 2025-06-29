@@ -32,20 +32,20 @@ class ContractDeployer:
     def compile_contract(self, contract_path: str) -> dict:
         """Compile a Solidity contract"""
         try:
-            import solcx
+            from solcx import compile_files, install_solc, set_solc_version, get_installed_solc_versions
             
             # Install and use 0.8.30 for OpenZeppelin v5
             try:
-                solcx.install_solc('0.8.30')
-                solcx.set_solc_version('0.8.30')
+                install_solc('0.8.30')
+                set_solc_version('0.8.30')
                 print("Using Solidity version: 0.8.30")
             except Exception as e:
                 print(f"Warning: Could not set Solidity 0.8.30: {e}")
                 # Use latest available
-                versions = solcx.get_installed_solc_versions()
+                versions = get_installed_solc_versions()
                 if versions:
                     latest = max(versions)
-                    solcx.set_solc_version(latest)
+                    set_solc_version(latest)
                     print(f"Using Solidity version: {latest}")
             
             # Check if OpenZeppelin is installed
@@ -64,7 +64,7 @@ class ContractDeployer:
             print(f"Remappings: {remappings}")
             
             # Compile with remappings
-            compiled = solcx.compile_files(
+            compiled = compile_files(
                 [contract_path],
                 import_remappings=remappings,
                 output_values=['abi', 'bin']
@@ -168,7 +168,7 @@ class ContractDeployer:
         # Deploy LearningAchievementNFT (ERC-721)
         achievement_path = os.path.join(contracts_dir, 'LearningAchievementNFT.sol')
         if os.path.exists(achievement_path):
-            deployed_addresses['ACHIEVEMENT_CONTRACT_ADDRESS'] = self.deploy_contract(
+            deployed_addresses['NFT_CONTRACT_ADDRESS'] = self.deploy_contract(
                 'LearningAchievementNFT',
                 achievement_path
             )

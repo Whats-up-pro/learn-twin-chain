@@ -31,6 +31,49 @@
     "inputs": [
       {
         "indexed": true,
+        "internalType": "string",
+        "name": "did",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "cidDid",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "studentAddress",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "skill",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "tokenId",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      }
+    ],
+    "name": "DIDLinked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
         "internalType": "address",
         "name": "previousOwner",
         "type": "address"
@@ -88,6 +131,50 @@
         "internalType": "string",
         "name": "",
         "type": "string"
+      }
+    ],
+    "name": "didLinks",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "did",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "cidDid",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "studentAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "skill",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "tokenId",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
       },
       {
         "internalType": "uint256",
@@ -121,6 +208,19 @@
         "internalType": "uint256",
         "name": "version",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllLinkedDIDs",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "",
+        "type": "string[]"
       }
     ],
     "stateMutability": "view",
@@ -167,6 +267,57 @@
         "internalType": "struct TwinDataLog[]",
         "name": "",
         "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_did",
+        "type": "string"
+      }
+    ],
+    "name": "getDIDLink",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "did",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "cidDid",
+            "type": "string"
+          },
+          {
+            "internalType": "address",
+            "name": "studentAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "string",
+            "name": "skill",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "tokenId",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct DIDLink",
+        "name": "",
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",
@@ -232,6 +383,58 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_did",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_cidDid",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "_studentAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "_skill",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_tokenId",
+        "type": "string"
+      }
+    ],
+    "name": "linkDIDToBlockchain",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "linkedDIDs",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
       }
     ],
     "stateMutability": "view",

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
-import { LearnerProfile, DigitalTwin, Nft, LearningModule, UpdateTwinPayload, LearningCheckpoint, KnowledgeArea } from '../types';
+import { LearnerProfile, DigitalTwin, Nft, LearningModule, UpdateTwinPayload, LearningCheckpoint, KnowledgeArea, UserRole } from '../types';
 import { DEFAULT_LEARNER_PROFILE, INITIAL_DIGITAL_TWIN, LEARNING_MODULES } from '../constants';
 import toast from 'react-hot-toast';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
@@ -9,7 +9,9 @@ interface AppContextType {
   digitalTwin: DigitalTwin;
   nfts: Nft[];
   learningModules: LearningModule[];
-  updateLearnerProfile: (profile: LearnerProfile) => void;
+  role: UserRole | null;
+  setRole: (role: UserRole | null) => void;
+  updateLearnerProfile: (profile: LearnerProfile, userRole?: UserRole) => void;
   logout: () => void;
   updateDigitalTwin: (payload: Partial<UpdateTwinPayload>, description: string) => Promise<void>;
   mintNftForModule: (moduleId: string, moduleName: string) => void;
@@ -36,6 +38,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return savedNfts ? JSON.parse(savedNfts) : [];
   });
   const [learningModules] = useState<LearningModule[]>(LEARNING_MODULES);
+  const [role, setRole] = useState<UserRole | null>(() => {
+    const savedRole = localStorage.getItem('userRole');
+    return savedRole ? (savedRole as UserRole) : null;
+  });
 
   useEffect(() => {
     if (learnerProfile) {
@@ -52,6 +58,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     localStorage.setItem('nfts', JSON.stringify(nfts));
   }, [nfts]);
+
+  useEffect(() => {
+    if (role) {
+      localStorage.setItem('userRole', role);
+    } else {
+      localStorage.removeItem('userRole');
+    }
+  }, [role]);
 
   // Sync learnerProfile with localStorage changes (e.g., after login)
   useEffect(() => {
@@ -175,8 +189,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }));
   }, [updateDigitalTwinState]);
 
-  const updateLearnerProfile = useCallback((profile: LearnerProfile) => {
+  const updateLearnerProfile = useCallback((profile: LearnerProfile, userRole?: UserRole) => {
     setLearnerProfile(profile);
+    if (userRole) setRole(userRole);
   }, []);
 
   const logout = useCallback(() => {
@@ -184,12 +199,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setLearnerProfile(null);
     setDigitalTwin(INITIAL_DIGITAL_TWIN);
     setNfts([]);
-    
+    setRole(null);
     // Clear localStorage
     localStorage.removeItem('learnerProfile');
     localStorage.removeItem('digitalTwin');
     localStorage.removeItem('nfts');
-    
+    localStorage.removeItem('userRole');
     console.log('Logout successful - all data cleared');
   }, []);
 
@@ -198,10 +213,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       learnerProfile,
       digitalTwin, 
       nfts, 
-      learningModules, 
+      learningModules,
+      role,
+      setRole,
       updateLearnerProfile,
       logout,
-      updateDigitalTwin, 
+      updateDigitalTwin,
       mintNftForModule,
       getModuleById,
       completeCheckpoint,

@@ -42,5 +42,183 @@
       "input validation"
     ],
     "preferred_learning_style": "visual-examples"
-  }
+  },
+  "NFT_list": [
+    {
+      "token_id": "0xa405e95963c81cdeaa4f0abfc03b29e1982f90921802135e671d8fbba380ff3b",
+      "skill": "JavaScript Programming",
+      "cid_nft": "QmUTsjy7xPMyPYvQYzPSbDcJgqTbBkpP3wryh4oA1c2bL1",
+      "mint_date": "2024-01-16",
+      "issuer": "did:learntwin:school001",
+      "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "metadata": {
+        "name": "Skill Achievement: JavaScript Programming",
+        "description": "Verified credential for skill: JavaScript Programming",
+        "image": "ipfs://QmYourImageHash",
+        "attributes": [
+          {
+            "trait_type": "Skill",
+            "value": "JavaScript Programming"
+          },
+          {
+            "trait_type": "Issuer",
+            "value": "did:learntwin:school001"
+          },
+          {
+            "trait_type": "Student",
+            "value": "did:learntwin:student002"
+          },
+          {
+            "trait_type": "Student Address",
+            "value": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+          },
+          {
+            "trait_type": "Verification Date",
+            "value": "2024-01-16"
+          },
+          {
+            "trait_type": "VC CID",
+            "value": "QmUTsjy7xPMyPYvQYzPSbDcJgqTbBkpP3wryh4oA1c2bL1"
+          }
+        ],
+        "vc_data": {
+          "@context": [
+            "https://www.w3.org/2018/credentials/v1",
+            "https://schema.org"
+          ],
+          "id": "urn:uuid:1751229898",
+          "type": [
+            "VerifiableCredential",
+            "SkillCredential"
+          ],
+          "issuer": "did:learntwin:school001",
+          "issuanceDate": "2025-06-29T20:44:58Z",
+          "credentialSubject": {
+            "id": "did:learntwin:student002",
+            "skill": "JavaScript Programming",
+            "metadata": {
+              "verification_date": "2024-01-16",
+              "score": 88
+            }
+          },
+          "proof": {
+            "type": "EcdsaSecp256k1Signature2019",
+            "created": "2025-06-29T20:44:58Z",
+            "proofPurpose": "assertionMethod",
+            "verificationMethod": "did:learntwin:school001#key-1",
+            "jws": "1BapfDtsA56t4RT7uhUA6QaMKxVMEAOQBL097Ot7IXEzq+vHr7NlGPgHF/aYQzYCctTrs4lV4N3mRkkeLEMgHA=="
+          }
+        }
+      }
+    },
+    {
+      "token_id": "0x70468b6180f03c2d2c07df3ac8c275f7a1732bf3a9d36614afb6d87904715e6f",
+      "skill": "JavaScript Programming",
+      "cid_nft": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h",
+      "mint_date": "2024-01-16",
+      "issuer": "did:learntwin:school001",
+      "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "metadata": {
+        "name": "Skill Achievement: JavaScript Programming",
+        "description": "Verified credential for skill: JavaScript Programming",
+        "image": "ipfs://QmYourImageHash",
+        "attributes": [
+          {
+            "trait_type": "Skill",
+            "value": "JavaScript Programming"
+          },
+          {
+            "trait_type": "Issuer",
+            "value": "did:learntwin:school001"
+          },
+          {
+            "trait_type": "Student",
+            "value": "did:learntwin:student002"
+          },
+          {
+            "trait_type": "Student Address",
+            "value": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+          },
+          {
+            "trait_type": "Verification Date",
+            "value": "2024-01-16"
+          },
+          {
+            "trait_type": "VC CID",
+            "value": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h"
+          }
+        ],
+        "vc_data": {
+          "@context": [
+            "https://www.w3.org/2018/credentials/v1",
+            "https://schema.org"
+          ],
+          "id": "urn:uuid:1751230044",
+          "type": [
+            "VerifiableCredential",
+            "SkillCredential"
+          ],
+          "issuer": "did:learntwin:school001",
+          "issuanceDate": "2025-06-29T20:47:24Z",
+          "credentialSubject": {
+            "id": "did:learntwin:student002",
+            "skill": "JavaScript Programming",
+            "metadata": {
+              "verification_date": "2024-01-16",
+              "score": 88
+            }
+          },
+          "proof": {
+            "type": "EcdsaSecp256k1Signature2019",
+            "created": "2025-06-29T20:47:24Z",
+            "proofPurpose": "assertionMethod",
+            "verificationMethod": "did:learntwin:school001#key-1",
+            "jws": "xLAi2DCDZWKhpq3RDbvRroNBYTa2IFz7rQ3IK0lqCEzIxPrsrL7vYHzi5EIDUJF4+3TisPcDlwv5oSAIyc7meQ=="
+          }
+        }
+      }
+    }
+  ],
+  "did_document": {
+    "@context": [
+      "https://www.w3.org/ns/did/v1",
+      "https://w3id.org/security/suites/ed25519-2018/v1"
+    ],
+    "id": "did:learntwin:student002",
+    "controller": "did:learntwin:student002",
+    "verificationMethod": [
+      {
+        "id": "did:learntwin:student002#keys-1",
+        "type": "Ed25519VerificationKey2018",
+        "controller": "did:learntwin:student002",
+        "publicKeyBase58": ""
+      }
+    ],
+    "service": [
+      {
+        "id": "did:learntwin:student002#linkeddomains",
+        "type": "LinkedDomains",
+        "serviceEndpoint": "https://learntwinchain.com"
+      }
+    ],
+    "alsoKnownAs": [
+      "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+    ],
+    "metadata": {
+      "created": "",
+      "updated": "2024-01-15T00:00:00Z",
+      "version": 3
+    },
+    "nft_credentials": {
+      "skill": "JavaScript Programming",
+      "token_id": "0x70468b6180f03c2d2c07df3ac8c275f7a1732bf3a9d36614afb6d87904715e6f",
+      "cid_nft": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h",
+      "blockchain_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "issuer": "did:learntwin:school001",
+      "issued_at": "2024-01-15T00:00:00Z"
+    }
+  },
+  "did_cid": "QmdYvqDeQyVhj8WHYPGk28N7izxkuaC4TTKG2ySpHW1vmq",
+  "blockchain_tx": "0x940d56178c1e09decdd7327d2c413f86796308b82c3db214f1120c6d4c0917af",
+  "version": 3
 }
