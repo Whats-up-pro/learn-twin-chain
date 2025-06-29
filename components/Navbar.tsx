@@ -55,6 +55,12 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                 <Link to="/tutor" className={navLinkClasses('/tutor')}>AI Tutor</Link>
               </div>
             )}
+            {/* Employer navigation */}
+            {role === UserRole.EMPLOYER && isLoggedIn && (
+              <div className="ml-8 flex items-center space-x-2">
+                <Link to="/employer" className={navLinkClasses('/employer')}>Job Posting & Search</Link>
+              </div>
+            )}
           </div>
           <div className="flex items-center">
             {isLoggedIn ? (

@@ -36,8 +36,8 @@ const EmployerDashboardPage: React.FC = () => {
 
   // Available programs for filtering
   const availablePrograms = [
-    'Computer Science', 'Information Systems', 'Software Engineering',
-    'Data Science', 'Artificial Intelligence', 'Cybersecurity',
+    'Computer Science', 'Information Systems', 'Cybersecurity',
+    'Information Security', 'Data Science', 'Artificial Intelligence',
     'Web Development', 'Mobile Development', 'Game Development',
     'Network Engineering', 'Database Administration'
   ];
@@ -53,14 +53,11 @@ const EmployerDashboardPage: React.FC = () => {
         digitalTwin: {
           learnerDid: 'did:learntwin:student001',
           knowledge: { 
-            'Python': 0.95, 
+            'Python': 0.8, 
             'Data Structures': 1.0,
-            'Algorithms': 0.88,
-            'Machine Learning': 0.75,
-            'SQL': 0.82,
-            'Git': 0.90
+            'Python cơ bản': 0.95
           },
-          skills: { problemSolving: 0.92, logicalThinking: 0.95, selfLearning: 0.88 },
+          skills: { problemSolving: 0.7, logicalThinking: 0.8, selfLearning: 0.85 },
           behavior: { timeSpent: '180h', quizAccuracy: 0.92, preferredLearningStyle: 'code-first' },
           checkpoints: [],
           version: 1,
@@ -78,15 +75,13 @@ const EmployerDashboardPage: React.FC = () => {
         digitalTwin: {
           learnerDid: 'did:learntwin:student002',
           knowledge: { 
-            'HTML': 0.85, 
-            'CSS': 0.88,
-            'JavaScript': 0.75,
-            'React': 0.70,
-            'Python': 0.60,
-            'UI/UX Design': 0.80
+            'HTML': 0.8, 
+            'CSS': 0.75,
+            'Python': 0.6,
+            'HTML & CSS': 0.85
           },
-          skills: { problemSolving: 0.85, logicalThinking: 0.80, selfLearning: 0.90 },
-          behavior: { timeSpent: '120h', quizAccuracy: 0.88, preferredLearningStyle: 'visual' },
+          skills: { problemSolving: 0.8, logicalThinking: 0.75, selfLearning: 0.85 },
+          behavior: { timeSpent: '120h', quizAccuracy: 0.88, preferredLearningStyle: 'visual-examples' },
           checkpoints: [],
           version: 1,
           lastUpdated: new Date().toISOString()
@@ -98,21 +93,17 @@ const EmployerDashboardPage: React.FC = () => {
       {
         id: '3',
         learnerDid: 'did:learntwin:student003',
-        name: 'Lê Văn Cường',
+        name: 'Phạm Văn Hậu',
         avatarUrl: undefined,
         digitalTwin: {
           learnerDid: 'did:learntwin:student003',
           knowledge: { 
-            'Java': 0.88, 
-            'Spring Boot': 0.82, 
-            'SQL': 0.85, 
-            'Docker': 0.75,
-            'AWS': 0.70,
-            'Microservices': 0.78,
-            'Git': 0.90
+            'Python': 0.9, 
+            'Mạng máy tính': 0.7,
+            'Python cơ bản': 0.9
           },
-          skills: { problemSolving: 0.88, logicalThinking: 0.85, selfLearning: 0.82 },
-          behavior: { timeSpent: '150h', quizAccuracy: 0.85, preferredLearningStyle: 'practical' },
+          skills: { problemSolving: 0.75, logicalThinking: 0.8, selfLearning: 0.85 },
+          behavior: { timeSpent: '150h', quizAccuracy: 0.85, preferredLearningStyle: 'theory-then-practice' },
           checkpoints: [],
           version: 1,
           lastUpdated: new Date().toISOString()
@@ -124,21 +115,18 @@ const EmployerDashboardPage: React.FC = () => {
       {
         id: '4',
         learnerDid: 'did:learntwin:student004',
-        name: 'Phạm Thị Dung',
+        name: 'Lê Hoàng Giang',
         avatarUrl: undefined,
         digitalTwin: {
           learnerDid: 'did:learntwin:student004',
           knowledge: { 
-            'UI/UX Design': 0.90, 
-            'Figma': 0.88, 
-            'Adobe XD': 0.85, 
-            'HTML': 0.82,
-            'CSS': 0.88,
-            'JavaScript': 0.75,
-            'Prototyping': 0.92
+            'Java': 0.8, 
+            'Python': 0.85,
+            'Lập trình hướng đối tượng': 0.8,
+            'Python cơ bản': 0.85
           },
-          skills: { problemSolving: 0.90, logicalThinking: 0.85, selfLearning: 0.88 },
-          behavior: { timeSpent: '95h', quizAccuracy: 0.90, preferredLearningStyle: 'visual' },
+          skills: { problemSolving: 0.8, logicalThinking: 0.85, selfLearning: 0.8 },
+          behavior: { timeSpent: '95h', quizAccuracy: 0.90, preferredLearningStyle: 'practice-first' },
           checkpoints: [],
           version: 1,
           lastUpdated: new Date().toISOString()
@@ -150,27 +138,111 @@ const EmployerDashboardPage: React.FC = () => {
       {
         id: '5',
         learnerDid: 'did:learntwin:student005',
-        name: 'Hoàng Văn Em',
+        name: 'Trần Dương Minh Đại',
         avatarUrl: undefined,
         digitalTwin: {
           learnerDid: 'did:learntwin:student005',
           knowledge: { 
-            'Mobile Development': 0.85, 
-            'React Native': 0.82, 
-            'Flutter': 0.78, 
-            'JavaScript': 0.88,
-            'Firebase': 0.75,
-            'App Store': 0.80,
-            'Git': 0.85
+            'Python': 0.95, 
+            'C': 0.6,
+            'An toàn hệ thống': 0.6,
+            'Python cơ bản': 0.95
           },
-          skills: { problemSolving: 0.85, logicalThinking: 0.88, selfLearning: 0.90 },
-          behavior: { timeSpent: '200h', quizAccuracy: 0.87, preferredLearningStyle: 'hands-on' },
+          skills: { problemSolving: 0.7, logicalThinking: 0.8, selfLearning: 0.85 },
+          behavior: { timeSpent: '200h', quizAccuracy: 0.87, preferredLearningStyle: 'theory-then-practice' },
           checkpoints: [],
           version: 1,
           lastUpdated: new Date().toISOString()
         },
         matchScore: 86,
         appliedAt: '2024-01-11T11:30:00Z',
+        status: 'pending'
+      },
+      {
+        id: '6',
+        learnerDid: 'did:learntwin:student006',
+        name: 'Huỳnh Quốc Khánh',
+        avatarUrl: undefined,
+        digitalTwin: {
+          learnerDid: 'did:learntwin:student006',
+          knowledge: { 
+            'Python': 0.9, 
+            'R': 0.5,
+            'Machine Learning cơ bản': 0.7,
+            'Python cơ bản': 0.9
+          },
+          skills: { problemSolving: 0.8, logicalThinking: 0.85, selfLearning: 0.9 },
+          behavior: { timeSpent: '160h', quizAccuracy: 0.88, preferredLearningStyle: 'theory-then-practice' },
+          checkpoints: [],
+          version: 1,
+          lastUpdated: new Date().toISOString()
+        },
+        matchScore: 88,
+        appliedAt: '2024-01-10T13:20:00Z',
+        status: 'pending'
+      },
+      {
+        id: '7',
+        learnerDid: 'did:learntwin:student007',
+        name: 'Nguyễn Anh Khoa',
+        avatarUrl: undefined,
+        digitalTwin: {
+          learnerDid: 'did:learntwin:student007',
+          knowledge: { 
+            'Python': 0.8, 
+            'C++': 0.65,
+            'Hệ điều hành': 0.6,
+            'Python cơ bản': 0.8
+          },
+          skills: { problemSolving: 0.85, logicalThinking: 0.8, selfLearning: 0.85 },
+          behavior: { timeSpent: '140h', quizAccuracy: 0.85, preferredLearningStyle: 'practice-first' },
+          checkpoints: [],
+          version: 1,
+          lastUpdated: new Date().toISOString()
+        },
+        matchScore: 84,
+        appliedAt: '2024-01-09T16:45:00Z',
+        status: 'pending'
+      },
+      {
+        id: '8',
+        learnerDid: 'did:learntwin:student008',
+        name: 'Võ Nguyễn Gia Quốc',
+        avatarUrl: undefined,
+        digitalTwin: {
+          learnerDid: 'did:learntwin:student008',
+          knowledge: { 
+            'Python': 0.88, 
+            'SQL': 0.7,
+            'Xử lý dữ liệu': 0.75,
+            'Python cơ bản': 0.88
+          },
+          skills: { problemSolving: 0.85, logicalThinking: 0.8, selfLearning: 0.85 },
+          behavior: { timeSpent: '175h', quizAccuracy: 0.89, preferredLearningStyle: 'theory-then-practice' },
+          checkpoints: [],
+          version: 1,
+          lastUpdated: new Date().toISOString()
+        },
+        matchScore: 90,
+        appliedAt: '2024-01-08T12:10:00Z',
+        status: 'pending'
+      },
+      {
+        id: '99',
+        learnerDid: 'did:learntwin:student099',
+        name: 'testaccount',
+        avatarUrl: undefined,
+        digitalTwin: {
+          learnerDid: 'did:learntwin:student099',
+          knowledge: {},
+          skills: { problemSolving: 0.5, logicalThinking: 0.5, selfLearning: 0.5 },
+          behavior: { timeSpent: '0h', quizAccuracy: 0.0, preferredLearningStyle: 'code-first' },
+          checkpoints: [],
+          version: 1,
+          lastUpdated: new Date().toISOString()
+        },
+        matchScore: 50,
+        appliedAt: '2024-01-07T10:00:00Z',
         status: 'pending'
       }
     ];
@@ -199,9 +271,13 @@ const EmployerDashboardPage: React.FC = () => {
         const studentPrograms = {
           '1': 'Computer Science',
           '2': 'Information Systems', 
-          '3': 'Software Engineering',
-          '4': 'Web Development',
-          '5': 'Mobile Development'
+          '3': 'Cybersecurity',
+          '4': 'Computer Science',
+          '5': 'Computer Science',
+          '6': 'Information Security',
+          '7': 'Computer Science',
+          '8': 'Information Security',
+          '99': 'Computer Science'
         };
         const studentProgram = studentPrograms[student.id as keyof typeof studentPrograms];
         const hasMatchingProgram = studentProgram.toLowerCase().includes(searchLower);
@@ -226,9 +302,12 @@ const EmployerDashboardPage: React.FC = () => {
         const studentPrograms = {
           '1': 'Computer Science',
           '2': 'Information Systems', 
-          '3': 'Software Engineering',
-          '4': 'Web Development',
-          '5': 'Mobile Development'
+          '3': 'Cybersecurity',
+          '4': 'Computer Science',
+          '5': 'Computer Science',
+          '6': 'Information Security',
+          '7': 'Computer Science',
+          '8': 'Information Security'
         };
         const studentProgram = studentPrograms[student.id as keyof typeof studentPrograms];
         return selectedPrograms.includes(studentProgram);
