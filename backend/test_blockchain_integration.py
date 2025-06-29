@@ -31,7 +31,7 @@ def test_blockchain_service():
         print("✅ Blockchain service initialized successfully")
         
         # Test data
-        test_student_address = "0x1234567890123456789012345678901234567890"
+        test_student_address = "0xdD2FD4581271e230360230F9337D5c0430Bf44C0"
         test_student_did = "did:learner:test123"
         test_module_id = "python_basics_001"
         test_module_title = "Python Basics - Introduction"

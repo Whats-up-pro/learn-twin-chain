@@ -1,6 +1,7 @@
 # backend/test_ipfs.py
 from digital_twin.services.ipfs_service import IPFSService
 import json
+import time
 
 def test_ipfs():
     """Test IPFS functionality"""

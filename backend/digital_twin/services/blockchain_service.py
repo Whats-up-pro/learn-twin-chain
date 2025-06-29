@@ -75,6 +75,15 @@ class BlockchainService:
                 abi=registry_abi
             )
             
+            zkp_certificate_address = os.getenv('ZKP_CERTIFICATE_CONTRACT_ADDRESS')
+            if zkp_certificate_address:
+                with open('contracts/abi/ZKPCertificateRegistry.json', 'r') as f:
+                    zkp_certificate_abi = json.load(f)
+                self.contracts['zkp_certificate'] = self.w3.eth.contract(
+                    address=zkp_certificate_address,
+                    abi=zkp_certificate_abi
+                )
+            
         except Exception as e:
             print(f"Failed to load contracts: {e}")
     
@@ -448,3 +457,23 @@ class BlockchainService:
             
         except Exception as e:
             return {"error": f"Failed to verify achievement: {str(e)}"}
+    
+    def mint_zkp_certificate(self, student_address: str, metadata_uri: str) -> dict:
+        """Mint ZKP certificate on-chain by calling createZKPCertificate"""
+        if not self.is_available() or 'zkp_certificate' not in self.contracts:
+            return {"error": "ZKP Certificate contract not available"}
+        try:
+            tx_hash = self._send_transaction(
+                self.contracts['zkp_certificate'].functions.createZKPCertificate,
+                student_address,
+                metadata_uri
+            )
+            # Lấy certId từ event hoặc trả về tx_hash (tùy backend xử lý tiếp)
+            return {
+                "success": True,
+                "tx_hash": tx_hash,
+                "student_address": student_address,
+                "metadata_uri": metadata_uri
+            }
+        except Exception as e:
+            return {"error": f"Failed to mint ZKP certificate: {str(e)}"}

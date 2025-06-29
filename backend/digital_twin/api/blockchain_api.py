@@ -58,6 +58,10 @@ class ZKPCertificateRequest(BaseModel):
     student_address: str
     twin_data: Dict[str, Any]
 
+class ZKPCertificateMintRequest(BaseModel):
+    student_address: str
+    cid: str
+
 @router.get("/status")
 async def get_blockchain_status():
     """Check blockchain service status"""
@@ -208,20 +212,14 @@ async def generate_employer_verification(request: VerificationRequest):
     return result
 
 @router.post("/certificate/zkp")
-async def create_zkp_certificate(request: ZKPCertificateRequest):
-    """Create ZKP certificate data structure"""
+async def mint_zkp_certificate(request: ZKPCertificateMintRequest):
+    """Mint ZKP certificate on-chain by calling createZKPCertificate"""
     if not blockchain_service.is_available():
         raise HTTPException(status_code=503, detail="Blockchain service not available")
-    
-    result = blockchain_service.create_zkp_certificate(
-        request.student_did,
-        request.student_address,
-        request.twin_data
-    )
-    
+    metadata_uri = f"ipfs://{request.cid}"
+    result = blockchain_service.mint_zkp_certificate(request.student_address, metadata_uri)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
-    
     return result
 
 @router.get("/achievement/{token_id}/verify")
