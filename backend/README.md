@@ -130,7 +130,7 @@ Khi sinh viên đăng ký tài khoản mới:
 - Hiển thị danh sách tất cả Digital Twin
 - Xem chi tiết từng sinh viên
 - Theo dõi tiến độ học tập
-- ** Xem blockchain data và NFTs**
+- **Xem blockchain data và NFTs**
 
 ## Format Digital Twin File
 
