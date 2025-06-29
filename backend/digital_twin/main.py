@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from digital_twin.api.twin_api import router as twin_router
 from digital_twin.api.learning_api import router as learning_router
 from digital_twin.api.analytics_api import router as analytics_router
+from digital_twin.api.ipfs_api import router as ipfs_router
 from .config.config import config
 from .utils import Logger
 from pydantic import BaseModel
@@ -137,6 +138,7 @@ app.add_middleware(
 app.include_router(twin_router, prefix="/api/v1")
 app.include_router(learning_router, prefix="/api/v1/learning")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
+app.include_router(ipfs_router, prefix="/api/v1/ipfs")
 
 @app.get("/")
 async def root():

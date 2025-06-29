@@ -1,32 +1,256 @@
 [
   {
-    "id": "did:learntwin:student099",
-    "did": "did:learntwin:student099",
-    "name": "testaccount",
-    "email": "testaccount@example.com",
-    "role": "learner",
-    "password": "test1234",
+    "id": "did:learntwin:student001",
+    "did": "did:learntwin:student001",
+    "name": "Đoàn Minh Trung",
+    "email": "trung@example.com",
+    "role": "student",
     "avatarUrl": "",
-    "createdAt": "2024-06-28T00:00:00Z"
+    "createdAt": "2024-06-28T00:00:00Z",
+    "NFT_list": [
+      {
+        "token_id": "0x20c627347b09763f9c5bb5c069aa5a65b97a2efa5ec9f113e3bf1269cf15f9bf",
+        "skill": "Solarity Programming",
+        "cid_nft": "QmVvaKnANwBeCSAm5VYCo3tAeNj7pysaTy56xQME7SpthF",
+        "mint_date": "2024-01-15",
+        "issuer": "did:learntwin:school001",
+        "student_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "metadata": {
+          "name": "Skill Achievement: Solarity Programming",
+          "description": "Verified credential for skill: Solarity Programming",
+          "image": "ipfs://QmYourImageHash",
+          "attributes": [
+            {
+              "trait_type": "Skill",
+              "value": "Solarity Programming"
+            },
+            {
+              "trait_type": "Issuer",
+              "value": "did:learntwin:school001"
+            },
+            {
+              "trait_type": "Student",
+              "value": "did:learntwin:student001"
+            },
+            {
+              "trait_type": "Student Address",
+              "value": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+            },
+            {
+              "trait_type": "Verification Date",
+              "value": "2024-01-15"
+            },
+            {
+              "trait_type": "VC CID",
+              "value": "QmVvaKnANwBeCSAm5VYCo3tAeNj7pysaTy56xQME7SpthF"
+            }
+          ],
+          "vc_data": {
+            "@context": [
+              "https://www.w3.org/2018/credentials/v1",
+              "https://schema.org"
+            ],
+            "id": "urn:uuid:1751229409",
+            "type": [
+              "VerifiableCredential",
+              "SkillCredential"
+            ],
+            "issuer": "did:learntwin:school001",
+            "issuanceDate": "2025-06-29T20:36:49Z",
+            "credentialSubject": {
+              "id": "did:learntwin:student001",
+              "skill": "Solarity Programming",
+              "metadata": {
+                "verification_date": "2024-01-15",
+                "score": 95
+              }
+            },
+            "proof": {
+              "type": "EcdsaSecp256k1Signature2019",
+              "created": "2025-06-29T20:36:49Z",
+              "proofPurpose": "assertionMethod",
+              "verificationMethod": "did:learntwin:school001#key-1",
+              "jws": "A/pwuTko54+eSQKY78r8Yx2AlFuHYRIETNoRQ4NIk/HDNBbCCUvPTTb0yKD7H5zi+7MTzbXFfTKNjp2WGaanWA=="
+            }
+          }
+        }
+      }
+    ],
+    "metadata": {}
+  },
+  {
+    "id": "did:learntwin:student002",
+    "did": "did:learntwin:student002",
+    "name": "Phan Thế Duy",
+    "email": "duy@example.com",
+    "role": "student",
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z",
+    "NFT_list": [
+      {
+        "token_id": "0xa405e95963c81cdeaa4f0abfc03b29e1982f90921802135e671d8fbba380ff3b",
+        "skill": "JavaScript Programming",
+        "cid_nft": "QmUTsjy7xPMyPYvQYzPSbDcJgqTbBkpP3wryh4oA1c2bL1",
+        "mint_date": "2024-01-16",
+        "issuer": "did:learntwin:school001",
+        "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        "metadata": {
+          "name": "Skill Achievement: JavaScript Programming",
+          "description": "Verified credential for skill: JavaScript Programming",
+          "image": "ipfs://QmYourImageHash",
+          "attributes": [
+            {
+              "trait_type": "Skill",
+              "value": "JavaScript Programming"
+            },
+            {
+              "trait_type": "Issuer",
+              "value": "did:learntwin:school001"
+            },
+            {
+              "trait_type": "Student",
+              "value": "did:learntwin:student002"
+            },
+            {
+              "trait_type": "Student Address",
+              "value": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+            },
+            {
+              "trait_type": "Verification Date",
+              "value": "2024-01-16"
+            },
+            {
+              "trait_type": "VC CID",
+              "value": "QmUTsjy7xPMyPYvQYzPSbDcJgqTbBkpP3wryh4oA1c2bL1"
+            }
+          ],
+          "vc_data": {
+            "@context": [
+              "https://www.w3.org/2018/credentials/v1",
+              "https://schema.org"
+            ],
+            "id": "urn:uuid:1751229898",
+            "type": [
+              "VerifiableCredential",
+              "SkillCredential"
+            ],
+            "issuer": "did:learntwin:school001",
+            "issuanceDate": "2025-06-29T20:44:58Z",
+            "credentialSubject": {
+              "id": "did:learntwin:student002",
+              "skill": "JavaScript Programming",
+              "metadata": {
+                "verification_date": "2024-01-16",
+                "score": 88
+              }
+            },
+            "proof": {
+              "type": "EcdsaSecp256k1Signature2019",
+              "created": "2025-06-29T20:44:58Z",
+              "proofPurpose": "assertionMethod",
+              "verificationMethod": "did:learntwin:school001#key-1",
+              "jws": "1BapfDtsA56t4RT7uhUA6QaMKxVMEAOQBL097Ot7IXEzq+vHr7NlGPgHF/aYQzYCctTrs4lV4N3mRkkeLEMgHA=="
+            }
+          }
+        }
+      },
+      {
+        "token_id": "0x70468b6180f03c2d2c07df3ac8c275f7a1732bf3a9d36614afb6d87904715e6f",
+        "skill": "JavaScript Programming",
+        "cid_nft": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h",
+        "mint_date": "2024-01-16",
+        "issuer": "did:learntwin:school001",
+        "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        "metadata": {
+          "name": "Skill Achievement: JavaScript Programming",
+          "description": "Verified credential for skill: JavaScript Programming",
+          "image": "ipfs://QmYourImageHash",
+          "attributes": [
+            {
+              "trait_type": "Skill",
+              "value": "JavaScript Programming"
+            },
+            {
+              "trait_type": "Issuer",
+              "value": "did:learntwin:school001"
+            },
+            {
+              "trait_type": "Student",
+              "value": "did:learntwin:student002"
+            },
+            {
+              "trait_type": "Student Address",
+              "value": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+            },
+            {
+              "trait_type": "Verification Date",
+              "value": "2024-01-16"
+            },
+            {
+              "trait_type": "VC CID",
+              "value": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h"
+            }
+          ],
+          "vc_data": {
+            "@context": [
+              "https://www.w3.org/2018/credentials/v1",
+              "https://schema.org"
+            ],
+            "id": "urn:uuid:1751230044",
+            "type": [
+              "VerifiableCredential",
+              "SkillCredential"
+            ],
+            "issuer": "did:learntwin:school001",
+            "issuanceDate": "2025-06-29T20:47:24Z",
+            "credentialSubject": {
+              "id": "did:learntwin:student002",
+              "skill": "JavaScript Programming",
+              "metadata": {
+                "verification_date": "2024-01-16",
+                "score": 88
+              }
+            },
+            "proof": {
+              "type": "EcdsaSecp256k1Signature2019",
+              "created": "2025-06-29T20:47:24Z",
+              "proofPurpose": "assertionMethod",
+              "verificationMethod": "did:learntwin:school001#key-1",
+              "jws": "xLAi2DCDZWKhpq3RDbvRroNBYTa2IFz7rQ3IK0lqCEzIxPrsrL7vYHzi5EIDUJF4+3TisPcDlwv5oSAIyc7meQ=="
+            }
+          }
+        }
+      }
+    ],
+    "metadata": {}
   },
   {
     "id": "did:learntwin:teacher001",
     "did": "did:learntwin:teacher001",
-    "name": "test2",
-    "email": "test2@example.com",
+    "name": "Nguyễn Văn Giáo",
+    "email": "teacher@example.com",
     "role": "teacher",
-    "password": "test1234",
     "avatarUrl": "",
     "createdAt": "2024-06-28T00:00:00Z"
   },
   {
     "id": "did:learntwin:employer001",
     "did": "did:learntwin:employer001",
-    "name": "test3",
-    "email": "test3@example.com",
+    "name": "Công ty ABC",
+    "email": "employer@example.com",
     "role": "employer",
-    "password": "test1234",
     "avatarUrl": "",
     "createdAt": "2024-06-28T00:00:00Z"
+  },
+  {
+    "id": "did:learntwin:school001",
+    "did": "did:learntwin:school001",
+    "name": "Trường Đại học UIT",
+    "email": "school@uit.edu.vn",
+    "role": "school",
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z",
+    "publicKey": "",
+    "privateKey": ""
   }
 ]

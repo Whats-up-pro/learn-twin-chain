@@ -25,7 +25,7 @@ class BlockchainManager:
         if self.nft_contract_address:
             self.nft_contract = self.w3.eth.contract(
                 address=self.nft_contract_address, 
-                abi=self._load_abi('LearnTwinNFT.json')
+                abi=self._load_abi('LearningAchievementNFT.json')
             )
         
         if self.registry_contract_address:
@@ -107,13 +107,16 @@ class BlockchainManager:
         # Upload metadata to IPFS
         ipfs_cid = self.upload_to_ipfs(metadata)
         
-        # Build transaction
-        tx = self.nft_contract.functions.mintAchievement(
-            student_address,
-            module_id,
-            module_title,
-            score,
-            ipfs_cid
+        # Convert student_address to checksum address
+        student_address_checksum = self.w3.to_checksum_address(student_address)
+        
+        # Build transaction - using mintSkillMastery for skill achievements
+        tx = self.nft_contract.functions.mintSkillMastery(
+            student_address_checksum,  # address
+            module_id,                 # string
+            f"Completed {module_title} with score {score}",  # string
+            ipfs_cid,                  # string
+            0                          # uint256 (0 = never expires)
         ).build_transaction({
             'from': self.account.address,
             'gas': 2000000,
@@ -266,5 +269,42 @@ class BlockchainManager:
         signed_tx = self.w3.eth.account.sign_transaction(tx, self.account.key)
         tx_hash = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
         
+        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
+        return receipt['transactionHash'].hex()
+
+    def link_did_to_blockchain(
+        self, 
+        student_did: str, 
+        cid_did: str, 
+        student_address: str, 
+        skill: str, 
+        token_id: str
+    ) -> str:
+        """Link DID với CID lên blockchain registry"""
+        if not self.registry_contract:
+            raise Exception("Registry contract not initialized")
+        
+        # Convert student_address to checksum address
+        student_address_checksum = self.w3.to_checksum_address(student_address)
+        
+        # Build transaction
+        tx = self.registry_contract.functions.linkDIDToBlockchain(
+            student_did,
+            cid_did,
+            student_address_checksum,
+            skill,
+            token_id
+        ).build_transaction({
+            'from': self.account.address,
+            'gas': 2000000,
+            'gasPrice': self.w3.eth.gas_price,
+            'nonce': self.w3.eth.get_transaction_count(self.account.address)
+        })
+        
+        # Sign and send transaction
+        signed_tx = self.w3.eth.account.sign_transaction(tx, self.account.key)
+        tx_hash = self.w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        
+        # Wait for confirmation
         receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash)
         return receipt['transactionHash'].hex()

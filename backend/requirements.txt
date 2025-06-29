@@ -24,3 +24,13 @@ eth-account>=0.11.0
 py-solc-x>=1.1.1
 eth-tester[py-evm]>=0.8.0b1
 python-multipart
+
+# Cryptography and signing
+ecdsa>=0.18.0
+
+# Solidity compilation
+py-solc-x>=2.0.0
+
+# Additional blockchain utilities
+eth-utils>=2.0.0
+hexbytes>=0.3.0
