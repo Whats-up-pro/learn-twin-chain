@@ -44,21 +44,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
 
   return (
     <>
-      {/* Backdrop phủ toàn bộ màn hình, chỉ làm mờ không có màu đen */}
+      {/* Backdrop phủ toàn bộ màn hình với blur */}
       {isOpen && (
         <div
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-[99999] transition-opacity duration-300"
           style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'transparent',
-            backdropFilter: 'blur(4px)',
-            zIndex: 99999,
-            transition: 'opacity 0.3s',
             opacity: internalVisible ? 1 : 0,
             pointerEvents: internalVisible ? 'auto' : 'none',
           }}

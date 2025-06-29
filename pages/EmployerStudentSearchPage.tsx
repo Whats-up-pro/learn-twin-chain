@@ -58,7 +58,7 @@ interface Student {
   gpa: number;
   skills: Record<string, number>;
   matchScore: number;
-  hasZKProof?: boolean;
+  hasZeroKnowledgeProof?: boolean;
   proofVerified?: boolean;
   zkProofDetails?: {
     proofType: 'skill' | 'identity' | 'academic' | 'experience';
@@ -84,7 +84,7 @@ const EmployerStudentSearchPage: React.FC = () => {
   const studentsPerPage = 5;
   
   // Job posting state
-  const [showJobForm, setShowJobForm] = useState(false);
+  const [showJobForm, setShowJobForm] = useState(true);
   const [jobPosting, setJobPosting] = useState<JobPosting>({
     id: '',
     title: '',
@@ -164,7 +164,7 @@ const EmployerStudentSearchPage: React.FC = () => {
           'Python Basics': 0.95
         },
         matchScore: 95,
-        hasZKProof: true,
+        hasZeroKnowledgeProof: true,
         proofVerified: true,
         zkProofDetails: {
           proofType: 'skill',
@@ -194,7 +194,7 @@ const EmployerStudentSearchPage: React.FC = () => {
           'HTML & CSS': 0.85
         },
         matchScore: 87,
-        hasZKProof: true,
+        hasZeroKnowledgeProof: true,
         proofVerified: false,
         zkProofDetails: {
           proofType: 'academic',
@@ -223,7 +223,7 @@ const EmployerStudentSearchPage: React.FC = () => {
           'Python Basics': 0.9
         },
         matchScore: 89,
-        hasZKProof: false,
+        hasZeroKnowledgeProof: false,
         proofVerified: false,
         privacySettings: {
           allowContact: false,
@@ -245,7 +245,7 @@ const EmployerStudentSearchPage: React.FC = () => {
           'Python Basics': 0.85
         },
         matchScore: 91,
-        hasZKProof: true,
+        hasZeroKnowledgeProof: true,
         proofVerified: true,
         zkProofDetails: {
           proofType: 'experience',
@@ -275,7 +275,7 @@ const EmployerStudentSearchPage: React.FC = () => {
           'Python Basics': 0.95
         },
         matchScore: 93,
-        hasZKProof: true,
+        hasZeroKnowledgeProof: true,
         proofVerified: true,
         zkProofDetails: {
           proofType: 'skill',
@@ -305,7 +305,7 @@ const EmployerStudentSearchPage: React.FC = () => {
           'Python': 0.7
         },
         matchScore: 88,
-        hasZKProof: true,
+        hasZeroKnowledgeProof: true,
         proofVerified: false,
         zkProofDetails: {
           proofType: 'experience',
@@ -335,7 +335,7 @@ const EmployerStudentSearchPage: React.FC = () => {
           'SQL': 0.75
         },
         matchScore: 85,
-        hasZKProof: true,
+        hasZeroKnowledgeProof: true,
         proofVerified: true,
         zkProofDetails: {
           proofType: 'academic',
@@ -354,26 +354,26 @@ const EmployerStudentSearchPage: React.FC = () => {
       },
       {
         id: '8',
-        name: 'Trần Thị Cẩm',
-        institution: 'UIT',
+        name: 'Nguyễn Thị Mai',
+        institution: 'BKU',
         program: 'Information Technology',
         gpa: 3.3,
         skills: {
           'Java': 0.7,
-          'Spring Boot': 0.8,
-          'MySQL': 0.75,
-          'Git': 0.9
+          'Spring Boot': 0.6,
+          'MySQL': 0.8,
+          'REST API': 0.75
         },
         matchScore: 82,
-        hasZKProof: true,
-        proofVerified: false,
+        hasZeroKnowledgeProof: true,
+        proofVerified: true,
         zkProofDetails: {
-          proofType: 'experience',
+          proofType: 'skill',
           proofLevel: 'intermediate',
-          verificationStatus: 'pending',
-          expiryDate: '2025-08-15',
-          issuer: 'Industry Partner',
-          blockchainTx: '0x3333333333333333'
+          verificationStatus: 'verified',
+          expiryDate: '2025-10-31',
+          issuer: 'BKU Blockchain',
+          blockchainTx: '0x7777777777777777'
         },
         privacySettings: {
           allowContact: true,
@@ -381,42 +381,12 @@ const EmployerStudentSearchPage: React.FC = () => {
           allowProfileView: false,
           requireNDA: false
         }
-      },
-      {
-        id: '99',
-        name: 'Test Account Student099',
-        institution: 'UIT',
-        program: 'Computer Science',
-        gpa: 3.5,
-        skills: {
-          'Python': 0.7,
-          'JavaScript': 0.6,
-          'HTML': 0.8,
-          'CSS': 0.75
-        },
-        matchScore: 78,
-        hasZKProof: true,
-        proofVerified: true,
-        zkProofDetails: {
-          proofType: 'skill',
-          proofLevel: 'basic',
-          verificationStatus: 'verified',
-          expiryDate: '2025-12-31',
-          issuer: 'LearnTwinChain',
-          blockchainTx: '0x1234567890abcdef'
-        },
-        privacySettings: {
-          allowContact: true,
-          allowSkillView: true,
-          allowProfileView: true,
-          requireNDA: false
-        }
       }
     ];
 
-    setStudents(mockStudents);
-    setFilteredStudents(mockStudents);
-    setLoading(false);
+      setStudents(mockStudents);
+      setFilteredStudents(mockStudents);
+      setLoading(false);
   }, []);
 
   // Calculate pagination
@@ -449,7 +419,7 @@ const EmployerStudentSearchPage: React.FC = () => {
   };
 
   const getZKProofStatus = (student: Student) => {
-    if (!student.hasZKProof || !student.zkProofDetails) {
+    if (!student.hasZeroKnowledgeProof || !student.zkProofDetails) {
       return { status: 'No Proof', color: 'bg-red-500', canContact: false };
     }
 
@@ -495,26 +465,39 @@ const EmployerStudentSearchPage: React.FC = () => {
       setShowJobForm(false);
       
       // Filter students based on job requirements
-      const matchingStudents = students.filter(student => {
-        // Check if student has required ZK proof types
-        const hasRequiredProofType = jobPosting.requiredProofTypes.some(
-          proofType => student.zkProofDetails?.proofType === proofType
-        );
+      let filtered = students.filter(student => {
+        // Only show students with ZK proof
+        if (!student.hasZeroKnowledgeProof) {
+          return false;
+        }
         
-        // Check if student has required skills
-        const hasRequiredSkills = jobPosting.requiredSkills.some(
-          skill => student.skills[skill] !== undefined
-        );
+        // Filter by institutions
+        if (jobPosting.requiredInstitutions.length > 0 && !jobPosting.requiredInstitutions.includes(student.institution)) {
+          return false;
+        }
         
-        // Check if student's proof level meets minimum requirement
-        const proofLevels = { basic: 1, intermediate: 2, advanced: 3, expert: 4 };
-        const studentLevel = student.zkProofDetails?.proofLevel || 'basic';
-        const meetsLevelRequirement = proofLevels[studentLevel] >= proofLevels[jobPosting.minProofLevel];
+        // Filter by programs
+        if (jobPosting.requiredPrograms.length > 0 && !jobPosting.requiredPrograms.includes(student.program)) {
+          return false;
+        }
         
-        return hasRequiredProofType && hasRequiredSkills && meetsLevelRequirement && student.hasZKProof;
+        // Filter by skills
+        if (jobPosting.requiredSkills.length > 0) {
+          const hasRequiredSkill = jobPosting.requiredSkills.some(skill => student.skills[skill] !== undefined);
+          if (!hasRequiredSkill) {
+            return false;
+          }
+        }
+        
+        // Filter by GPA
+        if (jobPosting.minimumGPA !== '' && student.gpa < jobPosting.minimumGPA) {
+          return false;
+        }
+        
+        return true;
       });
-      
-      setFilteredStudents(matchingStudents);
+    
+    setFilteredStudents(filtered);
       setCurrentPage(1);
       
       toast.success('Job posted successfully! Smart contract deployed.');
@@ -607,6 +590,11 @@ const EmployerStudentSearchPage: React.FC = () => {
     }
 
     let filtered = students.filter(student => {
+      // Only show students with ZK proof
+      if (!student.hasZeroKnowledgeProof) {
+        return false;
+      }
+      
       // Filter by institutions
       if (jobPosting.requiredInstitutions.length > 0 && !jobPosting.requiredInstitutions.includes(student.institution)) {
         return false;
@@ -643,13 +631,13 @@ const EmployerStudentSearchPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
+      {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Smart Job Posting Platform
           </h1>
           <p className="text-xl text-gray-600">
-            Post job requirements and find candidates with verified ZK proofs
+            Post job requirements and find candidates with verified Zero Knowledge Proofs
           </p>
         </div>
 
@@ -660,322 +648,314 @@ const EmployerStudentSearchPage: React.FC = () => {
               <div className="p-2 bg-blue-100 rounded-lg">
                 <BriefcaseIcon className="w-6 h-6 text-blue-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Post New Job</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Job Requirements</h2>
             </div>
-            <button
-              onClick={() => setShowJobForm(!showJobForm)}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              {showJobForm ? 'Cancel' : 'Post Job'}
-            </button>
           </div>
 
-          {showJobForm && (
+          <div className="space-y-6">
+            {/* Basic Job Info */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Job Title</label>
+                <input
+                  type="text"
+                  value={jobPosting.title}
+                  onChange={(e) => setJobPosting({...jobPosting, title: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="e.g., Senior Python Developer"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+                <input
+                  type="text"
+                  value={jobPosting.company}
+                  onChange={(e) => setJobPosting({...jobPosting, company: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="e.g., TechCorp Inc."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                <input
+                  type="text"
+                  value={jobPosting.location}
+                  onChange={(e) => setJobPosting({...jobPosting, location: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="e.g., Ho Chi Minh City"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Salary Range</label>
+                <input
+                  type="text"
+                  value={jobPosting.salary}
+                  onChange={(e) => setJobPosting({...jobPosting, salary: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                  placeholder="e.g., $2000 - $4000"
+                />
+              </div>
+            </div>
+
+            {/* Job Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Job Type</label>
+              <select
+                value={jobPosting.jobType}
+                onChange={(e) => setJobPosting({...jobPosting, jobType: e.target.value as any})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              >
+                <option value="full-time">Full-time</option>
+                <option value="part-time">Part-time</option>
+                <option value="contract">Contract</option>
+                <option value="internship">Internship</option>
+              </select>
+            </div>
+
+            {/* Required Skills - Replace with 3 filter bars */}
             <div className="space-y-6">
-              {/* Basic Job Info */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Job Title</label>
-                  <input
-                    type="text"
-                    value={jobPosting.title}
-                    onChange={(e) => setJobPosting({...jobPosting, title: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., Senior Python Developer"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
-                  <input
-                    type="text"
-                    value={jobPosting.company}
-                    onChange={(e) => setJobPosting({...jobPosting, company: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., TechCorp Inc."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                  <input
-                    type="text"
-                    value={jobPosting.location}
-                    onChange={(e) => setJobPosting({...jobPosting, location: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., Ho Chi Minh City"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Salary Range</label>
-                  <input
-                    type="text"
-                    value={jobPosting.salary}
-                    onChange={(e) => setJobPosting({...jobPosting, salary: e.target.value})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                    placeholder="e.g., $2000 - $4000"
-                  />
-                </div>
-              </div>
-
-              {/* Job Type */}
+              {/* Institution Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Job Type</label>
-                <select
-                  value={jobPosting.jobType}
-                  onChange={(e) => setJobPosting({...jobPosting, jobType: e.target.value as any})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                >
-                  <option value="full-time">Full-time</option>
-                  <option value="part-time">Part-time</option>
-                  <option value="contract">Contract</option>
-                  <option value="internship">Internship</option>
-                </select>
-              </div>
-
-              {/* Required Skills - Replace with 3 filter bars */}
-              <div className="space-y-6">
-                {/* Institution Filter */}
-                <div>
-                  <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                    <BuildingOfficeIcon className="w-4 h-4 text-blue-600" />
-                    Institutions
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {availableInstitutions.slice(0, showInstitutionSection ? availableInstitutions.length : 3).map((institution) => (
-                      <button
-                        key={institution}
-                        onClick={() => toggleInstitution(institution)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          jobPosting.requiredInstitutions.includes(institution)
-                            ? 'bg-blue-600 text-white shadow-lg'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {institution}
-                      </button>
-                    ))}
-                    {availableInstitutions.length > 3 && (
-                      <button
-                        onClick={() => setShowInstitutionSection(!showInstitutionSection)}
-                        className="flex items-center gap-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        {showInstitutionSection ? (
-                          <>
-                            <ChevronUpIcon className="w-4 h-4" />
-                            Show Less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDownIcon className="w-4 h-4" />
-                            Show More ({availableInstitutions.length - 3} more)
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Program Filter */}
-                <div>
-                  <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                    <AcademicCapIcon className="w-4 h-4 text-green-600" />
-                    Programs
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {availablePrograms.slice(0, showProgramSection ? availablePrograms.length : 3).map((program) => (
-                      <button
-                        key={program}
-                        onClick={() => toggleProgram(program)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          jobPosting.requiredPrograms.includes(program)
-                            ? 'bg-green-600 text-white shadow-lg'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {program}
-                      </button>
-                    ))}
-                    {availablePrograms.length > 3 && (
-                      <button
-                        onClick={() => setShowProgramSection(!showProgramSection)}
-                        className="flex items-center gap-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        {showProgramSection ? (
-                          <>
-                            <ChevronUpIcon className="w-4 h-4" />
-                            Show Less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDownIcon className="w-4 h-4" />
-                            Show More ({availablePrograms.length - 3} more)
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Skills Filter */}
-                <div>
-                  <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                    <CodeBracketIcon className="w-4 h-4 text-purple-600" />
-                    Skills
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {availableSkills.slice(0, showFilterSection ? availableSkills.length : 3).map((skill) => (
-                      <button
-                        key={skill}
-                        type="button"
-                        onClick={() => toggleSkill(skill)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          jobPosting.requiredSkills.includes(skill)
-                            ? 'bg-purple-600 text-white shadow-lg'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {skill}
-                      </button>
-                    ))}
-                    {availableSkills.length > 3 && (
-                      <button
-                        onClick={() => setShowFilterSection(!showFilterSection)}
-                        className="flex items-center gap-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        {showFilterSection ? (
-                          <>
-                            <ChevronUpIcon className="w-4 h-4" />
-                            Show Less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDownIcon className="w-4 h-4" />
-                            Show More ({availableSkills.length - 3} more)
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* GPA Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum GPA</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="4.0"
-                    value={jobPosting.minimumGPA === '' ? '' : jobPosting.minimumGPA}
-                    onChange={(e) => setJobPosting(prev => ({
-                      ...prev,
-                      minimumGPA: e.target.value === '' ? '' : parseFloat(e.target.value)
-                    }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500"
-                    placeholder="e.g., 3.5"
-                  />
-                </div>
-
-                {/* Clear Filters */}
-                {(jobPosting.requiredInstitutions.length > 0 || jobPosting.requiredPrograms.length > 0 || jobPosting.requiredSkills.length > 0 || jobPosting.minimumGPA !== '') && (
-                  <div className="pt-2">
+                <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <BuildingOfficeIcon className="w-4 h-4 text-blue-600" />
+                  Institutions
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {availableInstitutions.slice(0, showInstitutionSection ? availableInstitutions.length : 3).map((institution) => (
                     <button
-                      type="button"
-                      onClick={clearAllFilters}
-                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      key={institution}
+                      onClick={() => toggleInstitution(institution)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        jobPosting.requiredInstitutions.includes(institution)
+                          ? 'bg-blue-600 text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
                     >
-                      Clear All Filters
+                      {institution}
                     </button>
-                  </div>
-                )}
-              </div>
-
-              {/* ZK Proof Requirements */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Required Proof Types</label>
-                  <div className="space-y-2">
-                    {(['skill', 'identity', 'academic', 'experience'] as const).map((proofType) => (
-                      <label key={proofType} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={jobPosting.requiredProofTypes.includes(proofType)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setJobPosting({
-                                ...jobPosting,
-                                requiredProofTypes: [...jobPosting.requiredProofTypes, proofType]
-                              });
-                            } else {
-                              setJobPosting({
-                                ...jobPosting,
-                                requiredProofTypes: jobPosting.requiredProofTypes.filter(pt => pt !== proofType)
-                              });
-                            }
-                          }}
-                          className="mr-2"
-                        />
-                        <span className="text-sm text-gray-700 capitalize">{proofType}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Minimum Proof Level */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Proof Level</label>
-                  <select
-                    value={jobPosting.minProofLevel}
-                    onChange={(e) => setJobPosting({...jobPosting, minProofLevel: e.target.value as any})}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  >
-                    <option value="basic">Basic</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                    <option value="expert">Expert</option>
-                  </select>
+                  ))}
+                  {availableInstitutions.length > 3 && (
+                    <button
+                      onClick={() => setShowInstitutionSection(!showInstitutionSection)}
+                      className="flex items-center gap-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      {showInstitutionSection ? (
+                        <>
+                          <ChevronUpIcon className="w-4 h-4" />
+                          Show Less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDownIcon className="w-4 h-4" />
+                          Show More ({availableInstitutions.length - 3} more)
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Job Description */}
+              {/* Program Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Job Description</label>
-                <textarea
-                  value={jobPosting.description}
-                  onChange={(e) => setJobPosting({...jobPosting, description: e.target.value})}
-                  rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-                  placeholder="Describe the role and responsibilities..."
+                <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <AcademicCapIcon className="w-4 h-4 text-green-600" />
+                  Programs
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {availablePrograms.slice(0, showProgramSection ? availablePrograms.length : 3).map((program) => (
+                    <button
+                      key={program}
+                      onClick={() => toggleProgram(program)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        jobPosting.requiredPrograms.includes(program)
+                          ? 'bg-green-600 text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {program}
+                    </button>
+                  ))}
+                  {availablePrograms.length > 3 && (
+                    <button
+                      onClick={() => setShowProgramSection(!showProgramSection)}
+                      className="flex items-center gap-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      {showProgramSection ? (
+                        <>
+                          <ChevronUpIcon className="w-4 h-4" />
+                          Show Less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDownIcon className="w-4 h-4" />
+                          Show More ({availablePrograms.length - 3} more)
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Skills Filter */}
+              <div>
+                <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <CodeBracketIcon className="w-4 h-4 text-purple-600" />
+                  Skills
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {availableSkills.slice(0, showFilterSection ? availableSkills.length : 3).map((skill) => (
+                    <button
+                      key={skill}
+                      type="button"
+                      onClick={() => toggleSkill(skill)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                        jobPosting.requiredSkills.includes(skill)
+                          ? 'bg-purple-600 text-white shadow-lg'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {skill}
+                    </button>
+                  ))}
+                  {availableSkills.length > 3 && (
+                    <button
+                      onClick={() => setShowFilterSection(!showFilterSection)}
+                      className="flex items-center gap-1 px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      {showFilterSection ? (
+                        <>
+                          <ChevronUpIcon className="w-4 h-4" />
+                          Show Less
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDownIcon className="w-4 h-4" />
+                          Show More ({availableSkills.length - 3} more)
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* GPA Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Minimum GPA</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="4.0"
+                  value={jobPosting.minimumGPA === '' ? '' : jobPosting.minimumGPA}
+                  onChange={(e) => setJobPosting(prev => ({
+                    ...prev,
+                    minimumGPA: e.target.value === '' ? '' : parseFloat(e.target.value)
+                  }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-500"
+                  placeholder="e.g., 3.5"
                 />
               </div>
 
-              {/* Submit Button */}
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => setShowJobForm(false)}
-                  className="px-6 py-3 text-gray-600 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleJobSubmit}
-                  disabled={contractDeploying || !jobPosting.title || !jobPosting.company}
-                  className="px-8 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {contractDeploying ? (
-                    <>
-                      <LoadingSpinner />
-                      Deploying Smart Contract...
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheckIcon className="w-5 h-5" />
-                      Deploy Smart Contract & Post Job
-                    </>
-                  )}
-                </button>
+              {/* Clear Filters */}
+              {(jobPosting.requiredInstitutions.length > 0 || jobPosting.requiredPrograms.length > 0 || jobPosting.requiredSkills.length > 0 || jobPosting.minimumGPA !== '') && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ZK Proof Requirements */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Required Proof Types</label>
+                <div className="space-y-2">
+                  {(['skill', 'identity', 'academic', 'experience'] as const).map((proofType) => (
+                    <label key={proofType} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={jobPosting.requiredProofTypes.includes(proofType)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setJobPosting({
+                              ...jobPosting,
+                              requiredProofTypes: [...jobPosting.requiredProofTypes, proofType]
+                            });
+                          } else {
+                            setJobPosting({
+                              ...jobPosting,
+                              requiredProofTypes: jobPosting.requiredProofTypes.filter(pt => pt !== proofType)
+                            });
+                          }
+                        }}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-700 capitalize">{proofType}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
-          )}
+
+            {/* Minimum Proof Level */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Proof Level</label>
+              <select
+                value={jobPosting.minProofLevel}
+                onChange={(e) => setJobPosting({...jobPosting, minProofLevel: e.target.value as any})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              >
+                <option value="basic">Basic</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+                <option value="expert">Expert</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Job Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Job Description</label>
+            <textarea
+              value={jobPosting.description}
+              onChange={(e) => setJobPosting({...jobPosting, description: e.target.value})}
+              rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              placeholder="Describe the role and responsibilities..."
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end gap-4">
+            <button
+              onClick={() => setShowJobForm(false)}
+              className="px-6 py-3 text-gray-600 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleJobSubmit}
+              disabled={contractDeploying || !jobPosting.title || !jobPosting.company}
+              className="px-8 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-xl font-bold hover:from-green-700 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {contractDeploying ? (
+                <>
+                  <LoadingSpinner />
+                  Deploying Smart Contract...
+                </>
+              ) : (
+                <>
+                  <ShieldCheckIcon className="w-5 h-5" />
+                  Find Matching Candidates
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Current Job Status */}
@@ -1007,7 +987,7 @@ const EmployerStudentSearchPage: React.FC = () => {
             </h2>
             {jobPosting.id && (
               <p className="text-gray-600 mt-2">
-                Showing candidates with verified ZK proofs matching your job requirements
+                Showing candidates with verified Zero Knowledge Proofs matching your job requirements
               </p>
             )}
           </div>
@@ -1023,7 +1003,7 @@ const EmployerStudentSearchPage: React.FC = () => {
                 <p className="text-gray-600 text-lg">
                   {jobPosting.id 
                     ? 'Try adjusting your job requirements or posting a new job'
-                    : 'Post a job to find candidates with verified ZK proofs'
+                    : 'Post a job to find candidates with verified Zero Knowledge Proofs'
                   }
                 </p>
               </div>
@@ -1105,7 +1085,7 @@ const EmployerStudentSearchPage: React.FC = () => {
                 {selectedStudent?.name.charAt(0)}
               </span>
             </div>
-            
+
             <h3 className="text-xl font-bold text-gray-900 mb-4">{selectedStudent?.name}</h3>
             
             <div className="mb-6">
@@ -1129,7 +1109,7 @@ const EmployerStudentSearchPage: React.FC = () => {
             
             <div className="text-sm text-gray-600">
               {selectedStudent && !getZKProofStatus(selectedStudent).canContact && (
-                <p>This student requires ZK proof verification before contact.</p>
+                <p>This student requires Zero Knowledge Proof verification before contact.</p>
               )}
             </div>
           </div>
@@ -1139,7 +1119,7 @@ const EmployerStudentSearchPage: React.FC = () => {
         <Modal
           isOpen={showProofModal}
           onClose={() => setShowProofModal(false)}
-          title="ZK Proof Verification Required"
+          title="Zero Knowledge Proof Verification Required"
           size="lg"
         >
           <div className="p-6">
@@ -1149,9 +1129,9 @@ const EmployerStudentSearchPage: React.FC = () => {
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <ShieldCheckIcon className="w-8 h-8 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">ZK Proof Verification Required</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Zero Knowledge Proof Verification Required</h3>
                   <p className="text-gray-600">
-                    To contact {selectedStudent?.name}, you need to verify their Zero-Knowledge proof and accept privacy terms.
+                    To contact {selectedStudent?.name}, you need to verify their Zero Knowledge proof and accept privacy terms.
                   </p>
                 </div>
                 
@@ -1222,7 +1202,7 @@ const EmployerStudentSearchPage: React.FC = () => {
             {proofVerificationStep === 'verify' && (
               <div className="text-center py-8">
                 <LoadingSpinner />
-                <h3 className="text-lg font-bold text-gray-900 mt-4">Verifying ZK Proof...</h3>
+                <h3 className="text-lg font-bold text-gray-900 mt-4">Verifying Zero Knowledge Proof...</h3>
                 <p className="text-gray-600">Please wait while we verify the proof on the blockchain.</p>
               </div>
             )}
@@ -1234,7 +1214,7 @@ const EmployerStudentSearchPage: React.FC = () => {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">Verification Complete!</h3>
                 <p className="text-gray-600 mb-6">
-                  ZK proof has been verified successfully. You can now contact {selectedStudent?.name}.
+                  Zero Knowledge Proof has been verified successfully. You can now contact {selectedStudent?.name}.
                 </p>
                 <div className="bg-green-50 rounded-lg p-4 mb-6">
                   <h4 className="font-semibold text-green-900 mb-2">Contact Information</h4>
