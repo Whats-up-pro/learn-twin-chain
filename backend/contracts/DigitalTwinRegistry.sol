@@ -4,11 +4,11 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/Ownable.sol"; // Or use a DID-based access control
 
 struct TwinDataLog {
-    string did;
-    bytes32 dataHash; // Hash of the Digital Twin state
-    string ipfsCid;   // CID of the full Digital Twin data on IPFS
-    uint256 timestamp;
-    uint256 version;
+    string did;         // DID
+    bytes32 dataHash;   // Hash of the Digital Twin state
+    string ipfsCid;     // CID of the full Digital Twin data on IPFS
+    uint256 timestamp;  // Update time
+    uint256 version;    // data version
 }
 
 contract DigitalTwinRegistry is Ownable {
