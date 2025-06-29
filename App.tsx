@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import TeacherDashboardPage from './pages/TeacherDashboardPage';
 import EmployerDashboardPage from './pages/EmployerDashboardPage';
+import EmployerStudentSearchPage from './pages/EmployerStudentSearchPage';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
 import { UserRole } from './types';
@@ -72,7 +73,7 @@ const AppContent: React.FC = () => {
           } />
           <Route path="/employer" element={
             <ProtectedRoute allowedRoles={[UserRole.EMPLOYER]}>
-              <EmployerDashboardPage />
+              <EmployerStudentSearchPage />
             </ProtectedRoute>
           } />
           <Route path="/module/:moduleId" element={
