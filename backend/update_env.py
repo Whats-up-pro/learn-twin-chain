@@ -37,17 +37,25 @@ def update_env_with_contracts():
             lines[i] = f'MODULE_PROGRESS_CONTRACT_ADDRESS={deployment_data["contracts"]["MODULE_PROGRESS_CONTRACT_ADDRESS"]}'
             updated = True
         elif line.startswith('ACHIEVEMENT_CONTRACT_ADDRESS='):
-            lines[i] = f'ACHIEVEMENT_CONTRACT_ADDRESS={deployment_data["contracts"]["ACHIEVEMENT_CONTRACT_ADDRESS"]}'
+            lines[i] = f'ACHIEVEMENT_CONTRACT_ADDRESS={deployment_data["contracts"]["NFT_CONTRACT_ADDRESS"]}'
             updated = True
         elif line.startswith('REGISTRY_CONTRACT_ADDRESS='):
             lines[i] = f'REGISTRY_CONTRACT_ADDRESS={deployment_data["contracts"]["REGISTRY_CONTRACT_ADDRESS"]}'
             updated = True
+        elif line.startswith('ZKP_CERTIFICATE_CONTRACT_ADDRESS='):
+            # Check if ZKP contract exists in deployment data
+            if 'ZKP_CERTIFICATE_CONTRACT_ADDRESS' in deployment_data["contracts"]:
+                lines[i] = f'ZKP_CERTIFICATE_CONTRACT_ADDRESS={deployment_data["contracts"]["ZKP_CERTIFICATE_CONTRACT_ADDRESS"]}'
+                updated = True
     
     # If addresses not found, add them
     if not updated:
         lines.append(f'MODULE_PROGRESS_CONTRACT_ADDRESS={deployment_data["contracts"]["MODULE_PROGRESS_CONTRACT_ADDRESS"]}')
-        lines.append(f'ACHIEVEMENT_CONTRACT_ADDRESS={deployment_data["contracts"]["ACHIEVEMENT_CONTRACT_ADDRESS"]}')
+        lines.append(f'ACHIEVEMENT_CONTRACT_ADDRESS={deployment_data["contracts"]["NFT_CONTRACT_ADDRESS"]}')
         lines.append(f'REGISTRY_CONTRACT_ADDRESS={deployment_data["contracts"]["REGISTRY_CONTRACT_ADDRESS"]}')
+        # Add ZKP contract if exists
+        if 'ZKP_CERTIFICATE_CONTRACT_ADDRESS' in deployment_data["contracts"]:
+            lines.append(f'ZKP_CERTIFICATE_CONTRACT_ADDRESS={deployment_data["contracts"]["ZKP_CERTIFICATE_CONTRACT_ADDRESS"]}')
     
     # Write updated .env
     with open(env_file, 'w') as f:
@@ -55,8 +63,10 @@ def update_env_with_contracts():
     
     print("✅ Updated .env with contract addresses:")
     print(f"  MODULE_PROGRESS_CONTRACT_ADDRESS: {deployment_data['contracts']['MODULE_PROGRESS_CONTRACT_ADDRESS']}")
-    print(f"  ACHIEVEMENT_CONTRACT_ADDRESS: {deployment_data['contracts']['ACHIEVEMENT_CONTRACT_ADDRESS']}")
+    print(f"  ACHIEVEMENT_CONTRACT_ADDRESS: {deployment_data['contracts']['NFT_CONTRACT_ADDRESS']}")
     print(f"  REGISTRY_CONTRACT_ADDRESS: {deployment_data['contracts']['REGISTRY_CONTRACT_ADDRESS']}")
+    if 'ZKP_CERTIFICATE_CONTRACT_ADDRESS' in deployment_data["contracts"]:
+        print(f"  ZKP_CERTIFICATE_CONTRACT_ADDRESS: {deployment_data['contracts']['ZKP_CERTIFICATE_CONTRACT_ADDRESS']}")
     print(f"\n📝 Updated {env_file} successfully!")
 
 if __name__ == "__main__":

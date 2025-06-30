@@ -9,6 +9,7 @@ from digital_twin.api.learning_api import router as learning_router
 from digital_twin.api.analytics_api import router as analytics_router
 from digital_twin.api.blockchain_api import router as blockchain_router
 from digital_twin.api.ipfs_api import router as ipfs_router
+from digital_twin.api.zkp_api import router as zkp_router
 from .config.config import config
 from .utils import Logger
 from pydantic import BaseModel
@@ -147,6 +148,7 @@ app.include_router(twin_router, prefix="/api/v1")
 app.include_router(learning_router, prefix="/api/v1/learning")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
 app.include_router(ipfs_router, prefix="/api/v1/ipfs")
+app.include_router(zkp_router)
 
 @app.get("/")
 async def root():
