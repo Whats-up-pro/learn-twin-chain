@@ -7,7 +7,13 @@ export const APP_NAME = 'LearnTwinChain';
 export const DEFAULT_LEARNER_PROFILE: LearnerProfile = {
   did: 'did:learntwin:student001',
   name: 'Alex Student',
-  avatarUrl: 'https://picsum.photos/seed/alexstudent/100/100',
+  email: 'alex.student@uit.edu.vn',
+  avatarUrl: 'https://ui-avatars.com/api/?name=Alex+Student&background=0ea5e9&color=fff&size=100',
+  institution: 'UIT',
+  program: 'Computer Science',
+  birth_year: 2000,
+  enrollment_date: '2023-09-01',
+  createdAt: '2023-09-01T00:00:00.000Z'
 };
 
 export const INITIAL_DIGITAL_TWIN: DigitalTwin = {
@@ -43,7 +49,7 @@ export const LEARNING_MODULES: LearningModule[] = [
       { type: 'text', value: 'Welcome to the world of Python! Python is a high-level, interpreted programming language known for its readability and versatility.' },
       { type: 'text', value: 'It was created by Guido van Rossum and first released in 1991. Python\'s design philosophy emphasizes code readability with its notable use of significant indentation.' },
       { type: 'code', value: '# This is a simple Python comment\nprint("Hello, Python!")', language: 'python' },
-      { type: 'image', value: 'https://picsum.photos/seed/pythonintro/600/300' },
+      { type: 'image', value: 'https://via.placeholder.com/600x300/0ea5e9/ffffff?text=Python+Introduction' },
     ],
     quiz: [
       { id: 'q1m1', text: 'Who created Python?', options: [{ id: 'a', text: 'James Gosling' }, { id: 'b', text: 'Guido van Rossum' }, { id: 'c', text: 'Bjarne Stroustrup' }], correctOptionId: 'b', explanation: 'Guido van Rossum is the creator of Python.' },

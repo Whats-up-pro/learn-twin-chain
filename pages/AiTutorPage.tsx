@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { sendMessageToGemini, startChatSession } from '../services/geminiService';
 import { ChatMessage } from '../types';
-import LoadingSpinner from '../components/LoadingSpinner';
-import { PaperAirplaneIcon, SparklesIcon } from '@heroicons/react/24/solid';
+import { PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../contexts/AppContext';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'; // For GitHub Flavored Markdown (tables, etc.)
@@ -27,7 +26,7 @@ const AiTutorPage: React.FC = () => {
       { 
         id: 'initial-ai-message', 
         sender: 'ai', 
-        text: `Hello ${learnerProfile.name}! I'm your AI Tutor, powered by Gemini. How can I help you with your Python learning journey today?`, 
+        text: `Hello ${learnerProfile?.name || 'User'}! I'm your AI Tutor, powered by Gemini. How can I help you with your Python learning journey today?`, 
         timestamp: new Date() 
       }
     ]);
@@ -45,7 +44,7 @@ const AiTutorPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const aiResponseText = await sendMessageToGemini(userMessage.text, messages);
+      const aiResponseText = await sendMessageToGemini(userMessage.text);
       const aiMessage: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'ai', text: aiResponseText, timestamp: new Date() };
       setMessages(prev => [...prev, aiMessage]);
       updateBehavior({
@@ -69,7 +68,6 @@ const AiTutorPage: React.FC = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-150px)] max-w-3xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
       <header className="bg-sky-600 text-white p-4 flex items-center space-x-2">
-        <SparklesIcon className="h-6 w-6"/>
         <h1 className="text-xl font-semibold">AI Tutor (Gemini)</h1>
       </header>
       
@@ -112,10 +110,9 @@ const AiTutorPage: React.FC = () => {
           </div>
         ))}
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-xs px-4 py-3 rounded-lg shadow bg-gray-200">
-              <LoadingSpinner size="sm" text="AI is thinking..." />
-            </div>
+          <div className="flex items-center justify-center p-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+            <span className="ml-2 text-gray-600">AI is thinking...</span>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -138,7 +135,11 @@ const AiTutorPage: React.FC = () => {
             className="bg-sky-500 hover:bg-sky-600 text-white p-3 rounded-lg disabled:opacity-50 transition-colors shadow hover:shadow-md"
             aria-label="Send message"
           >
-            {isLoading ? <LoadingSpinner size="sm" /> : <PaperAirplaneIcon className="h-6 w-6" />}
+            {isLoading ? (
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+            ) : (
+              <PaperAirplaneIcon className="h-6 w-6" />
+            )}
           </button>
         </div>
       </div>

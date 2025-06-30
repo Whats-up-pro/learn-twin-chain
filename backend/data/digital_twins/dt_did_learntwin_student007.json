@@ -1,45 +1,46 @@
 {
   "twin_id": "did:learntwin:student007",
-  "owner_did": "did:learner:0x987Mno",
+  "owner_did": "did:learner:0xStU012",
   "profile": {
-    "full_name": "Nguyễn Anh Khoa",
-    "birth_year": 2006,
+    "full_name": "Nguyễn Ngọc Tự",
+    "birth_year": 2002,
     "institution": "UIT",
-    "program": "Computer Science",
-    "enrollment_date": "2025-09-01"
+    "program": "Cybersecurity",
+    "enrollment_date": "2024-09-01"
   },
   "learning_state": {
     "progress": {
-      "Hệ điều hành": 0.6,
-      "Python cơ bản": 0.8
+      "Web Security": 0.8,
+      "Malware Analysis": 0.6
     },
     "checkpoint_history": [
       {
-        "module": "Python cơ bản",
-        "completed_at": "2025-03-30",
-        "tokenized": true,
-        "nft_cid": "QmLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBc"
+        "module": "Web Security",
+        "completed_at": "2025-06-20",
+        "tokenized": false,
+        "nft_cid": null
       }
     ],
     "current_modules": [
-      "Nghiên cứu khoa học"
+      "Web Security",
+      "Malware Analysis"
     ]
   },
   "skill_profile": {
     "programming_languages": {
-      "Python": 0.8,
-      "C++": 0.65
+      "Python": 0.9,
+      "JavaScript": 0.7
     },
     "soft_skills": {
-      "self_learning": 0.85
+      "security_research": 0.8
     }
   },
   "interaction_logs": {
-    "last_llm_session": "2025-06-18T18:20:00+07:00",
+    "last_llm_session": "2025-06-20T10:00:00+07:00",
     "most_asked_topics": [
-      "process management",
-      "memory allocation"
+      "Python",
+      "JavaScript"
     ],
-    "preferred_learning_style": "practice-first"
+    "preferred_learning_style": "code-first"
   }
 }

@@ -1,28 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  AcademicCapIcon, 
-  UserGroupIcon, 
-  ChartBarIcon,
-  PlusIcon,
-  EyeIcon,
-  PencilIcon,
-  TrashIcon,
-  ClockIcon,
-  CheckCircleIcon,
-  UserIcon,
-  ArrowPathIcon,
-  CodeBracketIcon,
-  HeartIcon,
-  BookOpenIcon,
-  InformationCircleIcon
-} from '@heroicons/react/24/outline';
-import { TeacherDashboard, Course, LearnerProgress } from '../types';
-import LoadingSpinner from '../components/LoadingSpinner';
-import Modal from '../components/Modal';
+import { AcademicCapIcon, UserGroupIcon, ChartBarIcon, PlusIcon, EyeIcon, PencilIcon, TrashIcon, CheckCircleIcon, UserIcon, ArrowPathIcon, CodeBracketIcon, HeartIcon, BookOpenIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { Course, LearnerProgress } from '../types';
 import toast from 'react-hot-toast';
+import Modal from '../components/Modal';
 
 const TeacherDashboardPage: React.FC = () => {
-  const [dashboard, setDashboard] = useState<TeacherDashboard | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [learnerProgress, setLearnerProgress] = useState<LearnerProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,6 +88,9 @@ const TeacherDashboardPage: React.FC = () => {
 
   // Lọc chỉ lấy học sinh (did chứa 'student')
   const studentLearners = learnerProgress.filter(l => l.learnerId.includes('student'));
+  
+  console.log('learnerProgress:', learnerProgress);
+  console.log('studentLearners:', studentLearners);
 
   // Tính toán students hiển thị theo trang
   const indexOfLastStudent = currentPage * studentsPerPage;
@@ -199,10 +184,6 @@ const TeacherDashboardPage: React.FC = () => {
     setShowLearnerModal(true);
   };
 
-  const handleSendMessage = (learnerId: string) => {
-    toast.success(`Message sent to learner ${learnerId}`);
-  };
-
   const handleOpenFeedback = (learner: LearnerProgress) => {
     setFeedbackTarget(learner);
     setFeedbackContent('');
@@ -211,152 +192,195 @@ const TeacherDashboardPage: React.FC = () => {
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!feedbackTarget) return;
-    if (!feedbackContent.trim()) {
-      toast.error('Feedback content is required');
+    if (!feedbackTarget || !feedbackContent.trim()) {
+      toast.error('Please enter feedback content');
       return;
     }
+
     try {
-      const res = await fetch('http://localhost:8000/api/v1/feedback', {
+      // Send feedback to backend
+      const response = await fetch('http://localhost:8000/api/v1/feedback', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          student_did: feedbackTarget.digitalTwin.learnerDid,
-          teacher_id: 'did:learntwin:teacher001', // TODO: lấy từ context nếu có
-          content: feedbackContent
+          student_did: feedbackTarget.learnerId,
+          teacher_id: 'teacher001', // In real app, this would be the logged-in teacher's ID
+          content: feedbackContent,
+          score: null, // Optional score
+          created_at: new Date().toISOString()
         })
       });
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.detail || 'Failed to send feedback');
-        return;
+
+      if (response.ok) {
+        toast.success('Feedback sent successfully!');
+        setShowFeedbackModal(false);
+        setFeedbackContent('');
+        setFeedbackTarget(null);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.detail || 'Failed to send feedback');
       }
-      toast.success('Feedback sent successfully!');
-      setShowFeedbackModal(false);
-    } catch (err) {
-      toast.error('Network error!');
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+      toast.error('Failed to send feedback. Please try again.');
     }
   };
 
   // Helper function to get student display name
   const getStudentDisplayName = (student: any) => {
-    if (student.digitalTwin?.profile?.full_name) {
-      return student.digitalTwin.profile.full_name;
-    }
-    return student.name || student.email || 'Unknown Student';
+    // Lấy từ digital twin profile hoặc fallback
+    return student.learnerName || 
+           (student.digitalTwin as any)?.profile?.full_name || 
+           'Unknown Student';
   };
 
   // Helper function to get student institution
   const getStudentInstitution = (student: any) => {
-    return student.digitalTwin?.profile?.institution || 'Not specified';
+    return (student.digitalTwin as any)?.profile?.institution || 'UIT';
   };
 
   // Helper function to get student program
   const getStudentProgram = (student: any) => {
-    return student.digitalTwin?.profile?.program || 'Not specified';
+    return (student.digitalTwin as any)?.profile?.program || 'Computer Science';
   };
 
   // Helper function to get student progress
   const getStudentProgress = (student: any) => {
-    const progress = student.digitalTwin?.learning_state?.progress;
-    if (!progress || Object.keys(progress).length === 0) {
-      return 0;
+    // Tính progress từ digital twin knowledge
+    const knowledge = (student.digitalTwin as any)?.knowledge;
+    if (!knowledge || Object.keys(knowledge).length === 0) {
+      return student.courseProgress?.averageScore / 100 || 0;
     }
-    const values = Object.values(progress) as number[];
-    return values.reduce((sum, val) => sum + val, 0) / values.length;
+    
+    const values = Object.values(knowledge) as number[];
+    const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+    return Math.min(average, 1); // Đảm bảo không vượt quá 1
   };
 
   // Helper function to get student skills
   const getStudentSkills = (student: any) => {
-    const skills = student.digitalTwin?.skill_profile?.programming_languages;
-    if (!skills || Object.keys(skills).length === 0) {
-      return ['No skills recorded'];
+    const skills = (student.digitalTwin as any)?.skill_profile?.programming_languages;
+    if (skills && Object.keys(skills).length > 0) {
+      return Object.keys(skills).filter(skill => skills[skill] > 0.5);
     }
-    return Object.keys(skills).slice(0, 3); // Show top 3 skills
+    return ['Python', 'Basic Programming'];
   };
 
   // Helper function to get current modules
   const getCurrentModules = (student: any) => {
-    const modules = student.digitalTwin?.learning_state?.current_modules;
-    if (!modules || modules.length === 0) {
-      return ['No active modules'];
+    const currentModules = (student.digitalTwin as any)?.learning_state?.current_modules;
+    if (currentModules && currentModules.length > 0) {
+      return currentModules;
     }
-    return modules.slice(0, 2); // Show top 2 current modules
+    return ['Introduction to Python', 'Variables and Data Types'];
   };
 
   // Helper function to get student birth year
   const getStudentBirthYear = (student: any) => {
-    return student.digitalTwin?.profile?.birth_year || 'Not specified';
+    return (student.digitalTwin as any)?.profile?.birth_year || 'N/A';
   };
 
   // Helper function to get student enrollment date
   const getStudentEnrollmentDate = (student: any) => {
-    const date = student.digitalTwin?.profile?.enrollment_date;
-    if (!date) return 'Not specified';
-    return new Date(date).toLocaleDateString();
+    const enrollmentDate = (student.digitalTwin as any)?.profile?.enrollment_date;
+    if (enrollmentDate) {
+      return new Date(enrollmentDate).toLocaleDateString();
+    }
+    return 'N/A';
   };
 
   // Helper function to get student soft skills
   const getStudentSoftSkills = (student: any) => {
-    const softSkills = student.digitalTwin?.skill_profile?.soft_skills;
-    if (!softSkills || Object.keys(softSkills).length === 0) {
-      return ['No soft skills recorded'];
+    const softSkills = (student.digitalTwin as any)?.skill_profile?.soft_skills;
+    if (softSkills && Object.keys(softSkills).length > 0) {
+      return Object.keys(softSkills).filter(skill => softSkills[skill] > 0.5);
     }
-    return Object.keys(softSkills).slice(0, 2); // Show top 2 soft skills
+    return ['Problem Solving', 'Logical Thinking'];
   };
 
   // Helper function to get student learning style
   const getStudentLearningStyle = (student: any) => {
-    return student.digitalTwin?.interaction_logs?.preferred_learning_style || 'Not specified';
+    return (student.digitalTwin as any)?.interaction_logs?.preferred_learning_style || 'hands-on';
   };
 
   // Helper function to get student last activity
   const getStudentLastActivity = (student: any) => {
-    const lastSession = student.digitalTwin?.interaction_logs?.last_llm_session;
-    if (!lastSession) return 'No recent activity';
-    return new Date(lastSession).toLocaleDateString();
+    const lastSessionTime = (student.digitalTwin as any)?.interaction_logs?.last_llm_session;
+    if (lastSessionTime) {
+      const lastDate = new Date(lastSessionTime);
+      const now = new Date();
+      const diffInHours = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60));
+      
+      if (diffInHours < 24) {
+        return `${diffInHours} hours ago`;
+      } else {
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays} days ago`;
+      }
+    }
+    return 'No recent activity';
   };
 
   // Hàm lấy danh sách học sinh/DT từ API thật
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/v1/learning/students');
-      if (!res.ok) throw new Error('Failed to fetch students');
-      const data = await res.json();
-      
-      // Map data.students về LearnerProgress với dữ liệu Digital Twin đầy đủ
-      const mapped: LearnerProgress[] = (data.students || []).map((dt: any) => ({
-        learnerId: dt.twin_id || dt.learnerDid || '',
-        learnerName: dt.profile?.full_name || 'Unknown',
-        avatarUrl: '',
-        digitalTwin: {
-          learnerDid: dt.twin_id || dt.learnerDid || '',
-          knowledge: dt.knowledge || {},
-          skills: dt.skills || {},
-          behavior: dt.behavior || {},
-          checkpoints: dt.checkpoints || [],
-          version: dt.version || 1,
-          lastUpdated: dt.lastUpdated || new Date().toISOString(),
-          // Thêm dữ liệu Digital Twin đầy đủ
-          profile: dt.profile || {},
-          learning_state: dt.learning_state || {},
-          skill_profile: dt.skill_profile || {},
-          interaction_logs: dt.interaction_logs || {}
-        },
-        courseProgress: {
-          courseId: 'N/A',
-          completedModules: dt.learning_state?.checkpoint_history?.length || 0,
-          totalModules: Object.keys(dt.learning_state?.progress || {}).length || 0,
-          averageScore: getStudentProgress({ digitalTwin: dt }) * 100,
-          lastActivity: dt.interaction_logs?.last_llm_session || new Date().toISOString()
-        }
-      }));
-      setLearnerProgress(mapped);
-      toast.success('Student/DT list updated!');
-    } catch (err) {
+      // Fetch students from backend API
+      const response = await fetch('http://localhost:8000/api/v1/learning/students');
+      if (response.ok) {
+        const data = await response.json();
+        const students = data.students || [];
+        
+        // Transform data to match LearnerProgress interface
+        const transformedStudents: LearnerProgress[] = students.map((student: any) => ({
+          learnerId: student.twin_id || student.did,
+          learnerName: student.profile?.full_name || 'Unknown Student',
+          avatarUrl: '', // API không trả về avatarUrl
+          digitalTwin: {
+            learnerDid: student.twin_id || student.did,
+            version: student.version || 1,
+            knowledge: student.learning_state?.progress || {},
+            skills: {
+              problemSolving: student.skill_profile?.soft_skills?.problem_solving || 0.5,
+              logicalThinking: student.skill_profile?.soft_skills?.logical_thinking || 0.5,
+              selfLearning: student.skill_profile?.soft_skills?.self_learning || 0.5
+            },
+            behavior: {
+              timeSpent: "0h",
+              quizAccuracy: 0.5,
+              lastLlmSession: student.interaction_logs?.last_llm_session || null,
+              preferredLearningStyle: student.interaction_logs?.preferred_learning_style || "hands-on",
+              mostAskedTopics: student.interaction_logs?.most_asked_topics || []
+            },
+            checkpoints: student.learning_state?.checkpoint_history || [],
+            lastUpdated: new Date().toISOString(),
+            profile: student.profile || {},
+            learning_state: student.learning_state || {},
+            skill_profile: student.skill_profile || {},
+            interaction_logs: student.interaction_logs || {}
+          },
+          courseProgress: {
+            courseId: 'default-course',
+            completedModules: Object.values(student.learning_state?.progress || {}).filter((v: any) => v >= 1).length,
+            totalModules: Object.keys(student.learning_state?.progress || {}).length || 4,
+            averageScore: Object.values(student.learning_state?.progress || {}).reduce((sum: number, val: any) => sum + val, 0) / Math.max(Object.keys(student.learning_state?.progress || {}).length, 1) * 100,
+            lastActivity: student.interaction_logs?.last_llm_session || new Date().toISOString()
+          }
+        }));
+        
+        setLearnerProgress(transformedStudents);
+        console.log('Transformed students:', transformedStudents);
+      } else {
+        console.error('Failed to fetch students');
+        // Fallback to demo data
+        setLearnerProgress([]);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      // Fallback to demo data
       setLearnerProgress([]);
-      toast.error('Failed to fetch student/DT list!');
     } finally {
       setLoading(false);
     }
@@ -382,140 +406,179 @@ const TeacherDashboardPage: React.FC = () => {
     }
   };
 
-  // Progress color helpers
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return 'text-green-600';
-    if (percentage >= 60) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-  const getProgressBarColor = (percentage: number) => {
-    if (percentage >= 80) return 'bg-green-500';
-    if (percentage >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
-  if (loading) return <LoadingSpinner />;
+  if (loading) return (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <span className="ml-2 text-gray-600">Loading...</span>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Teacher Dashboard</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSyncData}
-            className={`bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-600 ${syncing ? 'opacity-60 cursor-not-allowed' : ''}`}
-            disabled={syncing}
-          >
-            <ArrowPathIcon className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync Data'}
-          </button>
-          <button
-            onClick={handleCreateCourse}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Create Course
-          </button>
+      <div className="bg-gradient-to-r from-sky-600 to-blue-700 rounded-xl shadow-lg mb-8">
+        <div className="px-8 py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="mb-4 md:mb-0">
+              <h1 className="text-3xl font-bold text-white mb-2">Teacher Dashboard</h1>
+              <p className="text-sky-100">Monitor your students' progress and manage courses</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleSyncData}
+                className={`bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center ${syncing ? 'opacity-60 cursor-not-allowed' : ''}`}
+                disabled={syncing}
+              >
+                <ArrowPathIcon className={`w-5 h-5 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync Data'}
+              </button>
+              <button
+                onClick={handleCreateCourse}
+                className="bg-white text-sky-600 hover:bg-gray-50 px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center"
+              >
+                <PlusIcon className="w-5 h-5 mr-2" />
+                Create Course
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center">
-            <AcademicCapIcon className="w-8 h-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Courses</p>
-              <p className="text-2xl font-bold text-gray-900">{totalCourses}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Total Students */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Students</p>
+              <p className="text-3xl font-bold text-gray-900">{totalLearners}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <UserGroupIcon className="w-6 h-6 text-blue-600" />
             </div>
           </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center">
-            <UserGroupIcon className="w-8 h-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Learners</p>
-              <p className="text-2xl font-bold text-gray-900">{totalLearners}</p>
-            </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-green-600 font-medium">+12%</span>
+            <span className="text-gray-500 ml-1">from last month</span>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center">
-            <ChartBarIcon className="w-8 h-8 text-purple-600" />
-            <div className="ml-4">
+
+        {/* Active Learners - moved up */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-600">Active Learners</p>
-              <p className="text-2xl font-bold text-gray-900">{activeLearners}</p>
+              <p className="text-3xl font-bold text-gray-900">{activeLearners}</p>
+            </div>
+            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+              <ChartBarIcon className="w-6 h-6 text-yellow-600" />
             </div>
           </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-green-600 font-medium">+5%</span>
+            <span className="text-gray-500 ml-1">from last week</span>
+          </div>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <div className="flex items-center">
-            <CheckCircleIcon className="w-8 h-8 text-indigo-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Avg. Completion</p>
-              <p className="text-2xl font-bold text-gray-900">78%</p>
+
+        {/* Active Courses - now third */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Courses</p>
+              <p className="text-3xl font-bold text-gray-900">{totalCourses}</p>
             </div>
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+              <BookOpenIcon className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-green-600 font-medium">+3</span>
+            <span className="text-gray-500 ml-1">new this month</span>
+          </div>
+        </div>
+
+        {/* Avg. Completion */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Avg. Completion</p>
+              <p className="text-3xl font-bold text-gray-900">78%</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+              <CheckCircleIcon className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-sm">
+            <span className="text-green-600 font-medium">+8%</span>
+            <span className="text-gray-500 ml-1">this week</span>
           </div>
         </div>
       </div>
 
       {/* Courses */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">My Courses</h2>
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 border-b border-gray-100">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center">
+            <BookOpenIcon className="w-6 h-6 mr-3 text-emerald-600" />
+            My Courses
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">Manage and monitor your course offerings</p>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(courses.length > 0 ? courses : demoCourses).map((course) => (
-              <div key={course.id} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-3">
+              <div key={course.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-emerald-300">
+                <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{course.title}</h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{course.title}</h3>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         course.isPublished 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-green-100 text-green-800 border border-green-200' 
+                          : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
                       }`}>
                         {course.isPublished ? 'Published' : 'Draft'}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{course.description}</p>
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{course.description}</p>
                   </div>
                 </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Enrolled Learners</span>
-                    <span className="font-semibold">{course.enrolledLearners}</span>
+                
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">Enrolled Learners</span>
+                    <span className="text-lg font-bold text-gray-900">{course.enrolledLearners}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Created</span>
-                    <span>{new Date(course.createdAt).toLocaleDateString()}</span>
+                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">Created</span>
+                    <span className="text-sm font-semibold text-gray-900">{new Date(course.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
+                
                 <div className="flex gap-2 pt-4 border-t border-gray-100">
                   <button 
                     onClick={() => handleEditCourse(course)}
-                    className="flex-1 text-green-600 hover:text-green-800 text-sm font-medium"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
                   >
-                    <PencilIcon className="w-4 h-4 inline mr-1" />
+                    <PencilIcon className="w-4 h-4 mr-1" />
                     Edit
                   </button>
                   <button 
                     onClick={() => handleTogglePublish(course.id)}
-                    className={`flex-1 text-sm font-medium ${
-                      course.isPublished ? 'text-orange-600 hover:text-orange-800' : 'text-blue-600 hover:text-blue-800'
+                    className={`flex-1 text-sm font-semibold py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center ${
+                      course.isPublished 
+                        ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}
                   >
                     {course.isPublished ? 'Unpublish' : 'Publish'}
                   </button>
                   <button 
                     onClick={() => handleDeleteCourse(course.id)}
-                    className="flex-1 text-red-600 hover:text-red-800 text-sm font-medium"
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
                   >
-                    <TrashIcon className="w-4 h-4 inline mr-1" />
+                    <TrashIcon className="w-4 h-4 mr-1" />
                     Delete
                   </button>
                 </div>
@@ -541,93 +604,133 @@ const TeacherDashboardPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {currentStudents.map((learner) => {
                   const progressPercentage = getStudentProgress(learner);
+                  const studentAvatarUrl = (learner as any)?.avatarUrl && (learner as any).avatarUrl.trim() !== ''
+                    ? (learner as any).avatarUrl
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(getStudentDisplayName(learner))}&background=0ea5e9&color=fff&size=80`;
+                  
                   return (
-                    <div key={learner.learnerId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                            {getStudentDisplayName(learner)}
-                          </h3>
-                          <p className="text-sm text-gray-600 mb-2">{learner.learnerId}</p>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Institution:</span>
-                              <span className="font-medium">{getStudentInstitution(learner)}</span>
+                    <div key={learner.learnerId} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
+                      {/* Header với avatar và tên */}
+                      <div className="bg-gradient-to-r from-sky-50 to-blue-50 p-6">
+                        <div className="flex items-center space-x-4">
+                          <div className="relative">
+                            <img 
+                              src={studentAvatarUrl}
+                              alt={getStudentDisplayName(learner)}
+                              className="w-16 h-16 rounded-full border-4 border-white shadow-lg"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(getStudentDisplayName(learner))}&background=0ea5e9&color=fff&size=80`;
+                              }}
+                            />
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Program:</span>
-                              <span className="font-medium">{getStudentProgram(learner)}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-lg font-bold text-gray-900 truncate">
+                              {getStudentDisplayName(learner)}
+                            </h3>
+                            <p className="text-sm text-gray-600 truncate">{learner.learnerId}</p>
+                            <div className="flex items-center mt-1">
+                              <span className="text-xs bg-sky-100 text-sky-800 px-2 py-1 rounded-full font-medium">
+                                {getStudentInstitution(learner)}
+                              </span>
                             </div>
                           </div>
                         </div>
                       </div>
-                      
-                      {/* Progress Section */}
-                      <div className="mb-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-gray-700">Overall Progress</span>
-                          <span className="text-sm font-semibold text-blue-600">
-                            {Math.round(progressPercentage * 100)}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="h-2 rounded-full bg-blue-500 transition-all duration-300"
-                            style={{ width: `${Math.round(progressPercentage * 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
 
-                      {/* Skills Section */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Programming Skills</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {getStudentSkills(learner).map((skill, index) => (
-                            <span 
-                              key={index}
-                              className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
-                            >
-                              {skill}
+                      {/* Content */}
+                      <div className="p-6 space-y-4">
+                        {/* Progress Section */}
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-semibold text-gray-700">Overall Progress</span>
+                            <span className="text-lg font-bold text-sky-600">
+                              {Math.round(progressPercentage * 100)}%
                             </span>
-                          ))}
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div 
+                              className={`h-3 rounded-full transition-all duration-500 ${
+                                progressPercentage >= 0.8 ? 'bg-green-500' : 
+                                progressPercentage >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.round(progressPercentage * 100)}%` }}
+                            ></div>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Current Modules */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Current Modules</h4>
-                        <div className="space-y-1">
-                          {getCurrentModules(learner).map((module: string, index: number) => (
-                            <div key={index} className="text-sm text-gray-600 flex items-center">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                              {module}
-                            </div>
-                          ))}
+                        {/* Student Info */}
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <div className="text-gray-500 text-xs font-medium mb-1">Program</div>
+                            <div className="font-semibold text-gray-900 truncate">{getStudentProgram(learner)}</div>
+                          </div>
+                          <div className="bg-gray-50 rounded-lg p-3">
+                            <div className="text-gray-500 text-xs font-medium mb-1">Learning Style</div>
+                            <div className="font-semibold text-gray-900 truncate">{getStudentLearningStyle(learner)}</div>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Last Activity */}
-                      <div className="mb-4 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Last Activity:</span>
-                          <span className="font-medium">{getStudentLastActivity(learner)}</span>
+                        {/* Skills Section */}
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Top Skills</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {getStudentSkills(learner).slice(0, 3).map((skill, index) => (
+                              <span 
+                                key={index}
+                                className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-md font-medium border border-green-200"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Current Modules */}
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Current Modules</h4>
+                          <div className="space-y-1">
+                            {getCurrentModules(learner).slice(0, 2).map((module: string, index: number) => (
+                              <div key={index} className="flex items-center p-2 bg-blue-50 rounded-lg">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                <span className="text-xs text-blue-800 font-medium truncate">{module}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Last Activity */}
+                        <div className="pt-2 border-t border-gray-100">
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>Last Activity</span>
+                            <span className="font-medium">{getStudentLastActivity(learner)}</span>
+                          </div>
                         </div>
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex gap-2 pt-4 border-t border-gray-100">
-                        <button 
-                          onClick={() => handleViewLearnerDetails(learner)}
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-md transition-colors"
-                        >
-                          View Details
-                        </button>
-                        <button 
-                          onClick={() => handleOpenFeedback(learner)}
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-3 rounded-md transition-colors"
-                        >
-                          Send Feedback
-                        </button>
+                      <div className="px-6 pb-6">
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleViewLearnerDetails(learner)}
+                            className="flex-1 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                          >
+                            <EyeIcon className="w-4 h-4 mr-1" />
+                            View Details
+                          </button>
+                          <button 
+                            onClick={() => handleOpenFeedback(learner)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                            </svg>
+                            Feedback
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -635,27 +738,33 @@ const TeacherDashboardPage: React.FC = () => {
               </div>
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center mt-8 gap-2">
+                <div className="flex justify-center items-center space-x-2 mt-8">
                   <button
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-md border ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                    className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Prev
+                    Previous
                   </button>
-                  {Array.from({ length: totalPages }, (_, i) => (
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                     <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`px-3 py-1 rounded-md border ${currentPage === i + 1 ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        currentPage === page
+                          ? 'bg-sky-600 text-white shadow-md'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
                     >
-                      {i + 1}
+                      {page}
                     </button>
                   ))}
+                  
                   <button
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className={`px-3 py-1 rounded-md border ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white text-blue-600 hover:bg-blue-50'}`}
+                    className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                   </button>
@@ -663,32 +772,88 @@ const TeacherDashboardPage: React.FC = () => {
               )}
             </>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-600">No students found.</p>
+            <div className="text-center py-16">
+              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <UserGroupIcon className="w-12 h-12 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">No Students Found</h3>
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                There are no students enrolled in your courses yet. Try syncing data or creating new courses.
+              </p>
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={handleSyncData}
+                  className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+                >
+                  <ArrowPathIcon className="w-5 h-5 mr-2" />
+                  Sync Data
+                </button>
+                <button
+                  onClick={handleCreateCourse}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+                >
+                  <PlusIcon className="w-5 h-5 mr-2" />
+                  Create Course
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
 
       {/* Popular Modules */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Popular Modules</h2>
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 border-b border-gray-100">
+          <h2 className="text-xl font-bold text-gray-900 flex items-center">
+            <ChartBarIcon className="w-6 h-6 mr-3 text-green-600" />
+            Popular Modules
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">Most completed modules by your students</p>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {demoPopularModules.map((mod) => (
-              <div key={mod.moduleId} className="border border-gray-200 rounded-lg p-4 flex flex-col justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{mod.title}</h3>
-                  <p className="text-sm text-gray-600">Completion Rate:</p>
-                  <div className="w-full bg-gray-200 rounded-full h-3 mt-2 mb-1">
-                    <div 
-                      className="h-3 rounded-full bg-blue-500 transition-all duration-300"
-                      style={{ width: `${Math.round(mod.completionRate * 100)}%` }}
-                    ></div>
+              <div key={mod.moduleId} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300 hover:border-green-300">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{mod.title}</h3>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      <span>Active Module</span>
+                    </div>
                   </div>
-                  <span className="text-sm font-semibold text-blue-700">{Math.round(mod.completionRate * 100)}%</span>
+                  <div className="ml-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <BookOpenIcon className="w-6 h-6 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-semibold text-gray-700">Completion Rate</span>
+                      <span className="text-lg font-bold text-green-600">
+                        {Math.round(mod.completionRate * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className={`h-3 rounded-full transition-all duration-500 ${
+                          mod.completionRate >= 0.8 ? 'bg-green-500' : 
+                          mod.completionRate >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.round(mod.completionRate * 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <span className="text-xs text-gray-500">Students enrolled</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {Math.floor(mod.completionRate * 50) + 15}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -697,12 +862,9 @@ const TeacherDashboardPage: React.FC = () => {
       </div>
 
       {/* Course Creation/Editing Modal */}
-      <Modal 
-        isOpen={showCourseModal} 
-        onClose={() => setShowCourseModal(false)}
-        title={isEditing ? 'Edit Course' : 'Create New Course'}
-      >
-        <div className="p-6">
+      <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${showCourseModal ? '' : 'hidden'}`}>
+        <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4" onClick={(e) => e.stopPropagation()}>
+          <h3 className="text-lg font-semibold mb-4">Create New Course</h3>
           <form onSubmit={handleSubmitCourse} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Course Title *</label>
@@ -755,7 +917,7 @@ const TeacherDashboardPage: React.FC = () => {
             </div>
           </form>
         </div>
-      </Modal>
+      </div>
 
       {/* Learner Details Modal */}
       <Modal 
@@ -769,10 +931,22 @@ const TeacherDashboardPage: React.FC = () => {
             <div className="space-y-8">
               {/* Header Section */}
               <div className="flex items-center space-x-6 pb-6 border-b border-gray-200">
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <span className="text-3xl font-bold text-white">
-                    {getStudentDisplayName(selectedLearner).charAt(0)}
-                  </span>
+                <div className="relative">
+                  <img 
+                    src={(selectedLearner as any)?.avatarUrl && (selectedLearner as any).avatarUrl.trim() !== ''
+                      ? (selectedLearner as any).avatarUrl
+                      : `https://ui-avatars.com/api/?name=${encodeURIComponent(getStudentDisplayName(selectedLearner))}&background=0ea5e9&color=fff&size=96`
+                    }
+                    alt={getStudentDisplayName(selectedLearner)}
+                    className="w-24 h-24 rounded-full border-4 border-white shadow-lg"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(getStudentDisplayName(selectedLearner))}&background=0ea5e9&color=fff&size=96`;
+                    }}
+                  />
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full border-3 border-white flex items-center justify-center">
+                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  </div>
                 </div>
                 <div className="flex-1">
                   <h3 className="text-3xl font-bold text-gray-900 mb-3">{getStudentDisplayName(selectedLearner)}</h3>
@@ -973,25 +1147,23 @@ const TeacherDashboardPage: React.FC = () => {
       </Modal>
 
       {/* Feedback Modal */}
-      {showFeedbackModal && feedbackTarget && (
-        <Modal isOpen={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} title="Feedback">
-          <form onSubmit={handleSubmitFeedback} className="space-y-4 p-4">
-            <h2 className="text-xl font-bold mb-2">Send Feedback to {feedbackTarget.learnerName}</h2>
-            <textarea
-              className="w-full border rounded p-2"
-              rows={4}
-              placeholder="Enter feedback..."
-              value={feedbackContent}
-              onChange={e => setFeedbackContent(e.target.value)}
-              required
-            />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setShowFeedbackModal(false)} className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">Send</button>
-            </div>
-          </form>
-        </Modal>
-      )}
+      <Modal isOpen={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} title="Feedback">
+        <form onSubmit={handleSubmitFeedback} className="space-y-4 p-4">
+          <h2 className="text-xl font-bold mb-2">Send Feedback to {feedbackTarget?.learnerName}</h2>
+          <textarea
+            className="w-full border rounded p-2"
+            rows={4}
+            placeholder="Enter feedback..."
+            value={feedbackContent}
+            onChange={e => setFeedbackContent(e.target.value)}
+            required
+          />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShowFeedbackModal(false)} className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Send</button>
+          </div>
+        </form>
+      </Modal>
     </div>
     </div>
   );

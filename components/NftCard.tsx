@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Nft } from '../types';
 
@@ -8,9 +7,21 @@ interface NftCardProps {
 }
 
 const NftCard: React.FC<NftCardProps> = ({ nft, onVerify }) => {
+  const imageUrl = nft.imageUrl && nft.imageUrl.trim() !== '' 
+    ? nft.imageUrl 
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(nft.name)}&background=0ea5e9&color=fff&size=200`;
+
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">
-      <img className="w-full h-48 object-cover" src={nft.imageUrl} alt={nft.name} />
+      <img 
+        className="w-full h-48 object-cover" 
+        src={imageUrl} 
+        alt={nft.name}
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(nft.name)}&background=0ea5e9&color=fff&size=200`;
+        }}
+      />
       <div className="p-5">
         <h3 className="text-lg font-semibold text-sky-700 mb-1 truncate" title={nft.name}>{nft.name}</h3>
         <p className="text-gray-600 text-xs mb-3 truncate" title={nft.description}>{nft.description}</p>

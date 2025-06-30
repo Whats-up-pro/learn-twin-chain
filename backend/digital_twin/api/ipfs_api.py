@@ -2,9 +2,29 @@ from fastapi import APIRouter, HTTPException, Body
 from typing import Dict, Any
 from ..services.ipfs_service import IPFSService
 import json
+import os
 
 router = APIRouter()
 ipfs_service = IPFSService()
+
+# Mock public key for UIT (in production, this should be stored securely)
+UIT_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
+MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE8tKwV1FQ9yDjMZrfsWyCACmOP5rDFCRx
+I9CzHvAcbxfiVy6KtTnmRVEhmLjK65O+mONHRU4gZq/2r72mwt1z8Q==
+-----END PUBLIC KEY-----"""
+
+@router.get("/school-public-key")
+async def get_school_public_key():
+    """Get school's public key for verification"""
+    try:
+        return {
+            "status": "success",
+            "institution": "UIT",
+            "public_key": UIT_PUBLIC_KEY,
+            "algorithm": "ES256K"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get public key: {str(e)}")
 
 @router.post("/upload")
 async def upload_to_ipfs(data: Dict[str, Any] = Body(...), name: str = Body(None)):

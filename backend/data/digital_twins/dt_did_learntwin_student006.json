@@ -1,45 +1,46 @@
 {
   "twin_id": "did:learntwin:student006",
-  "owner_did": "did:learner:0x321Xyz",
+  "owner_did": "did:learner:0xPqR789",
   "profile": {
-    "full_name": "Huỳnh Quốc Khánh",
+    "full_name": "Nguyễn Anh Khoa",
     "birth_year": 2005,
     "institution": "UIT",
-    "program": "Information Security",
+    "program": "Computer Science",
     "enrollment_date": "2025-09-01"
   },
   "learning_state": {
     "progress": {
-      "Machine Learning cơ bản": 0.7,
-      "Python cơ bản": 0.9
+      "Introduction to Programming": 0.9,
+      "Data Structures": 0.7
     },
     "checkpoint_history": [
       {
-        "module": "Machine Learning cơ bản",
-        "completed_at": "2025-05-10",
-        "tokenized": true,
-        "nft_cid": "QmStUvWxYzAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIj"
+        "module": "Introduction to Programming",
+        "completed_at": "2025-06-20",
+        "tokenized": false,
+        "nft_cid": null
       }
     ],
     "current_modules": [
-      "Nghiên cứu khoa học"
+      "Introduction to Programming",
+      "Data Structures"
     ]
   },
   "skill_profile": {
     "programming_languages": {
-      "Python": 0.9,
-      "R": 0.5
+      "Python": 0.8,
+      "Java": 0.7
     },
     "soft_skills": {
-      "critical_thinking": 0.8
+      "problem_solving": 0.9
     }
   },
   "interaction_logs": {
-    "last_llm_session": "2025-06-17T21:45:00+07:00",
+    "last_llm_session": "2025-06-20T10:00:00+07:00",
     "most_asked_topics": [
-      "linear regression",
-      "neural networks"
+      "Python",
+      "Java"
     ],
-    "preferred_learning_style": "theory-then-practice"
+    "preferred_learning_style": "code-first"
   }
 }

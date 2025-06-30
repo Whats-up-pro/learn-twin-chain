@@ -1,45 +1,46 @@
 {
   "twin_id": "did:learntwin:student005",
-  "owner_did": "did:learner:0x123Def",
+  "owner_did": "did:learner:0xMnO456",
   "profile": {
-    "full_name": "Trần Dương Minh Đại",
-    "birth_year": 2004,
+    "full_name": "Phạm Tấn Gia Quốc",
+    "birth_year": 2005,
     "institution": "UIT",
-    "program": "Computer Science",
-    "enrollment_date": "2024-09-01"
+    "program": "Cybersecurity",
+    "enrollment_date": "2025-09-01"
   },
   "learning_state": {
     "progress": {
-      "An toàn hệ thống": 0.6,
-      "Python cơ bản": 0.95
+      "Ethical Hacking": 0.75,
+      "Digital Forensics": 0.8
     },
     "checkpoint_history": [
       {
-        "module": "Python cơ bản",
-        "completed_at": "2025-04-15",
-        "tokenized": true,
-        "nft_cid": "QmHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXy"
+        "module": "Ethical Hacking",
+        "completed_at": "2025-06-20",
+        "tokenized": false,
+        "nft_cid": null
       }
     ],
     "current_modules": [
-      "Nghiên cứu khoa học"
+      "Ethical Hacking",
+      "Digital Forensics"
     ]
   },
   "skill_profile": {
     "programming_languages": {
-      "Python": 0.95,
-      "C": 0.6
+      "Python": 0.7,
+      "Bash": 0.6
     },
     "soft_skills": {
-      "problem_solving": 0.7
+      "penetration_testing": 0.8
     }
   },
   "interaction_logs": {
-    "last_llm_session": "2025-06-16T17:00:00+07:00",
+    "last_llm_session": "2025-06-20T10:00:00+07:00",
     "most_asked_topics": [
-      "AES",
-      "hash functions"
+      "Python",
+      "Bash"
     ],
-    "preferred_learning_style": "theory-then-practice"
+    "preferred_learning_style": "code-first"
   }
 }

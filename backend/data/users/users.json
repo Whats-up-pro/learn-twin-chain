@@ -3,18 +3,61 @@
     "id": "did:learntwin:student001",
     "did": "did:learntwin:student001",
     "name": "Đoàn Minh Trung",
-    "email": "trung@example.com",
+    "email": "trung@uit.edu.vn",
+    "password": "password123",
     "role": "student",
     "avatarUrl": "",
     "createdAt": "2024-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Computer Science",
+    "birth_year": 2002,
+    "enrollment_date": "2021-09-01",
+    "student_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
     "NFT_list": [
+      {
+        "token_id": "0xcb070b4243b22c19b1b61dafe5ba39b5630e0490f6464be047f2dd0015c0e55e",
+        "skill": "OOP Programming",
+        "cid_nft": "QmbUDLhDPtkStiTwWa9Layebf29udyov6PoJn6JLSEiMP6",
+        "mint_date": "2024-01-15",
+        "issuer": "did:learntwin:uit001",
+        "metadata": {
+          "name": "Skill Achievement: OOP Programming",
+          "description": "Verified credential for skill: OOP Programming",
+          "image": "ipfs://QmYourImageHash",
+          "attributes": [
+            {
+              "trait_type": "Skill",
+              "value": "OOP Programming"
+            },
+            {
+              "trait_type": "Issuer",
+              "value": "did:learntwin:uit001"
+            },
+            {
+              "trait_type": "Student",
+              "value": "did:learntwin:student001"
+            },
+            {
+              "trait_type": "Student Address",
+              "value": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+            },
+            {
+              "trait_type": "Verification Date",
+              "value": "2024-01-15"
+            },
+            {
+              "trait_type": "VC CID",
+              "value": "QmbUDLhDPtkStiTwWa9Layebf29udyov6PoJn6JLSEiMP6"
+            }
+          ]
+        }
+      },
       {
         "token_id": "0x20c627347b09763f9c5bb5c069aa5a65b97a2efa5ec9f113e3bf1269cf15f9bf",
         "skill": "Solarity Programming",
         "cid_nft": "QmVvaKnANwBeCSAm5VYCo3tAeNj7pysaTy56xQME7SpthF",
         "mint_date": "2024-01-15",
-        "issuer": "did:learntwin:school001",
-        "student_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "issuer": "did:learntwin:uit001",
         "metadata": {
           "name": "Skill Achievement: Solarity Programming",
           "description": "Verified credential for skill: Solarity Programming",
@@ -26,7 +69,7 @@
             },
             {
               "trait_type": "Issuer",
-              "value": "did:learntwin:school001"
+              "value": "did:learntwin:uit001"
             },
             {
               "trait_type": "Student",
@@ -44,35 +87,7 @@
               "trait_type": "VC CID",
               "value": "QmVvaKnANwBeCSAm5VYCo3tAeNj7pysaTy56xQME7SpthF"
             }
-          ],
-          "vc_data": {
-            "@context": [
-              "https://www.w3.org/2018/credentials/v1",
-              "https://schema.org"
-            ],
-            "id": "urn:uuid:1751229409",
-            "type": [
-              "VerifiableCredential",
-              "SkillCredential"
-            ],
-            "issuer": "did:learntwin:school001",
-            "issuanceDate": "2025-06-29T20:36:49Z",
-            "credentialSubject": {
-              "id": "did:learntwin:student001",
-              "skill": "Solarity Programming",
-              "metadata": {
-                "verification_date": "2024-01-15",
-                "score": 95
-              }
-            },
-            "proof": {
-              "type": "EcdsaSecp256k1Signature2019",
-              "created": "2025-06-29T20:36:49Z",
-              "proofPurpose": "assertionMethod",
-              "verificationMethod": "did:learntwin:school001#key-1",
-              "jws": "A/pwuTko54+eSQKY78r8Yx2AlFuHYRIETNoRQ4NIk/HDNBbCCUvPTTb0yKD7H5zi+7MTzbXFfTKNjp2WGaanWA=="
-            }
-          }
+          ]
         }
       }
     ],
@@ -82,18 +97,23 @@
     "id": "did:learntwin:student002",
     "did": "did:learntwin:student002",
     "name": "Phan Thế Duy",
-    "email": "duy@example.com",
+    "email": "duy@uit.edu.vn",
+    "password": "password123",
     "role": "student",
     "avatarUrl": "",
     "createdAt": "2024-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Information Systems",
+    "birth_year": 2001,
+    "enrollment_date": "2020-09-01",
+    "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
     "NFT_list": [
       {
         "token_id": "0xa405e95963c81cdeaa4f0abfc03b29e1982f90921802135e671d8fbba380ff3b",
         "skill": "JavaScript Programming",
         "cid_nft": "QmUTsjy7xPMyPYvQYzPSbDcJgqTbBkpP3wryh4oA1c2bL1",
         "mint_date": "2024-01-16",
-        "issuer": "did:learntwin:school001",
-        "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        "issuer": "did:learntwin:uit001",
         "metadata": {
           "name": "Skill Achievement: JavaScript Programming",
           "description": "Verified credential for skill: JavaScript Programming",
@@ -105,7 +125,7 @@
             },
             {
               "trait_type": "Issuer",
-              "value": "did:learntwin:school001"
+              "value": "did:learntwin:uit001"
             },
             {
               "trait_type": "Student",
@@ -123,35 +143,7 @@
               "trait_type": "VC CID",
               "value": "QmUTsjy7xPMyPYvQYzPSbDcJgqTbBkpP3wryh4oA1c2bL1"
             }
-          ],
-          "vc_data": {
-            "@context": [
-              "https://www.w3.org/2018/credentials/v1",
-              "https://schema.org"
-            ],
-            "id": "urn:uuid:1751229898",
-            "type": [
-              "VerifiableCredential",
-              "SkillCredential"
-            ],
-            "issuer": "did:learntwin:school001",
-            "issuanceDate": "2025-06-29T20:44:58Z",
-            "credentialSubject": {
-              "id": "did:learntwin:student002",
-              "skill": "JavaScript Programming",
-              "metadata": {
-                "verification_date": "2024-01-16",
-                "score": 88
-              }
-            },
-            "proof": {
-              "type": "EcdsaSecp256k1Signature2019",
-              "created": "2025-06-29T20:44:58Z",
-              "proofPurpose": "assertionMethod",
-              "verificationMethod": "did:learntwin:school001#key-1",
-              "jws": "1BapfDtsA56t4RT7uhUA6QaMKxVMEAOQBL097Ot7IXEzq+vHr7NlGPgHF/aYQzYCctTrs4lV4N3mRkkeLEMgHA=="
-            }
-          }
+          ]
         }
       },
       {
@@ -159,8 +151,7 @@
         "skill": "JavaScript Programming",
         "cid_nft": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h",
         "mint_date": "2024-01-16",
-        "issuer": "did:learntwin:school001",
-        "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        "issuer": "did:learntwin:uit001",
         "metadata": {
           "name": "Skill Achievement: JavaScript Programming",
           "description": "Verified credential for skill: JavaScript Programming",
@@ -172,7 +163,7 @@
             },
             {
               "trait_type": "Issuer",
-              "value": "did:learntwin:school001"
+              "value": "did:learntwin:uit001"
             },
             {
               "trait_type": "Student",
@@ -190,67 +181,158 @@
               "trait_type": "VC CID",
               "value": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h"
             }
-          ],
-          "vc_data": {
-            "@context": [
-              "https://www.w3.org/2018/credentials/v1",
-              "https://schema.org"
-            ],
-            "id": "urn:uuid:1751230044",
-            "type": [
-              "VerifiableCredential",
-              "SkillCredential"
-            ],
-            "issuer": "did:learntwin:school001",
-            "issuanceDate": "2025-06-29T20:47:24Z",
-            "credentialSubject": {
-              "id": "did:learntwin:student002",
-              "skill": "JavaScript Programming",
-              "metadata": {
-                "verification_date": "2024-01-16",
-                "score": 88
-              }
-            },
-            "proof": {
-              "type": "EcdsaSecp256k1Signature2019",
-              "created": "2025-06-29T20:47:24Z",
-              "proofPurpose": "assertionMethod",
-              "verificationMethod": "did:learntwin:school001#key-1",
-              "jws": "xLAi2DCDZWKhpq3RDbvRroNBYTa2IFz7rQ3IK0lqCEzIxPrsrL7vYHzi5EIDUJF4+3TisPcDlwv5oSAIyc7meQ=="
-            }
-          }
+          ]
         }
       }
     ],
     "metadata": {}
   },
   {
+    "id": "did:learntwin:student003",
+    "did": "did:learntwin:student003",
+    "name": "Phạm Văn Hậu",
+    "email": "hau@uit.edu.vn",
+    "password": "password123",
+    "role": "student",
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Cybersecurity",
+    "birth_year": 2000,
+    "enrollment_date": "2019-09-01",
+    "student_address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    "NFT_list": [],
+    "metadata": {}
+  },
+  {
+    "id": "did:learntwin:student004",
+    "did": "did:learntwin:student004",
+    "name": "Huỳnh Quốc Khánh",
+    "email": "23520718@gm.uit.edu.vn",
+    "password": "password123",
+    "role": "student",
+    "avatarUrl": "",
+    "createdAt": "2025-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Cybersecurity",
+    "birth_year": 2005,
+    "enrollment_date": "2025-09-01",
+    "student_address": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    "NFT_list": [],
+    "metadata": {}
+  },
+  {
+    "id": "did:learntwin:student005",
+    "did": "did:learntwin:student005",
+    "name": "Phạm Tấn Gia Quốc",
+    "email": "23521308@gm.uit.edu.vn",
+    "password": "password123",
+    "role": "student",
+    "avatarUrl": "",
+    "createdAt": "2025-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Cybersecurity",
+    "birth_year": 2005,
+    "enrollment_date": "2025-09-01",
+    "student_address": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "NFT_list": [],
+    "metadata": {}
+  },
+  {
+    "id": "did:learntwin:student006",
+    "did": "did:learntwin:student006",
+    "name": "Nguyễn Anh Khoa",
+    "email": "23520819@gm.uit.edu.vn",
+    "password": "password123",
+    "role": "student",
+    "avatarUrl": "",
+    "createdAt": "2025-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Computer Science",
+    "birth_year": 2005,
+    "enrollment_date": "2025-09-01",
+    "student_address": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+    "NFT_list": [],
+    "metadata": {}
+  },
+  {
+    "id": "did:learntwin:student007",
+    "did": "did:learntwin:student007",
+    "name": "Nguyễn Ngọc Tự",
+    "email": "tunn@uit.edu.vn",
+    "password": "password123",
+    "role": "student",
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Cybersecurity",
+    "birth_year": 2002,
+    "enrollment_date": "2024-09-01",
+    "student_address": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+    "NFT_list": [],
+    "metadata": {}
+  },
+  {
+    "id": "did:learntwin:student008",
+    "did": "did:learntwin:student008",
+    "name": "Trần Tuấn Dũng",
+    "email": "dungtt@uit.edu.vn",
+    "password": "password123",
+    "role": "student",
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Data Science",
+    "birth_year": 2003,
+    "enrollment_date": "2024-09-01",
+    "student_address": "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
+    "NFT_list": [],
+    "metadata": {}
+  },
+  {
+    "id": "did:learntwin:student099",
+    "did": "did:learntwin:student099",
+    "name": "Test Student UIT",
+    "email": "test@uit.edu.vn",
+    "password": "password123",
+    "role": "student",
+    "avatarUrl": "",
+    "createdAt": "2024-06-28T00:00:00Z",
+    "institution": "UIT",
+    "program": "Cybersecurity",
+    "birth_year": 2005,
+    "enrollment_date": "2025-09-01",
+    "student_address": "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+    "NFT_list": [],
+    "metadata": {}
+  },
+  {
     "id": "did:learntwin:teacher001",
     "did": "did:learntwin:teacher001",
-    "name": "Nguyễn Văn Giáo",
-    "email": "teacher@example.com",
+    "name": "Dr. Viet Huynh",
+    "email": "viet@uit.edu.vn",
+    "password": "password123",
     "role": "teacher",
     "avatarUrl": "",
-    "createdAt": "2024-06-28T00:00:00Z"
+    "createdAt": "2024-06-28T00:00:00Z",
+    "institution": "UIT",
+    "department": "Computer Science",
+    "position": "Associate Professor",
+    "NFT_list": [],
+    "metadata": {}
   },
   {
     "id": "did:learntwin:employer001",
     "did": "did:learntwin:employer001",
-    "name": "Công ty ABC",
-    "email": "employer@example.com",
+    "name": "InSecLab HR",
+    "email": "hr@fpt-software.com",
+    "password": "password123",
     "role": "employer",
     "avatarUrl": "",
-    "createdAt": "2024-06-28T00:00:00Z"
-  },
-  {
-    "id": "did:learntwin:school001",
-    "did": "did:learntwin:school001",
-    "name": "Trường Đại học UIT",
-    "email": "school@uit.edu.vn",
-    "role": "school",
-    "avatarUrl": "",
     "createdAt": "2024-06-28T00:00:00Z",
-    "publicKey": "",
-    "privateKey": ""
+    "company": "InSecLab",
+    "position": "HR Manager",
+    "NFT_list": [],
+    "metadata": {}
   }
 ]

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // Test 1: School Public Key
+                console.log('Testing school public key...');
+                const publicKeyRes = await fetch('http://localhost:8000/api/v1/ipfs/school-public-key');
+                const publicKeyData = await publicKeyRes.json();
+                console.log('Public Key Response:', publicKeyData);
+                
+                // Test 2: IPFS Download
+                console.log('Testing IPFS download...');
+                const ipfsRes = await fetch('http://localhost:8000/api/v1/ipfs/download/QmPuqEpZs4oyCqvPcXQLmapdxbezJN4vTc8nzXrwEC2h1D');
+                const ipfsData = await ipfsRes.json();
+                console.log('IPFS Response:', ipfsData);
+                
+                resultDiv.innerHTML = `
+                    <h3>✅ API Test Successful!</h3>
+                    <p><strong>Public Key:</strong> ${publicKeyData.status}</p>
+                    <p><strong>IPFS Data:</strong> ${ipfsData.status}</p>
+                    <p><strong>Student Name:</strong> ${ipfsData.data?.learnerName || 'N/A'}</p>
+                    <p><strong>NFTs:</strong> ${ipfsData.data?.NFT_list?.length || 0}</p>
+                `;
+                
+            } catch (error) {
+                console.error('API Test Error:', error);
+                resultDiv.innerHTML = `
+                    <h3>❌ API Test Failed!</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 

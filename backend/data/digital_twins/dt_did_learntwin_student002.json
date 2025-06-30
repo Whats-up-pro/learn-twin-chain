@@ -49,7 +49,7 @@
       "skill": "JavaScript Programming",
       "cid_nft": "QmUTsjy7xPMyPYvQYzPSbDcJgqTbBkpP3wryh4oA1c2bL1",
       "mint_date": "2024-01-16",
-      "issuer": "did:learntwin:school001",
+      "issuer": "did:learntwin:uit001",
       "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
       "metadata": {
         "name": "Skill Achievement: JavaScript Programming",
@@ -62,7 +62,7 @@
           },
           {
             "trait_type": "Issuer",
-            "value": "did:learntwin:school001"
+            "value": "did:learntwin:uit001"
           },
           {
             "trait_type": "Student",
@@ -91,7 +91,7 @@
             "VerifiableCredential",
             "SkillCredential"
           ],
-          "issuer": "did:learntwin:school001",
+          "issuer": "did:learntwin:uit001",
           "issuanceDate": "2025-06-29T20:44:58Z",
           "credentialSubject": {
             "id": "did:learntwin:student002",
@@ -105,7 +105,7 @@
             "type": "EcdsaSecp256k1Signature2019",
             "created": "2025-06-29T20:44:58Z",
             "proofPurpose": "assertionMethod",
-            "verificationMethod": "did:learntwin:school001#key-1",
+            "verificationMethod": "did:learntwin:uit001#key-1",
             "jws": "1BapfDtsA56t4RT7uhUA6QaMKxVMEAOQBL097Ot7IXEzq+vHr7NlGPgHF/aYQzYCctTrs4lV4N3mRkkeLEMgHA=="
           }
         }
@@ -116,7 +116,7 @@
       "skill": "JavaScript Programming",
       "cid_nft": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h",
       "mint_date": "2024-01-16",
-      "issuer": "did:learntwin:school001",
+      "issuer": "did:learntwin:uit001",
       "student_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
       "metadata": {
         "name": "Skill Achievement: JavaScript Programming",
@@ -129,7 +129,7 @@
           },
           {
             "trait_type": "Issuer",
-            "value": "did:learntwin:school001"
+            "value": "did:learntwin:uit001"
           },
           {
             "trait_type": "Student",
@@ -158,7 +158,7 @@
             "VerifiableCredential",
             "SkillCredential"
           ],
-          "issuer": "did:learntwin:school001",
+          "issuer": "did:learntwin:uit001",
           "issuanceDate": "2025-06-29T20:47:24Z",
           "credentialSubject": {
             "id": "did:learntwin:student002",
@@ -172,7 +172,7 @@
             "type": "EcdsaSecp256k1Signature2019",
             "created": "2025-06-29T20:47:24Z",
             "proofPurpose": "assertionMethod",
-            "verificationMethod": "did:learntwin:school001#key-1",
+            "verificationMethod": "did:learntwin:uit001#key-1",
             "jws": "xLAi2DCDZWKhpq3RDbvRroNBYTa2IFz7rQ3IK0lqCEzIxPrsrL7vYHzi5EIDUJF4+3TisPcDlwv5oSAIyc7meQ=="
           }
         }
@@ -214,7 +214,7 @@
       "token_id": "0x70468b6180f03c2d2c07df3ac8c275f7a1732bf3a9d36614afb6d87904715e6f",
       "cid_nft": "QmVParoBF1CNY2UqWUeJ6RkLhErbawza8wymF2FoESfC4h",
       "blockchain_address": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
-      "issuer": "did:learntwin:school001",
+      "issuer": "did:learntwin:uit001",
       "issued_at": "2024-01-15T00:00:00Z"
     }
   },

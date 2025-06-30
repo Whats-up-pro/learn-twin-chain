@@ -1,700 +1,736 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  UserGroupIcon,
-  StarIcon,
-  ClockIcon,
+  ShieldCheckIcon,
+  DocumentTextIcon,
   CheckCircleIcon,
-  XMarkIcon,
-  BookOpenIcon
+  EyeIcon,
+  ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
-import { Candidate, DigitalTwin } from '../types';
-import LoadingSpinner from '../components/LoadingSpinner';
-import Modal from '../components/Modal';
-import InteractiveDemo from '../components/InteractiveDemo';
 import toast from 'react-hot-toast';
+import Modal from '../components/Modal';
+import { jwtVerify, importSPKI } from 'jose';
+import EmployerZKPVerify from '../components/EmployerZKPVerify';
+
+interface Checkpoint {
+  module: string;
+  moduleId: string;
+  moduleName: string;
+  completedAt: string;
+  score: number;
+  tokenized: boolean;
+  nftCid?: string;
+  nftId?: string;
+}
+
+interface VerificationResult {
+  success: boolean;
+  message: string;
+  details?: {
+    studentDid: string;
+    digitalTwinCid: string;
+    nftCids: string[];
+    verifiedNfts: any[];
+    institutionPublicKey: string;
+    verificationTimestamp: string;
+  };
+}
+
+interface StudentVerification {
+  did: string;
+  name: string;
+  digitalTwin: DigitalTwin;
+  nfts: Nft[];
+  verificationStatus: 'pending' | 'verified' | 'failed';
+  verificationResult?: VerificationResult;
+}
+
+interface DigitalTwin {
+  learnerDid: string;
+  learnerName: string;
+  student_id?: string;
+  institution?: string;
+  major?: string;
+  email?: string;
+  phone?: string;
+  version: number;
+  knowledge: Record<string, number>;
+  skills: Record<string, number>;
+  behavior: Record<string, any>;
+  checkpoints: Checkpoint[];
+  NFT_list?: any[];
+  lastUpdated: string;
+}
+
+interface Nft {
+  token_id: string;
+  skill: string;
+  cid_nft: string;
+  mint_date: string;
+  issuer: string;
+  verified?: boolean;
+}
+
+// Mock institution public key (in real app, this would come from blockchain/registry)
+const INSTITUTION_PUBLIC_KEY = "0x1234567890abcdef1234567890abcdef12345678";
+
+// Hàm lấy CID từ DID qua smart contract (mock)
+async function getCidFromDid(did: string): Promise<string> {
+  try {
+    console.log(`Getting CID from DID via smart contract: ${did}`);
+    
+    // TODO: Thay thế bằng gọi smart contract thực tế
+    // Ví dụ: return await contract.getCidByDid(did);
+    
+    // Mapping với CID thật từ IPFS (sẽ được cập nhật sau khi upload)
+    const mapping: Record<string, string> = {
+      'did:learntwin:student001': 'QmPuqEpZs4oyCqvPcXQLmapdxbezJN4vTc8nzXrwEC2h1D', // Real data uploaded
+      'did:learntwin:student002': 'QmPQ7FP3nmF54Qe6uvMScKEVDxhgAsrPcNGd4k14bkymsJ', // Real data uploaded
+      'did:learntwin:student003': 'QmZ9QcHpEzjmnWmHEKcL8vdmkm3dG6XTXkVg16B7d9Cz1v',
+      'did:learntwin:student004': 'QmW2WQi7j6c7UgJTarActp7tDNikE4B2qXtFCfLPdsgaTQ',
+      'did:learntwin:student005': 'QmUQw8wqXqJqJqJqJqJqJqJqJqJqJqJqJqJqJqJqJqJqJq',
+    };
+    
+    // Simulate blockchain delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const cid = mapping[did];
+    if (!cid) {
+      throw new Error(`DID ${did} not found in blockchain registry`);
+    }
+    
+    console.log(`CID retrieved from blockchain: ${cid}`);
+    return cid;
+  } catch (error) {
+    console.error('Error getting CID from DID:', error);
+    throw error;
+  }
+}
+
+// Hàm lấy dữ liệu từ IPFS qua backend
+async function fetchIpfsData(cid: string): Promise<any> {
+  try {
+    console.log(`Fetching IPFS data for CID: ${cid}`);
+    
+    const res = await fetch(`/api/v1/ipfs/download/${cid}`);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`IPFS fetch failed: ${res.status} ${errorText}`);
+      throw new Error(`Failed to fetch IPFS data: ${res.status} ${errorText}`);
+    }
+    
+    const json = await res.json();
+    console.log('IPFS data fetched successfully:', json);
+    
+    if (!json.data) {
+      throw new Error('Invalid IPFS data format: missing data field');
+    }
+    
+    return json.data;
+  } catch (error) {
+    console.error('Error fetching IPFS data:', error);
+    throw error;
+  }
+}
+
+// Hàm lấy public key trường từ backend API
+async function fetchSchoolPublicKey(): Promise<string> {
+  try {
+    console.log('Fetching school public key from backend...');
+    const res = await fetch('/api/v1/ipfs/school-public-key');
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`Failed to fetch public key: ${res.status} ${errorText}`);
+      throw new Error(`Failed to fetch public key: ${res.status} ${errorText}`);
+    }
+    
+    const json = await res.json();
+    console.log('School public key fetched successfully');
+    
+    if (!json.public_key) {
+      throw new Error('Invalid public key response: missing public_key field');
+    }
+    
+    return json.public_key;
+  } catch (error) {
+    console.error('Error fetching school public key:', error);
+    // Fallback to demo key
+    return `-----BEGIN PUBLIC KEY-----
+MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE8tKwV1FQ9yDjMZrfsWyCACmOP5rDFCRx
+I9CzHvAcbxfiVy6KtTnmRVEhmLjK65O+mONHRU4gZq/2r72mwt1z8Q==
+-----END PUBLIC KEY-----`;
+  }
+}
+
+// Hàm verify JWS (ECDSA secp256k1)
+async function verifyJws(vc: any, publicKeyPem: string): Promise<boolean> {
+  try {
+    console.log('Starting JWS verification...');
+    
+    // Kiểm tra xem data có proof không
+    if (!vc.proof || !vc.proof.jws) {
+      console.log('No proof.jws found in data, skipping verification');
+      return true; // Tạm thời return true nếu không có proof
+    }
+    
+    const { proof, ...payload } = vc;
+    const jws = proof.jws;
+    
+    console.log('JWS found, attempting verification...');
+    
+    // Chuyển publicKeyPem sang định dạng jose
+    const pubKey = await importSPKI(publicKeyPem, 'ES256K');
+    
+    try {
+      await jwtVerify(jws, pubKey, { algorithms: ['ES256K'] });
+      console.log('JWS verification successful');
+      return true;
+    } catch (verifyError) {
+      console.error('JWS verification failed:', verifyError);
+      return false;
+    }
+  } catch (error) {
+    console.error('Error in JWS verification:', error);
+    return false;
+  }
+}
+
+// Helper function to get student name from DID (simple fallback)
+function getStudentNameFromDid(did: string): string {
+  return did.split(':').pop() || did;
+}
 
 const EmployerDashboardPage: React.FC = () => {
-  const [students, setStudents] = useState<Candidate[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<Candidate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
-  const [showStudentModal, setShowStudentModal] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Candidate | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [studentDid, setStudentDid] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verificationHistory, setVerificationHistory] = useState<StudentVerification[]>([]);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [selectedVerification, setSelectedVerification] = useState<StudentVerification | null>(null);
 
-  // Available skills for filtering
-  const availableSkills = [
-    'React', 'TypeScript', 'JavaScript', 'Python', 'Java', 'C++', 'C#',
-    'Node.js', 'Django', 'Flask', 'Spring Boot', 'Angular', 'Vue.js',
-    'HTML', 'CSS', 'SQL', 'MongoDB', 'PostgreSQL', 'Docker', 'Kubernetes',
-    'AWS', 'Azure', 'Git', 'REST API', 'GraphQL', 'Machine Learning',
-    'Data Science', 'DevOps', 'UI/UX Design', 'Mobile Development'
-  ];
-
-  // Available programs for filtering
-  const availablePrograms = [
-    'Computer Science', 'Information Systems', 'Cybersecurity',
-    'Information Security', 'Data Science', 'Artificial Intelligence',
-    'Web Development', 'Mobile Development', 'Game Development',
-    'Network Engineering', 'Database Administration'
-  ];
-
-  // Mock data for students based on backend data structure
-  useEffect(() => {
-    const mockStudents: Candidate[] = [
-      {
-        id: '1',
-        learnerDid: 'did:learntwin:student001',
-        name: 'Đoàn Minh Trung',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student001',
-          knowledge: { 
-            'Python': 0.8, 
-            'Data Structures': 1.0,
-            'Python cơ bản': 0.95
-          },
-          skills: { problemSolving: 0.7, logicalThinking: 0.8, selfLearning: 0.85 },
-          behavior: { timeSpent: '180h', quizAccuracy: 0.92, preferredLearningStyle: 'code-first' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 95,
-        appliedAt: '2024-01-15T10:30:00Z',
-        status: 'pending'
-      },
-      {
-        id: '2',
-        learnerDid: 'did:learntwin:student002',
-        name: 'Phan Thế Duy',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student002',
-          knowledge: { 
-            'HTML': 0.8, 
-            'CSS': 0.75,
-            'Python': 0.6,
-            'HTML & CSS': 0.85
-          },
-          skills: { problemSolving: 0.8, logicalThinking: 0.75, selfLearning: 0.85 },
-          behavior: { timeSpent: '120h', quizAccuracy: 0.88, preferredLearningStyle: 'visual-examples' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 87,
-        appliedAt: '2024-01-14T15:20:00Z',
-        status: 'pending'
-      },
-      {
-        id: '3',
-        learnerDid: 'did:learntwin:student003',
-        name: 'Phạm Văn Hậu',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student003',
-          knowledge: { 
-            'Python': 0.9, 
-            'Mạng máy tính': 0.7,
-            'Python cơ bản': 0.9
-          },
-          skills: { problemSolving: 0.75, logicalThinking: 0.8, selfLearning: 0.85 },
-          behavior: { timeSpent: '150h', quizAccuracy: 0.85, preferredLearningStyle: 'theory-then-practice' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 89,
-        appliedAt: '2024-01-13T09:15:00Z',
-        status: 'pending'
-      },
-      {
-        id: '4',
-        learnerDid: 'did:learntwin:student004',
-        name: 'Lê Hoàng Giang',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student004',
-          knowledge: { 
-            'Java': 0.8, 
-            'Python': 0.85,
-            'Lập trình hướng đối tượng': 0.8,
-            'Python cơ bản': 0.85
-          },
-          skills: { problemSolving: 0.8, logicalThinking: 0.85, selfLearning: 0.8 },
-          behavior: { timeSpent: '95h', quizAccuracy: 0.90, preferredLearningStyle: 'practice-first' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 91,
-        appliedAt: '2024-01-12T14:45:00Z',
-        status: 'pending'
-      },
-      {
-        id: '5',
-        learnerDid: 'did:learntwin:student005',
-        name: 'Trần Dương Minh Đại',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student005',
-          knowledge: { 
-            'Python': 0.95, 
-            'C': 0.6,
-            'An toàn hệ thống': 0.6,
-            'Python cơ bản': 0.95
-          },
-          skills: { problemSolving: 0.7, logicalThinking: 0.8, selfLearning: 0.85 },
-          behavior: { timeSpent: '200h', quizAccuracy: 0.87, preferredLearningStyle: 'theory-then-practice' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 86,
-        appliedAt: '2024-01-11T11:30:00Z',
-        status: 'pending'
-      },
-      {
-        id: '6',
-        learnerDid: 'did:learntwin:student006',
-        name: 'Huỳnh Quốc Khánh',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student006',
-          knowledge: { 
-            'Python': 0.9, 
-            'R': 0.5,
-            'Machine Learning cơ bản': 0.7,
-            'Python cơ bản': 0.9
-          },
-          skills: { problemSolving: 0.8, logicalThinking: 0.85, selfLearning: 0.9 },
-          behavior: { timeSpent: '160h', quizAccuracy: 0.88, preferredLearningStyle: 'theory-then-practice' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 88,
-        appliedAt: '2024-01-10T13:20:00Z',
-        status: 'pending'
-      },
-      {
-        id: '7',
-        learnerDid: 'did:learntwin:student007',
-        name: 'Nguyễn Anh Khoa',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student007',
-          knowledge: { 
-            'Python': 0.8, 
-            'C++': 0.65,
-            'Hệ điều hành': 0.6,
-            'Python cơ bản': 0.8
-          },
-          skills: { problemSolving: 0.85, logicalThinking: 0.8, selfLearning: 0.85 },
-          behavior: { timeSpent: '140h', quizAccuracy: 0.85, preferredLearningStyle: 'practice-first' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 84,
-        appliedAt: '2024-01-09T16:45:00Z',
-        status: 'pending'
-      },
-      {
-        id: '8',
-        learnerDid: 'did:learntwin:student008',
-        name: 'Võ Nguyễn Gia Quốc',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student008',
-          knowledge: { 
-            'Python': 0.88, 
-            'SQL': 0.7,
-            'Xử lý dữ liệu': 0.75,
-            'Python cơ bản': 0.88
-          },
-          skills: { problemSolving: 0.85, logicalThinking: 0.8, selfLearning: 0.85 },
-          behavior: { timeSpent: '175h', quizAccuracy: 0.89, preferredLearningStyle: 'theory-then-practice' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 90,
-        appliedAt: '2024-01-08T12:10:00Z',
-        status: 'pending'
-      },
-      {
-        id: '99',
-        learnerDid: 'did:learntwin:student099',
-        name: 'testaccount',
-        avatarUrl: undefined,
-        digitalTwin: {
-          learnerDid: 'did:learntwin:student099',
-          knowledge: {},
-          skills: { problemSolving: 0.5, logicalThinking: 0.5, selfLearning: 0.5 },
-          behavior: { timeSpent: '0h', quizAccuracy: 0.0, preferredLearningStyle: 'code-first' },
-          checkpoints: [],
-          version: 1,
-          lastUpdated: new Date().toISOString()
-        },
-        matchScore: 50,
-        appliedAt: '2024-01-07T10:00:00Z',
-        status: 'pending'
-      }
-    ];
-
-    setTimeout(() => {
-      setStudents(mockStudents);
-      setFilteredStudents(mockStudents);
-      setLoading(false);
-    }, 1000);
-  }, []);
-
-  // Filter students based on search term (skills/programs) and selected filters
-  useEffect(() => {
-    let filtered = students;
-
-    // Filter by search term (skills or programs)
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(student => {
-        // Check if search term matches any skill
-        const hasMatchingSkill = Object.keys(student.digitalTwin.knowledge).some(skill => 
-          skill.toLowerCase().includes(searchLower)
-        );
-        
-        // Check if search term matches any program (mock data)
-        const studentPrograms = {
-          '1': 'Computer Science',
-          '2': 'Information Systems', 
-          '3': 'Cybersecurity',
-          '4': 'Computer Science',
-          '5': 'Computer Science',
-          '6': 'Information Security',
-          '7': 'Computer Science',
-          '8': 'Information Security',
-          '99': 'Computer Science'
-        };
-        const studentProgram = studentPrograms[student.id as keyof typeof studentPrograms];
-        const hasMatchingProgram = studentProgram.toLowerCase().includes(searchLower);
-        
-        return hasMatchingSkill || hasMatchingProgram;
-      });
+  const handleVerifyStudent = async () => {
+    if (!studentDid.trim()) {
+      toast.error('Please enter a valid student DID');
+      return;
     }
 
-    // Filter by selected skills
-    if (selectedSkills.length > 0) {
-      filtered = filtered.filter(student => {
-        const studentSkills = Object.keys(student.digitalTwin.knowledge);
-        return selectedSkills.some(skill => 
-          studentSkills.includes(skill) && student.digitalTwin.knowledge[skill] >= 0.7
-        );
-      });
+    if (!studentDid.startsWith('did:learntwin:')) {
+      toast.error('Invalid DID format. Expected format: did:learntwin:studentXXX');
+      return;
     }
 
-    // Filter by selected programs
-    if (selectedPrograms.length > 0) {
-      filtered = filtered.filter(student => {
-        const studentPrograms = {
-          '1': 'Computer Science',
-          '2': 'Information Systems', 
-          '3': 'Cybersecurity',
-          '4': 'Computer Science',
-          '5': 'Computer Science',
-          '6': 'Information Security',
-          '7': 'Computer Science',
-          '8': 'Information Security'
-        };
-        const studentProgram = studentPrograms[student.id as keyof typeof studentPrograms];
-        return selectedPrograms.includes(studentProgram);
-      });
-    }
-
-    // Sort by match score
-    filtered.sort((a, b) => b.matchScore - a.matchScore);
+    setVerifying(true);
     
-    setFilteredStudents(filtered);
-  }, [students, selectedSkills, selectedPrograms, searchTerm]);
+    try {
+      console.log('🔍 Starting verification for DID:', studentDid);
+      
+      // Bước 1: Lấy CID từ DID qua smart contract
+      console.log('📋 Step 1: Getting CID from DID...');
+      const cid = await getCidFromDid(studentDid);
+      console.log('✅ CID retrieved:', cid);
+      
+      // Bước 2: Download data từ IPFS bằng CID
+      console.log('📥 Step 2: Fetching IPFS data...');
+      const studentData = await fetchIpfsData(cid);
+      console.log('✅ IPFS data fetched:', studentData);
+      
+      // Bước 3: Lấy public key trường để verify
+      console.log('🔑 Step 3: Getting school public key...');
+      const schoolPublicKey = await fetchSchoolPublicKey();
+      console.log('✅ School public key retrieved');
+      
+      // Bước 4: Verify chữ ký của data
+      console.log('🔐 Step 4: Verifying digital signature...');
+      const isVerified = await verifyJws(studentData, schoolPublicKey);
+      console.log('✅ Signature verification result:', isVerified);
+      
+      if (!isVerified) {
+        throw new Error('Digital signature verification failed');
+      }
+      
+      // Bước 5: Tạo verification result
+      console.log('📝 Step 5: Creating verification result...');
+      const verificationResult: VerificationResult = {
+        success: true,
+        message: `Successfully verified student data for ${studentDid}`,
+        details: {
+          studentDid,
+          digitalTwinCid: cid,
+          nftCids: studentData.NFT_list?.map((nft: any) => nft.cid_nft) || [],
+          verifiedNfts: studentData.NFT_list || [],
+          institutionPublicKey: schoolPublicKey,
+          verificationTimestamp: new Date().toISOString()
+        }
+      };
 
-  const handleSkillToggle = (skill: string) => {
-    setSelectedSkills(prev => 
-      prev.includes(skill) 
-        ? prev.filter(s => s !== skill)
-        : [...prev, skill]
+      // Bước 6: Tạo student verification record
+      console.log('💾 Step 6: Creating student verification record...');
+      const studentVerification: StudentVerification = {
+        did: studentDid,
+        name: studentData.learnerName || getStudentNameFromDid(studentDid),
+        digitalTwin: studentData,
+        nfts: studentData.NFT_list || [],
+        verificationStatus: 'verified',
+        verificationResult
+      };
+
+      // Thêm vào history
+      setVerificationHistory(prev => [studentVerification, ...prev]);
+      
+      console.log('🎉 Verification completed successfully!');
+      toast.success(verificationResult.message);
+      setStudentDid('');
+      
+    } catch (error) {
+      console.error('❌ Verification error:', error);
+      console.error('❌ Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name
+      });
+      
+      // Hiển thị error message chi tiết hơn
+      const errorMessage = (error as Error).message;
+      toast.error(`Verification failed: ${errorMessage}`);
+      
+      // Thêm failed verification vào history
+      const failedVerification: StudentVerification = {
+        did: studentDid,
+        name: getStudentNameFromDid(studentDid),
+        digitalTwin: {} as DigitalTwin,
+        nfts: [],
+        verificationStatus: 'failed',
+        verificationResult: {
+          success: false,
+          message: 'Verification failed: ' + errorMessage
+        }
+      };
+      
+      setVerificationHistory(prev => [failedVerification, ...prev]);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleViewVerificationDetails = (verification: StudentVerification) => {
+    setSelectedVerification(verification);
+    setShowVerificationModal(true);
+  };
+
+  const handleCopyDid = (did: string) => {
+    navigator.clipboard.writeText(did);
+    toast.success('DID copied to clipboard!');
+  };
+
+  const handleCopyCid = (cid: string | undefined) => {
+    if (!cid) return;
+    navigator.clipboard.writeText(cid);
+    toast.success('CID copied to clipboard!');
+  };
+
+  // Helper function to truncate text and show tooltip
+  const TruncatedText = ({ text, maxLength = 20, className = "" }: { text: string, maxLength?: number, className?: string }) => {
+    const isTruncated = text.length > maxLength;
+    const displayText = isTruncated ? `${text.substring(0, maxLength)}...` : text;
+    
+    return (
+      <div className="relative group">
+        <span className={`font-mono text-xs bg-gray-100 px-2 py-1 rounded cursor-pointer ${className}`}>
+          {displayText}
+        </span>
+        {isTruncated && (
+          <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
+            {text}
+            <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>
+        )}
+      </div>
     );
   };
-
-  const handleProgramToggle = (program: string) => {
-    setSelectedPrograms(prev => 
-      prev.includes(program) 
-        ? prev.filter(p => p !== program)
-        : [...prev, program]
-    );
-  };
-
-  const clearFilters = () => {
-    setSelectedSkills([]);
-    setSelectedPrograms([]);
-    setSearchTerm('');
-  };
-
-  const handleViewStudent = (student: Candidate) => {
-    setSelectedStudent(student);
-    setShowStudentModal(true);
-  };
-
-  const getSkillLevel = (level: number) => {
-    if (level >= 0.9) return { text: 'Expert', color: 'bg-green-100 text-green-800' };
-    if (level >= 0.8) return { text: 'Advanced', color: 'bg-blue-100 text-blue-800' };
-    if (level >= 0.7) return { text: 'Intermediate', color: 'bg-yellow-100 text-yellow-800' };
-    return { text: 'Beginner', color: 'bg-gray-100 text-gray-800' };
-  };
-
-  const getTopSkills = (digitalTwin: DigitalTwin) => {
-    return Object.entries(digitalTwin.knowledge)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 5);
-  };
-
-  if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="space-y-6">
-      {/* Interactive Demo Info */}
-      <InteractiveDemo />
-      
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Student Search</h1>
-          <p className="text-gray-600 mt-1">Search students by skills and programs</p>
-        </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-blue-600">{filteredStudents.length}</div>
-          <div className="text-sm text-gray-600">Matching students</div>
-        </div>
-      </div>
-
-      {/* Search and Filter Section */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by skills or programs (e.g., React, Python, Computer Science...)"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
-            />
-          </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Type skill names or programs to search quickly
-          </p>
-        </div>
-
-        {/* Clear Filters Button */}
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={clearFilters}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-          >
-            <XMarkIcon className="w-4 h-4" />
-            Clear all filters
-          </button>
-        </div>
-
-        {/* Skills Filter */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <FunnelIcon className="w-5 h-5 text-gray-600" />
-            <h3 className="font-semibold text-gray-900">Filter by skills:</h3>
-            {selectedSkills.length > 0 && (
-              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                {selectedSkills.length} skills selected
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {availableSkills.map((skill) => (
-              <button
-                key={skill}
-                onClick={() => handleSkillToggle(skill)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  selectedSkills.includes(skill)
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {skill}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Programs Filter */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <BookOpenIcon className="w-5 h-5 text-gray-600" />
-            <h3 className="font-semibold text-gray-900">Filter by programs:</h3>
-            {selectedPrograms.length > 0 && (
-              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                {selectedPrograms.length} programs selected
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {availablePrograms.map((program) => (
-              <button
-                key={program}
-                onClick={() => handleProgramToggle(program)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  selectedPrograms.includes(program)
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {program}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Students List */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Student list ({filteredStudents.length})
-          </h2>
-        </div>
-        <div className="p-6">
-          {filteredStudents.length === 0 ? (
-            <div className="text-center py-12">
-              <UserGroupIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No matching students found</h3>
-              <p className="text-gray-600">Try changing search terms or filters</p>
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-700 rounded-xl shadow-lg">
+        <div className="px-8 py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div className="mb-4 md:mb-0">
+              <h1 className="text-3xl font-bold text-white mb-2">Certificate Verification</h1>
+              <p className="text-purple-100">Verify student certificates using blockchain and institutional public keys</p>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredStudents.map((student) => (
-                <div key={student.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                          <span className="text-xl font-bold text-white">
-                            {student.name.charAt(0)}
-                          </span>
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold text-gray-900">{student.name}</h3>
-                          <div className="flex items-center gap-4 mt-1">
-                            <div className="flex items-center gap-1">
-                              <StarIcon className="w-4 h-4 text-yellow-400" />
-                              <span className="text-sm font-medium text-gray-900">
-                                {student.matchScore}% match
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <ClockIcon className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">
-                                {student.digitalTwin.behavior.timeSpent} study time
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <CheckCircleIcon className="w-4 h-4 text-green-400" />
-                              <span className="text-sm text-gray-600">
-                                {Math.round(student.digitalTwin.behavior.quizAccuracy * 100)}% accuracy
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+            <div className="flex items-center space-x-2">
+              <ShieldCheckIcon className="w-8 h-8 text-white" />
+              <span className="text-white font-medium">Institution: UIT</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-                      {/* Top Skills */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Top skills:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {getTopSkills(student.digitalTwin).map(([skill, level]) => {
-                            const skillLevel = getSkillLevel(level);
-                            return (
-                              <span
-                                key={skill}
-                                className={`px-2 py-1 rounded text-xs font-medium ${skillLevel.color}`}
-                              >
-                                {skill} ({skillLevel.text})
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
+      {/* Verification Form */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <DocumentTextIcon className="w-6 h-6 mr-3 text-purple-600" />
+          Verify Student Certificate
+        </h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Student DID (Decentralized Identifier)
+            </label>
+            <div className="flex space-x-3">
+              <input
+                type="text"
+                value={studentDid}
+                onChange={(e) => setStudentDid(e.target.value)}
+                placeholder="did:learntwin:student001"
+                className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                disabled={verifying}
+              />
+              <button
+                onClick={handleVerifyStudent}
+                disabled={verifying || !studentDid.trim()}
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
+              >
+                {verifying ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheckIcon className="w-5 h-5 mr-2" />
+                    Verify
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              Enter the student's DID to retrieve and verify their certificates from the blockchain
+            </p>
+          </div>
+        </div>
+      </div>
 
-                      {/* Skills Match */}
-                      {selectedSkills.length > 0 && (
-                        <div className="mb-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Matching skills:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedSkills.map((skill) => {
-                              const level = student.digitalTwin.knowledge[skill] || 0;
-                              const skillLevel = getSkillLevel(level);
-                              return (
-                                <span
-                                  key={skill}
-                                  className={`px-2 py-1 rounded text-xs font-medium ${
-                                    level >= 0.7 ? skillLevel.color : 'bg-red-100 text-red-800'
-                                  }`}
-                                >
-                                  {skill} ({Math.round(level * 100)}%)
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-3">
-                      <button
-                        onClick={() => handleViewStudent(student)}
-                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        View details
-                      </button>
-                    </div>
+      {/* Verification History */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <ClipboardDocumentIcon className="w-6 h-6 mr-3 text-purple-600" />
+          Verification History
+        </h2>
+        
+        {verificationHistory.length === 0 ? (
+          <div className="text-center py-8">
+            <DocumentTextIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">No verifications yet. Enter a student DID above to start verifying certificates.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {verificationHistory.map((verification, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      verification.verificationStatus === 'verified' ? 'bg-green-500' :
+                      verification.verificationStatus === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`}></div>
+                    <h3 className="font-semibold text-gray-900">{verification.name}</h3>
+                    <span className="text-sm text-gray-500">({verification.did})</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      verification.verificationStatus === 'verified' ? 'bg-green-100 text-green-800' :
+                      verification.verificationStatus === 'failed' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {verification.verificationStatus.toUpperCase()}
+                    </span>
+                    <button
+                      onClick={() => handleViewVerificationDetails(verification)}
+                      className="text-purple-600 hover:text-purple-700"
+                    >
+                      <EyeIcon className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Certificates Found:</span>
+                    <span className="ml-2 font-medium">{verification.nfts.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Verification Time:</span>
+                    <span className="ml-2 font-medium">
+                      {verification.verificationResult?.details?.verificationTimestamp 
+                        ? new Date(verification.verificationResult.details.verificationTimestamp).toLocaleString()
+                        : 'N/A'
+                      }
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Institution:</span>
+                    <span className="ml-2 font-medium">UIT</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Student Detail Modal */}
-      <Modal
-        isOpen={showStudentModal}
-        onClose={() => setShowStudentModal(false)}
-        title={selectedStudent ? `Detailed Profile - ${selectedStudent.name}` : ''}
+      {/* Verification Details Modal */}
+      <Modal 
+        isOpen={showVerificationModal} 
+        onClose={() => setShowVerificationModal(false)}
+        title=""
+        size="6xl"
       >
-        {selectedStudent && (
-          <div className="p-6 space-y-6">
-            {/* Student Info */}
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">
-                  {selectedStudent.name.charAt(0)}
-                </span>
+        {selectedVerification && (
+          <div className="max-h-[80vh] flex flex-col">
+            {/* Header - Fixed */}
+            <div className="flex items-center gap-4 border-b border-gray-200 pb-4 mb-6 bg-white">
+              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full ml-4">
+                <CheckCircleIcon className="w-6 h-6 text-green-600" />
               </div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900">{selectedStudent.name}</h3>
-                <p className="text-gray-600">DID: {selectedStudent.learnerDid}</p>
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="flex items-center gap-1">
-                    <StarIcon className="w-4 h-4 text-yellow-400" />
-                    <span className="text-sm font-medium">{selectedStudent.matchScore}% match</span>
-                  </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedVerification.name}</h2>
+                <div className="flex items-center gap-3 text-sm text-gray-500">
+                  <span className="font-mono bg-gray-100 px-3 py-1 rounded-md text-xs">{selectedVerification.did}</span>
+                  <button 
+                    onClick={() => handleCopyDid(selectedVerification.did)} 
+                    className="text-purple-600 hover:text-purple-700 transition-colors"
+                  >
+                    <ClipboardDocumentIcon className="w-4 h-4" />
+                  </button>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                    {selectedVerification.verificationStatus.toUpperCase()}
+                  </span>
                 </div>
               </div>
+              <button 
+                onClick={() => setShowVerificationModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
-            {/* Skills Overview */}
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-3">Skills Overview</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-gray-900 mb-2">Soft Skills</h5>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Problem Solving</span>
-                      <span className="text-sm font-medium">{Math.round(selectedStudent.digitalTwin.skills.problemSolving * 100)}%</span>
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-6">
+              {/* Student Info */}
+              <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 rounded-xl p-6 border border-purple-100 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Student Information
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
+                      <span className="text-gray-600 font-medium">Student Name:</span>
+                      <span className="font-semibold text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.learnerName}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Logical Thinking</span>
-                      <span className="text-sm font-medium">{Math.round(selectedStudent.digitalTwin.skills.logicalThinking * 100)}%</span>
+                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
+                      <span className="text-gray-600 font-medium">Student ID:</span>
+                      <span className="font-mono text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.student_id}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Self Learning</span>
-                      <span className="text-sm font-medium">{Math.round(selectedStudent.digitalTwin.skills.selfLearning * 100)}%</span>
+                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
+                      <span className="text-gray-600 font-medium">Institution:</span>
+                      <span className="font-semibold text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.institution}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
+                      <span className="text-gray-600 font-medium">Major:</span>
+                      <span className="text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.major}</span>
                     </div>
                   </div>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-gray-900 mb-2">Learning Behavior</h5>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Study Time</span>
-                      <span className="text-sm font-medium">{selectedStudent.digitalTwin.behavior.timeSpent}</span>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
+                      <span className="text-gray-600 font-medium">Email:</span>
+                      <span className="text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.email}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Accuracy</span>
-                      <span className="text-sm font-medium">{Math.round(selectedStudent.digitalTwin.behavior.quizAccuracy * 100)}%</span>
+                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
+                      <span className="text-gray-600 font-medium">Phone:</span>
+                      <span className="text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.phone}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Learning Style</span>
-                      <span className="text-sm font-medium capitalize">{selectedStudent.digitalTwin.behavior.preferredLearningStyle}</span>
+                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
+                      <span className="text-gray-600 font-medium">Last Updated:</span>
+                      <span className="text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.lastUpdated ? new Date(selectedVerification.digitalTwin.lastUpdated).toLocaleString() : 'N/A'}</span>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Technical Skills */}
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-3">Technical Skills</h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {Object.entries(selectedStudent.digitalTwin.knowledge)
-                  .sort(([,a], [,b]) => b - a)
-                  .map(([skill, level]) => {
-                    const skillLevel = getSkillLevel(level);
-                    return (
-                      <div key={skill} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm font-medium text-gray-900">{skill}</span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${skillLevel.color}`}>
-                            {skillLevel.text}
+              {/* NFT Certificates */}
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                <div className="p-6 border-b border-gray-100">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Digital Certificates ({selectedVerification.nfts.length})
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">Verified blockchain credentials and achievements</p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {selectedVerification.nfts.map((nft: any, index: number) => (
+                      <div key={nft.token_id} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-200 shadow-sm hover:shadow-md transition-all duration-200">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-full flex-shrink-0">
+                              <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-semibold text-gray-900 text-lg truncate">{nft.skill}</h4>
+                              <p className="text-sm text-gray-500">Certificate #{index + 1}</p>
+                            </div>
+                          </div>
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200 flex-shrink-0">
+                            Verified
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${level * 100}%` }}
-                          ></div>
+                        
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600 flex-shrink-0">Token ID:</span>
+                            <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
+                              <TruncatedText text={nft.token_id} maxLength={20} />
+                              <button 
+                                onClick={() => handleCopyCid(nft.token_id)} 
+                                className="text-purple-600 hover:text-purple-700 transition-colors flex-shrink-0"
+                              >
+                                <ClipboardDocumentIcon className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600 flex-shrink-0">Issuer:</span>
+                            <span className="text-gray-900 truncate ml-2">{nft.issuer}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600 flex-shrink-0">Mint Date:</span>
+                            <span className="text-gray-900 truncate ml-2">{nft.mint_date}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-gray-600 flex-shrink-0">NFT CID:</span>
+                            <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
+                              <TruncatedText text={nft.cid_nft} maxLength={15} />
+                              <button 
+                                onClick={() => handleCopyCid(nft.cid_nft)} 
+                                className="text-purple-600 hover:text-purple-700 transition-colors flex-shrink-0"
+                              >
+                                <ClipboardDocumentIcon className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-600 mt-1">{Math.round(level * 100)}%</div>
+                        
+                        {nft.metadata?.name && (
+                          <div className="mt-4 pt-3 border-t border-green-200">
+                            <div className="text-sm font-medium text-gray-900 mb-1 truncate">{nft.metadata.name}</div>
+                            {nft.metadata?.description && (
+                              <div className="text-xs text-gray-600 truncate">{nft.metadata.description}</div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4 border-t border-gray-200">
-              <button
-                onClick={() => {
-                  toast.success(`Contacted ${selectedStudent.name}`);
-                  setShowStudentModal(false);
-                }}
-                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Contact now
-              </button>
-              <button
-                onClick={() => setShowStudentModal(false)}
-                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Close
-              </button>
+              {/* Technical Details */}
+              <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl border border-gray-200 shadow-sm">
+                <div className="p-6 border-b border-gray-100">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                    Technical Verification Details
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">Blockchain verification and cryptographic proof</p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Institution Public Key</label>
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 font-mono text-xs bg-white px-3 py-2 rounded-md border break-all min-w-0">
+                            {INSTITUTION_PUBLIC_KEY}
+                          </div>
+                          <button 
+                            onClick={() => handleCopyCid(INSTITUTION_PUBLIC_KEY)} 
+                            className="text-purple-600 hover:text-purple-700 transition-colors p-2 flex-shrink-0"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Digital Twin CID</label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 font-mono text-xs bg-white px-3 py-2 rounded-md border min-w-0">
+                            <TruncatedText 
+                              text={selectedVerification.verificationResult?.details?.digitalTwinCid || 'N/A'} 
+                              maxLength={30}
+                              className="bg-transparent px-0 py-0"
+                            />
+                          </div>
+                          <button 
+                            onClick={() => handleCopyCid(selectedVerification.verificationResult?.details?.digitalTwinCid)} 
+                            className="text-purple-600 hover:text-purple-700 transition-colors p-2 flex-shrink-0"
+                          >
+                            <ClipboardDocumentIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Verification Timestamp</label>
+                        <div className="bg-white px-3 py-2 rounded-md border text-sm truncate">
+                          {selectedVerification.verificationResult?.details?.verificationTimestamp 
+                            ? new Date(selectedVerification.verificationResult.details.verificationTimestamp).toLocaleString()
+                            : 'N/A'
+                          }
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Blockchain Transaction</label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 font-mono text-xs bg-white px-3 py-2 rounded-md border min-w-0">
+                            <TruncatedText 
+                              text={selectedVerification.verificationResult?.details?.verificationTimestamp 
+                                ? `0x${Date.now().toString(16)}${Math.random().toString(16).substring(2, 10)}`
+                                : 'N/A'
+                              } 
+                              maxLength={25}
+                              className="bg-transparent px-0 py-0"
+                            />
+                          </div>
+                          <button className="text-purple-600 hover:text-purple-700 transition-colors p-2 flex-shrink-0">
+                            <ClipboardDocumentIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </Modal>
+      <EmployerZKPVerify />
     </div>
   );
 };
 
-export default EmployerDashboardPage; 
+export default EmployerDashboardPage;

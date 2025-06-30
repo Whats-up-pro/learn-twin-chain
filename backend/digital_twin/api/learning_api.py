@@ -33,14 +33,14 @@ def verify_and_mint_skill(student_did: str = Body(...), student_address: str = B
         from ecdsa import SigningKey
         sk = SigningKey.from_pem(pem)
         private_key_hex = sk.to_string().hex()
-        issuer_did = "did:learntwin:school001"
+        issuer_did = "did:learntwin:uit001"
 
         # 2. Tạo VC chuẩn hóa và ký số
         vc = create_vc(issuer_did, student_did, skill, metadata, private_key_hex)
 
         # 3. Upload VC lên IPFS
         ipfs = IPFSService()
-        cid_nft = ipfs.upload_json(vc, name=f"VC_{student_did}_{skill}")
+        cid_nft = ipfs.upload_json(vc, name=f"VC_{student_did}_{skill}.json")
 
         # 4. Mint NFT với metadata là CIDnft
         nft_metadata = {
@@ -135,14 +135,14 @@ def verify_and_mint_skill_demo(student_did: str = Body(...), skill: str = Body(.
         from ecdsa import SigningKey
         sk = SigningKey.from_pem(pem)
         private_key_hex = sk.to_string().hex()
-        issuer_did = "did:learntwin:school001"
+        issuer_did = "did:learntwin:uit001"
 
         # 2. Tạo VC chuẩn hóa và ký số
         vc = create_vc(issuer_did, student_did, skill, metadata, private_key_hex)
 
         # 3. Upload VC lên IPFS
         ipfs = IPFSService()
-        cid_nft = ipfs.upload_json(vc, name=f"VC_{student_did}_{skill}")
+        cid_nft = ipfs.upload_json(vc, name=f"VC_{student_did}_{skill}.json")
 
         # 4. Demo mint NFT (không thực sự mint trên blockchain)
         import uuid
@@ -263,14 +263,15 @@ def update_did_data(student_did: str = Body(...), student_address: str = Body(..
                 "token_id": token_id,
                 "cid_nft": cid_nft,
                 "blockchain_address": student_address,
-                "issuer": "did:learntwin:school001",
+                "issuer": "did:learntwin:uit001",
                 "issued_at": "2024-01-15T00:00:00Z"
             }
         }
         
         # 3. Upload DID document lên IPFS
         ipfs = IPFSService()
-        cid_did = ipfs.upload_json(did_document, name=f"DID_{student_did}")
+        version = student_data.get("version", 1) + 1
+        cid_did = ipfs.upload_json(did_document, name=f"DID_{student_did}_v{version}.json")
         
         # 4. Link DID lên blockchain (registry contract)
         try:

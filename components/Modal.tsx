@@ -1,12 +1,12 @@
-import React, { ReactNode } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/solid';
+import React from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
-  children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  title?: string;
+  children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '6xl' | 'full';
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
@@ -17,38 +17,59 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
-    '2xl': 'max-w-4xl',
-    'full': 'max-w-7xl',
+    '6xl': 'max-w-6xl',
+    full: 'max-w-full'
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay phủ toàn bộ trang với blur */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
-        style={{ zIndex: 51 }}
-        onClick={onClose}
-      />
-      {/* Modal content */}
-      <div
-        className={`relative bg-white rounded-xl shadow-2xl p-8 ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-y-auto`}
-        style={{ zIndex: 52 }}
+  const modalContent = (
+    <div 
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}
+      onClick={onClose}
+    >
+      <div 
+        className={`bg-white rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[95vh] overflow-hidden flex flex-col`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-sky-700">{title}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
-            aria-label="Close modal"
-          >
-            <XMarkIcon className="h-6 w-6" />
-          </button>
+        {/* Header - Only show if title is provided */}
+        {title && (
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+        
+        {/* Content */}
+        <div className="flex-1 overflow-hidden">
+          {children}
         </div>
-        <div>{children}</div>
       </div>
     </div>
   );
+
+  // Use portal to render modal at document body level
+  return createPortal(modalContent, document.body);
 };
 
-export default Modal;
+export default Modal; 

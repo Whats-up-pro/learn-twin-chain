@@ -1,7 +1,13 @@
 export interface LearnerProfile {
   did: string;
   name: string;
+  email?: string;
   avatarUrl?: string;
+  institution?: string;
+  program?: string;
+  birth_year?: number;
+  enrollment_date?: string;
+  createdAt?: string;
 }
 
 export interface KnowledgeArea {
@@ -25,7 +31,9 @@ export interface LearningBehavior {
 export interface LearningCheckpoint {
   module: string;
   moduleId: string;
+  moduleName?: string; // Human-readable module name
   completedAt: string; // ISO date string
+  score?: number; // Score achieved in the module (0-100)
   tokenized: boolean;
   nftCid?: string; // Simulated IPFS CID for NFT metadata
   nftId?: string;
@@ -33,6 +41,7 @@ export interface LearningCheckpoint {
 
 export interface DigitalTwin {
   learnerDid: string;
+  learnerName?: string; // Student's real name
   knowledge: KnowledgeArea;
   skills: Skills;
   behavior: LearningBehavior;
@@ -49,6 +58,9 @@ export interface Nft {
   moduleId: string;
   issuedDate: string;
   cid?: string; // IPFS CID for NFT metadata
+  verified?: boolean; // Whether the NFT has been verified by institution
+  issuer?: string; // Institution that issued the NFT
+  institutionPublicKey?: string; // Public key of the issuing institution
 }
 
 export interface LearningModule {
@@ -119,7 +131,7 @@ export enum LoadingState {
 
 // New types for Employer and Teacher roles
 export enum UserRole {
-  LEARNER = 'learner',
+  LEARNER = 'student',
   TEACHER = 'teacher',
   EMPLOYER = 'employer'
 }

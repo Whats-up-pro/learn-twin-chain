@@ -5,7 +5,7 @@
   "profile": {
     "full_name": "Đoàn Minh Trung",
     "birth_year": 2002,
-    "institution": "BKU",
+    "institution": "UIT",
     "program": "Computer Science",
     "enrollment_date": "2021-09-01"
   },
@@ -54,7 +54,7 @@
       "skill": "OOP Programming",
       "cid_nft": "QmbUDLhDPtkStiTwWa9Layebf29udyov6PoJn6JLSEiMP6",
       "mint_date": "2024-01-15",
-      "issuer": "did:learntwin:school001",
+      "issuer": "did:learntwin:uit001",
       "student_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "metadata": {
         "name": "Skill Achievement: OOP Programming",
@@ -67,7 +67,7 @@
           },
           {
             "trait_type": "Issuer",
-            "value": "did:learntwin:school001"
+            "value": "did:learntwin:uit001"
           },
           {
             "trait_type": "Student",
@@ -96,7 +96,7 @@
             "VerifiableCredential",
             "SkillCredential"
           ],
-          "issuer": "did:learntwin:school001",
+          "issuer": "did:learntwin:uit001",
           "issuanceDate": "2025-06-29T20:35:35Z",
           "credentialSubject": {
             "id": "did:learntwin:student001",
@@ -110,7 +110,7 @@
             "type": "EcdsaSecp256k1Signature2019",
             "created": "2025-06-29T20:35:35Z",
             "proofPurpose": "assertionMethod",
-            "verificationMethod": "did:learntwin:school001#key-1",
+            "verificationMethod": "did:learntwin:uit001#key-1",
             "jws": "PsEex87YBEDc4jUfdTqhx7FJjdoUy8/csCRnP01KAfc7/z5Ikjap8XLxhoKX7m61S0YVhIZqUbFcBgSxU+DsCQ=="
           }
         }
@@ -121,7 +121,7 @@
       "skill": "Solarity Programming",
       "cid_nft": "QmVvaKnANwBeCSAm5VYCo3tAeNj7pysaTy56xQME7SpthF",
       "mint_date": "2024-01-15",
-      "issuer": "did:learntwin:school001",
+      "issuer": "did:learntwin:uit001",
       "student_address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
       "metadata": {
         "name": "Skill Achievement: Solarity Programming",
@@ -134,7 +134,7 @@
           },
           {
             "trait_type": "Issuer",
-            "value": "did:learntwin:school001"
+            "value": "did:learntwin:uit001"
           },
           {
             "trait_type": "Student",
@@ -163,7 +163,7 @@
             "VerifiableCredential",
             "SkillCredential"
           ],
-          "issuer": "did:learntwin:school001",
+          "issuer": "did:learntwin:uit001",
           "issuanceDate": "2025-06-29T20:36:49Z",
           "credentialSubject": {
             "id": "did:learntwin:student001",
@@ -177,7 +177,7 @@
             "type": "EcdsaSecp256k1Signature2019",
             "created": "2025-06-29T20:36:49Z",
             "proofPurpose": "assertionMethod",
-            "verificationMethod": "did:learntwin:school001#key-1",
+            "verificationMethod": "did:learntwin:uit001#key-1",
             "jws": "A/pwuTko54+eSQKY78r8Yx2AlFuHYRIETNoRQ4NIk/HDNBbCCUvPTTb0yKD7H5zi+7MTzbXFfTKNjp2WGaanWA=="
           }
         }

@@ -8,6 +8,7 @@ from digital_twin.api.twin_api import router as twin_router
 from digital_twin.api.learning_api import router as learning_router
 from digital_twin.api.analytics_api import router as analytics_router
 from digital_twin.api.ipfs_api import router as ipfs_router
+from digital_twin.api.zkp_api import router as zkp_router
 from .config.config import config
 from .utils import Logger
 from pydantic import BaseModel
@@ -23,8 +24,15 @@ DIGITAL_TWINS_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'digit
 class UserRegister(BaseModel):
     did: str
     name: str
+    email: str
     password: str
+    role: str = "student"  # Default to student
     avatarUrl: str = ""
+    # Student specific fields
+    institution: str = "UIT"
+    program: str = "Computer Science"
+    birth_year: int = None
+    enrollment_date: str = None
 
 class UserLogin(BaseModel):
     did: str
@@ -50,9 +58,14 @@ def write_users(users):
     with open(USERS_FILE, 'w', encoding='utf-8') as f:
         json.dump(users, f, ensure_ascii=False, indent=2)
 
-def create_digital_twin_file(did: str, name: str):
-    """Tạo file Digital Twin mới cho user đăng ký"""
+def create_digital_twin_file(did: str, name: str, role: str = 'student'):
+    """Tạo file Digital Twin mới cho user đăng ký (chỉ cho students)"""
     try:
+        # Chỉ tạo digital twin cho students
+        if role != 'student':
+            logger.info(f"Skipping Digital Twin creation for {did} with role {role}")
+            return True
+        
         # Đảm bảo thư mục tồn tại
         os.makedirs(DIGITAL_TWINS_DIR, exist_ok=True)
         
@@ -77,7 +90,7 @@ def create_digital_twin_file(did: str, name: str):
             "profile": {
                 "full_name": name,
                 "birth_year": None,
-                "institution": "BKU",
+                "institution": "UIT",
                 "program": "Computer Science",
                 "enrollment_date": datetime.now().strftime("%Y-%m-%d")
             },
@@ -139,6 +152,7 @@ app.include_router(twin_router, prefix="/api/v1")
 app.include_router(learning_router, prefix="/api/v1/learning")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
 app.include_router(ipfs_router, prefix="/api/v1/ipfs")
+app.include_router(zkp_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
@@ -154,12 +168,19 @@ async def register(user: UserRegister):
     if any(u['did'] == user.did for u in users):
         raise HTTPException(status_code=409, detail="User already exists")
     
+    # Tạo user data với thông tin mới
+    user_data = user.dict()
+    user_data['id'] = user.did
+    user_data['createdAt'] = datetime.now().isoformat()
+    user_data['NFT_list'] = []
+    user_data['metadata'] = {}
+    
     # Thêm user vào danh sách
-    users.append(user.dict())
+    users.append(user_data)
     write_users(users)
     
-    # Tạo file Digital Twin
-    if create_digital_twin_file(user.did, user.name):
+    # Tạo file Digital Twin (chỉ cho students)
+    if create_digital_twin_file(user.did, user.name, user.role):
         return {"message": "Registered successfully and Digital Twin created"}
     else:
         return {"message": "Registered successfully but failed to create Digital Twin"}
@@ -170,11 +191,19 @@ async def login(user: UserLogin):
     found = next((u for u in users if u['did'] == user.did and u['password'] == user.password), None)
     if not found:
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # Trả về đầy đủ thông tin user
     return {
         "did": found['did'],
         "name": found['name'],
+        "email": found.get('email', ''),
         "avatarUrl": found.get('avatarUrl', ''),
-        "role": found.get('role', 'learner')
+        "role": found.get('role', 'learner'),
+        "institution": found.get('institution', ''),
+        "program": found.get('program', ''),
+        "birth_year": found.get('birth_year'),
+        "enrollment_date": found.get('enrollment_date', ''),
+        "createdAt": found.get('createdAt', '')
     }
 
 @app.get("/api/v1/learning/students")
@@ -185,6 +214,10 @@ async def get_all_students():
         students_data = []
         
         for user in users:
+            # Chỉ xử lý users có role là student
+            if user.get('role') != 'student':
+                continue
+                
             # Xử lý did để lấy identifier
             if user['did'].startswith('did:learntwin:'):
                 identifier = user['did'].replace('did:learntwin:', '')
@@ -211,10 +244,10 @@ async def get_all_students():
                     "latest_cid": None,
                     "profile": {
                         "full_name": user['name'],
-                        "birth_year": None,
-                        "institution": "BKU",
-                        "program": "Computer Science",
-                        "enrollment_date": datetime.now().strftime("%Y-%m-%d")
+                        "birth_year": user.get('birth_year'),
+                        "institution": user.get('institution', 'UIT'),
+                        "program": user.get('program', 'Computer Science'),
+                        "enrollment_date": user.get('enrollment_date', datetime.now().strftime("%Y-%m-%d"))
                     },
                     "learning_state": {
                         "progress": {},
@@ -264,7 +297,7 @@ async def sync_users_and_twins():
             
             if not os.path.exists(twin_filepath):
                 # Tạo digital twin nếu chưa có
-                if create_digital_twin_file(user['did'], user['name']):
+                if create_digital_twin_file(user['did'], user['name'], user['role']):
                     created_count += 1
                     logger.info(f"Created missing Digital Twin for {identifier}")
             else:

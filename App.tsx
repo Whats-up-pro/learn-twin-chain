@@ -9,7 +9,6 @@ import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import TeacherDashboardPage from './pages/TeacherDashboardPage';
 import EmployerDashboardPage from './pages/EmployerDashboardPage';
-import EmployerStudentSearchPage from './pages/EmployerStudentSearchPage';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
 import { UserRole } from './types';
@@ -34,16 +33,18 @@ const AppContent: React.FC = () => {
   // Check localStorage on mount to restore session
   useEffect(() => {
     const savedProfile = localStorage.getItem('learnerProfile');
+    const savedRole = localStorage.getItem('userRole');
     if (savedProfile && !learnerProfile) {
       try {
         const profile = JSON.parse(savedProfile);
-        updateLearnerProfile(profile);
+        updateLearnerProfile(profile, savedRole as UserRole);
       } catch (error) {
         console.error('Error parsing saved profile:', error);
         localStorage.removeItem('learnerProfile');
+        localStorage.removeItem('userRole');
       }
     }
-  }, []); // Remove dependencies to avoid infinite loop
+  }, [learnerProfile, updateLearnerProfile]);
 
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
   const hideNavbar = location.pathname === '/login' || location.pathname === '/register';
@@ -73,7 +74,7 @@ const AppContent: React.FC = () => {
           } />
           <Route path="/employer" element={
             <ProtectedRoute allowedRoles={[UserRole.EMPLOYER]}>
-              <EmployerStudentSearchPage />
+              <EmployerDashboardPage />
             </ProtectedRoute>
           } />
           <Route path="/module/:moduleId" element={

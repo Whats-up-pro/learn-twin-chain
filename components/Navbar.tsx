@@ -16,7 +16,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
   const avatarUrl = learnerProfile && learnerProfile.avatarUrl && learnerProfile.avatarUrl.trim() !== ''
     ? learnerProfile.avatarUrl
-    : 'https://ui-avatars.com/api/?background=fff&color=888&name=U';
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=0ea5e9&color=fff&size=40`;
   const displayName = learnerProfile && learnerProfile.name ? learnerProfile.name : 'User';
 
   const handleLogout = () => {
@@ -62,8 +62,12 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                 <Link to="/profile" className="flex items-center text-sky-100 hover:text-white">
                   <img
                     src={avatarUrl}
-                    alt={displayName}
+                    alt={learnerProfile?.name || 'User'}
                     className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
+                    onError={e => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=0ea5e9&color=fff&size=40`;
+                    }}
                   />
                   <span className="hidden sm:inline text-sm">{displayName}</span>
                 </Link>
@@ -77,7 +81,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             ) : (
               <div className="flex items-center text-sky-100">
                 <img
-                  src={'https://picsum.photos/seed/defaultuser/40/40'}
+                  src={'https://ui-avatars.com/api/?name=User&background=0ea5e9&color=fff&size=40'}
                   alt="Guest"
                   className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
                 />
