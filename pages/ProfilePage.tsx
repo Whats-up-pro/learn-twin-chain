@@ -441,7 +441,8 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      <StudentZKPSection />
+      {/* ZKP Section - Only for Students */}
+      {isStudent && <StudentZKPSection />}
     </div>
   );
 };
