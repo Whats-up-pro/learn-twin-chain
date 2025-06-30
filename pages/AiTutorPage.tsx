@@ -44,7 +44,7 @@ const AiTutorPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const aiResponseText = await sendMessageToGemini(userMessage.text);
+      const aiResponseText = await sendMessageToGemini(userMessage.text, digitalTwin);
       const aiMessage: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'ai', text: aiResponseText, timestamp: new Date() };
       setMessages(prev => [...prev, aiMessage]);
       updateBehavior({

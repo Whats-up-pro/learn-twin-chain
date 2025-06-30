@@ -9,7 +9,7 @@ import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 const ModulePage: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
-  const { getModuleById, digitalTwin, updateKnowledge, updateBehavior } = useAppContext();
+  const { getModuleById, digitalTwin, updateKnowledge, updateBehavior, completeCheckpoint, mintNftForModule } = useAppContext();
   const [module, setModule] = useState<LearningModule | null | undefined>(undefined); // undefined for loading, null if not found
   const navigate = useNavigate();
 
@@ -24,11 +24,58 @@ const ModulePage: React.FC = () => {
   }, [moduleId, getModuleById, updateBehavior]);
 
   const handleQuizComplete = (score: number) => {
-    const newKnowledge = Math.min(1.0, (digitalTwin.knowledge[module?.title || ''] || 0) + (score / 100) * 0.3);
+    console.log('🎯 Quiz completed with score:', score);
+    
+    // Calculate knowledge based on quiz score
+    let newKnowledge: number;
+    
+    if (score >= 80) {
+      // If score is 80% or higher, mark module as completed (100%)
+      newKnowledge = 1.0;
+    } else if (score >= 60) {
+      // If score is 60-79%, set knowledge to 70%
+      newKnowledge = 0.7;
+    } else if (score >= 40) {
+      // If score is 40-59%, set knowledge to 50%
+      newKnowledge = 0.5;
+    } else {
+      // If score is below 40%, set knowledge to 30%
+      newKnowledge = 0.3;
+    }
+    
+    // Ensure new knowledge is not lower than current knowledge
+    const currentKnowledge = digitalTwin.knowledge[module?.title || ''] || 0;
+    newKnowledge = Math.max(newKnowledge, currentKnowledge);
+    
+    console.log('📊 Knowledge update:', {
+      module: module?.title,
+      score,
+      currentKnowledge,
+      newKnowledge,
+      percentage: Math.round(newKnowledge * 100)
+    });
     
     updateKnowledge({
       [module?.title || '']: newKnowledge
     });
+
+    // Create checkpoint for this module completion
+    if (module) {
+      completeCheckpoint({
+        module: module.title,
+        moduleId: module.id,
+        moduleName: module.title,
+        completedAt: getCurrentVietnamTimeISO(),
+        score: score
+      });
+
+      // If module is completed (score >= 80%), mint NFT
+      if (score >= 80) {
+        setTimeout(() => {
+          mintNftForModule(module.id, module.title);
+        }, 1000); // Small delay to ensure checkpoint is created first
+      }
+    }
 
     // Update behavior
     updateBehavior({
@@ -36,7 +83,11 @@ const ModulePage: React.FC = () => {
       lastLlmSession: getCurrentVietnamTimeISO()
     });
 
-    toast.success(`Quiz completed! Score: ${score}%`);
+    if (score >= 80) {
+      toast.success(`🎉 Module completed! Score: ${score}% - NFT will be minted!`);
+    } else {
+      toast.success(`Quiz completed! Score: ${score}% - Try again to improve your score!`);
+    }
     
     // Navigate back to dashboard after a short delay
     setTimeout(() => {

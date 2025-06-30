@@ -32,7 +32,7 @@ class BlockchainService:
             
             # Load contract addresses
             module_progress_address = os.getenv('MODULE_PROGRESS_CONTRACT_ADDRESS')
-            achievement_address = os.getenv('ACHIEVEMENT_CONTRACT_ADDRESS')
+            achievement_address = os.getenv('NFT_CONTRACT_ADDRESS')
             registry_address = os.getenv('REGISTRY_CONTRACT_ADDRESS')
             
             if not all([module_progress_address, achievement_address, registry_address]):

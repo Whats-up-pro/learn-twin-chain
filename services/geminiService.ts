@@ -1,21 +1,21 @@
-import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { ChatMessage, DigitalTwin } from '../types';
 import { GEMINI_MODEL_NAME } from '../constants';
 
-const API_KEY = process.env.API_KEY;
+// Try different environment variable names for Vite
+const API_KEY = (window as any).ENV?.VITE_GEMINI_API_KEY || 
+                (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+                'your_api_key_here';
 
-if (!API_KEY) {
-  console.error("API_KEY for Gemini is not set in environment variables.");
-  // Potentially throw an error or handle this state in the UI
-  // For this example, we'll allow the app to run but Gemini features will fail.
+if (!API_KEY || API_KEY === 'your_api_key_here') {
+  console.error("GEMINI API_KEY is not set.");
+  console.log("Please set VITE_GEMINI_API_KEY in your .env.local file");
 }
 
-const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
-
-let chatInstance: Chat | null = null;
+const genAI = API_KEY && API_KEY !== 'your_api_key_here' ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const getSystemInstruction = (digitalTwin?: DigitalTwin): string => {
-  let instruction = `You are ${GEMINI_MODEL_NAME}, a friendly and helpful AI Tutor for a student learning Python.
+  let instruction = `You are an AI Tutor for a student learning Python.
 Be encouraging and clear in your explanations.
 The student is currently working on Python programming.
 Always respond in Markdown format.
@@ -39,72 +39,58 @@ If asked about topics outside of Python learning, politely steer the conversatio
   return instruction;
 };
 
-export const startChatSession = async (digitalTwin: any): Promise<string> => {
-  try {
-    const response = await fetch('/api/gemini/start-session', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        digitalTwin,
-        context: 'Starting a new AI tutoring session for Python learning.'
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.sessionId || 'session-' + Date.now();
-  } catch (error) {
-    console.error('Error starting chat session:', error);
-    return 'session-' + Date.now();
-  }
+export const startChatSession = async (digitalTwin: DigitalTwin): Promise<string> => {
+  const sessionId = 'session-' + Date.now();
+  console.log('Chat session started:', sessionId);
+  return sessionId;
 };
 
-export const sendMessageToGemini = async (message: string): Promise<string> => {
+export const sendMessageToGemini = async (message: string, digitalTwin?: DigitalTwin): Promise<string> => {
+  if (!genAI) {
+    console.error("Gemini API not initialized because API_KEY is missing.");
+    return "I'm sorry, but I cannot respond right now because the Gemini API is not properly configured. Please check your API key setup.";
+  }
+
   try {
-    const response = await fetch('/api/gemini/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message,
-        context: 'You are an AI tutor helping students learn Python programming. Provide clear, helpful explanations and code examples when appropriate.'
-      }),
+    const systemInstruction = getSystemInstruction(digitalTwin);
+    const prompt = `${systemInstruction}\n\nUser: ${message}`;
+    
+    const result = await genAI.models.generateContent({
+      model: GEMINI_MODEL_NAME,
+      contents: prompt
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.response || 'Sorry, I could not process your request.';
+    
+    console.log('Gemini API response received successfully');
+    return result.text || 'Sorry, I could not generate a response.';
   } catch (error) {
     console.error('Error sending message to Gemini:', error);
+    if (error instanceof Error) {
+      if (error.message.includes('API_KEY')) {
+        return "I'm sorry, but there's an issue with the API key configuration. Please check your Gemini API key.";
+      }
+      return `Sorry, I encountered an error: ${error.message}. Please try again.`;
+    }
     return 'Sorry, I encountered an error. Please try again.';
   }
 };
 
 // Stateless generation example (if needed for specific non-chat tasks)
 export const generateContentStateless = async (prompt: string, digitalTwin?: DigitalTwin): Promise<string> => {
-   if (!ai) {
+  if (!genAI) {
     console.error("Gemini API not initialized because API_KEY is missing.");
     return "Gemini API is not available.";
   }
+  
   try {
     const systemInstruction = getSystemInstruction(digitalTwin);
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    const fullPrompt = `${systemInstruction}\n\n${prompt}`;
+    
+    const result = await genAI.models.generateContent({
       model: GEMINI_MODEL_NAME,
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction,
-      }
+      contents: fullPrompt
     });
-    return response.text || 'No response generated';
+    
+    return result.text || 'No response generated';
   } catch (error) {
     console.error("Error generating content from Gemini:", error);
      if (error instanceof Error) {

@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 
 interface QuizProps {
   questions: QuizQuestion[];
-  onQuizComplete: (score: number, correctAnswers: number, totalQuestions: number) => void;
+  onQuizComplete: (score: number) => void;
 }
 
 const QuizComponent: React.FC<QuizProps> = ({ questions, onQuizComplete }) => {
@@ -31,10 +31,11 @@ const QuizComponent: React.FC<QuizProps> = ({ questions, onQuizComplete }) => {
       }
     });
     const calculatedScore = (correctCount / questions.length);
+    const scorePercentage = Math.round(calculatedScore * 100); // Convert to percentage 0-100
     setScore(calculatedScore);
     setShowResults(true);
-    onQuizComplete(calculatedScore, correctCount, questions.length);
-    toast.success(`Quiz submitted! You got ${correctCount}/${questions.length} correct.`);
+    onQuizComplete(scorePercentage); // Pass percentage score
+    toast.success(`Quiz submitted! You got ${correctCount}/${questions.length} correct (${scorePercentage}%).`);
   };
 
   if (showResults) {
