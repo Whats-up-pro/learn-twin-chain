@@ -9,7 +9,7 @@ import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 const ModulePage: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
-  const { getModuleById, digitalTwin, updateKnowledge, updateBehavior } = useAppContext();
+  const { getModuleById, digitalTwin, updateKnowledge, updateBehavior, completeCheckpoint, mintNftForModule } = useAppContext();
   const [module, setModule] = useState<LearningModule | null | undefined>(undefined); // undefined for loading, null if not found
   const navigate = useNavigate();
 
@@ -24,10 +24,14 @@ const ModulePage: React.FC = () => {
   }, [moduleId, getModuleById, updateBehavior]);
 
   const handleQuizComplete = (score: number) => {
-    const newKnowledge = Math.min(1.0, (digitalTwin.knowledge[module?.title || ''] || 0) + (score / 100) * 0.3);
+    if (!module) return;
+
+    // Set knowledge to 1.0 (100%) when quiz is completed, regardless of score
+    const newKnowledge = 1.0;
     
+    // Update knowledge
     updateKnowledge({
-      [module?.title || '']: newKnowledge
+      [module.title]: newKnowledge
     });
 
     // Update behavior
@@ -36,7 +40,19 @@ const ModulePage: React.FC = () => {
       lastLlmSession: getCurrentVietnamTimeISO()
     });
 
-    toast.success(`Quiz completed! Score: ${score}%`);
+    // Mark module as completed by creating a checkpoint
+    completeCheckpoint({
+      module: module.title,
+      moduleId: module.id,
+      moduleName: module.title,
+      score: score,
+      completedAt: getCurrentVietnamTimeISO()
+    });
+
+    // Automatically mint NFT for module completion
+    mintNftForModule(module.id, module.title);
+
+    toast.success(`Quiz completed! Score: ${score}% - Module marked as completed! NFT minted!`);
     
     // Navigate back to dashboard after a short delay
     setTimeout(() => {
