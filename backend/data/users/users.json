@@ -334,5 +334,21 @@
     "position": "HR Manager",
     "NFT_list": [],
     "metadata": {}
+  },
+  {
+    "did": "did:learntwin:student110",
+    "name": "giaquoc",
+    "email": "gq@gm.uit.edu.vn",
+    "password": "giaquoc123",
+    "role": "student",
+    "avatarUrl": "",
+    "institution": "UIT",
+    "program": "Cybersecurity",
+    "birth_year": 2003,
+    "enrollment_date": "2025-06-30",
+    "id": "did:learntwin:student110",
+    "createdAt": "2025-06-30T15:53:28.303829",
+    "NFT_list": [],
+    "metadata": {}
   }
 ]
