@@ -32,9 +32,7 @@ const DashboardPage: React.FC = () => {
   console.log('DashboardPage: learningModules:', learningModules);
 
   const totalModules = learningModules.length;
-  const completedModulesCount = digitalTwin.checkpoints.filter((cp: any) => 
-      (digitalTwin.knowledge[cp.module] ?? 0) >= 1 
-  ).length;
+  const completedModulesCount = digitalTwin.checkpoints.length;
   
   const overallProgress = totalModules > 0 ? (completedModulesCount / totalModules) * 100 : 0;
 
@@ -56,7 +54,7 @@ const DashboardPage: React.FC = () => {
 
   const handleContinueLearning = () => {
     const incompleteModule = learningModules.find(module => 
-      (digitalTwin.knowledge[module.title] ?? 0) < 1
+      !digitalTwin.checkpoints.some(cp => cp.moduleId === module.id)
     );
     if (incompleteModule) {
       navigate(`/module/${incompleteModule.id}`);
@@ -201,8 +199,8 @@ const DashboardPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {learningModules.map(module => {
             const moduleKnowledge = digitalTwin.knowledge[module.title] ?? 0;
-            const isCompleted = moduleKnowledge >= 1;
-              const isStarted = moduleKnowledge > 0;
+            const isCompleted = digitalTwin.checkpoints.some(cp => cp.moduleId === module.id);
+            const isStarted = moduleKnowledge > 0;
             return (
                 <div key={module.id} className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-gray-100">
                   <div className="flex items-center justify-between mb-4">
@@ -220,7 +218,7 @@ const DashboardPage: React.FC = () => {
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium text-gray-700">Progress</span>
-                        <span className="text-sm font-bold text-gray-800">{Math.round(moduleKnowledge * 100)}%</span>
+                        <span className="text-sm font-bold text-gray-800">{isCompleted ? 100 : Math.round(moduleKnowledge * 100)}%</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                         <div 
@@ -229,7 +227,7 @@ const DashboardPage: React.FC = () => {
                             isStarted ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
                             'bg-gradient-to-r from-gray-400 to-gray-600'
                           }`}
-                          style={{ width: `${moduleKnowledge * 100}%` }}
+                          style={{ width: `${isCompleted ? 100 : moduleKnowledge * 100}%` }}
                         ></div>
                       </div>
                     </div>
@@ -242,7 +240,7 @@ const DashboardPage: React.FC = () => {
                       {isStarted && (
                         <span className="flex items-center text-blue-600">
                           <StarIcon className="h-4 w-4 mr-1" />
-                          {Math.round(moduleKnowledge * 100)}% done
+                          {isCompleted ? '100% done' : `${Math.round(moduleKnowledge * 100)}% done`}
                         </span>
                       )}
                     </div>

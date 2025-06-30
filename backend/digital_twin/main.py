@@ -169,7 +169,7 @@ app.include_router(twin_router, prefix="/api/v1")
 app.include_router(learning_router, prefix="/api/v1/learning")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
 app.include_router(ipfs_router, prefix="/api/v1/ipfs")
-app.include_router(gemini_router, prefix="/api/gemini")
+app.include_router(zkp_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():

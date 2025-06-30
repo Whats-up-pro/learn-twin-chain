@@ -10,6 +10,7 @@ import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 const ModulePage: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
   const { getModuleById, digitalTwin, updateKnowledge, updateBehavior, completeCheckpoint, mintNftForModule } = useAppContext();
+  const { getModuleById, digitalTwin, updateKnowledge, updateBehavior, completeCheckpoint, mintNftForModule } = useAppContext();
   const [module, setModule] = useState<LearningModule | null | undefined>(undefined); // undefined for loading, null if not found
   const navigate = useNavigate();
 
@@ -55,8 +56,9 @@ const ModulePage: React.FC = () => {
       percentage: Math.round(newKnowledge * 100)
     });
     
+    // Update knowledge
     updateKnowledge({
-      [module?.title || '']: newKnowledge
+      [module.title]: newKnowledge
     });
 
     // Create checkpoint for this module completion

@@ -3,8 +3,8 @@ import { ChatMessage, DigitalTwin } from '../types';
 import { GEMINI_MODEL_NAME } from '../constants';
 
 // Try different environment variable names for Vite
-const API_KEY = (window as any).ENV?.VITE_GEMINI_API_KEY || 
-                (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+const API_KEY = (window as any).ENV?.GEMINI_API_KEY || 
+                (import.meta as any).env?.GEMINI_API_KEY || 
                 'your_api_key_here';
 
 if (!API_KEY || API_KEY === 'your_api_key_here') {
