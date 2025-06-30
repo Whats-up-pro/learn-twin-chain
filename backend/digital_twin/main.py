@@ -10,9 +10,11 @@ from digital_twin.api.analytics_api import router as analytics_router
 from digital_twin.api.blockchain_api import router as blockchain_router
 from digital_twin.api.ipfs_api import router as ipfs_router
 from digital_twin.api.zkp_api import router as zkp_router
+from digital_twin.api.gemini_api import router as gemini_router
 from .config.config import config
 from .utils import Logger
 from pydantic import BaseModel
+from typing import Optional
 import json
 from datetime import datetime
 import sys
@@ -39,8 +41,8 @@ class UserRegister(BaseModel):
     # Student specific fields
     institution: str = "UIT"
     program: str = "Computer Science"
-    birth_year: int = None
-    enrollment_date: str = None
+    birth_year: Optional[int] = None
+    enrollment_date: Optional[str] = None
 
 class UserLogin(BaseModel):
     did: str
@@ -50,8 +52,8 @@ class TeacherFeedback(BaseModel):
     student_did: str
     teacher_id: str
     content: str
-    score: float = None
-    created_at: str = None
+    score: Optional[float] = None
+    created_at: Optional[str] = None
 
 def read_users():
     if not os.path.exists(USERS_FILE):
@@ -149,9 +151,16 @@ app = FastAPI(
 # Cấu hình CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5180"],  # Chỉ cho phép localhost:5180
+    allow_origins=[
+        "http://localhost:5180", 
+        "http://localhost:5173", 
+        "http://localhost:3000",
+        "http://127.0.0.1:5180",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+    ],  # Allow multiple common dev ports
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -160,6 +169,7 @@ app.include_router(twin_router, prefix="/api/v1")
 app.include_router(learning_router, prefix="/api/v1/learning")
 app.include_router(analytics_router, prefix="/api/v1/analytics")
 app.include_router(ipfs_router, prefix="/api/v1/ipfs")
+app.include_router(gemini_router, prefix="/api/gemini")
 
 @app.get("/")
 async def root():
@@ -192,6 +202,10 @@ async def health_check():
         }
     }
 
+@app.options("/register")
+async def register_options():
+    return {"message": "OK"}
+
 @app.post("/register")
 async def register(user: UserRegister):
     users = read_users()
@@ -214,6 +228,10 @@ async def register(user: UserRegister):
         return {"message": "Registered successfully and Digital Twin created"}
     else:
         return {"message": "Registered successfully but failed to create Digital Twin"}
+
+@app.options("/login")
+async def login_options():
+    return {"message": "OK"}
 
 @app.post("/login")
 async def login(user: UserLogin):
