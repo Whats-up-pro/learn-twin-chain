@@ -18,6 +18,9 @@ pytz>=2023.3
 # JSON schema validation
 jsonschema==4.21.1
 
+# Google GenAI for Gemini integration
+google-genai>=0.3.0
+
 # Blockchain and Web3 (for future blockchain integration)
 web3>=6.0.0,<7.0.0
 eth-account>=0.11.0
