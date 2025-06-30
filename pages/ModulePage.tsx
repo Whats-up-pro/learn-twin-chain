@@ -10,7 +10,6 @@ import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 const ModulePage: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
   const { getModuleById, digitalTwin, updateKnowledge, updateBehavior, completeCheckpoint, mintNftForModule } = useAppContext();
-  const { getModuleById, digitalTwin, updateKnowledge, updateBehavior, completeCheckpoint, mintNftForModule } = useAppContext();
   const [module, setModule] = useState<LearningModule | null | undefined>(undefined); // undefined for loading, null if not found
   const navigate = useNavigate();
 
