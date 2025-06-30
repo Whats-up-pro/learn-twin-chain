@@ -2,17 +2,16 @@ import { GoogleGenAI } from "@google/genai";
 import { ChatMessage, DigitalTwin } from '../types';
 import { GEMINI_MODEL_NAME } from '../constants';
 
-// Try different environment variable names for Vite
-const API_KEY = (window as any).ENV?.GEMINI_API_KEY || 
-                (import.meta as any).env?.GEMINI_API_KEY || 
-                'your_api_key_here';
+// Load API key from Vite environment variables
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-if (!API_KEY || API_KEY === 'your_api_key_here') {
-  console.error("GEMINI API_KEY is not set.");
-  console.log("Please set VITE_GEMINI_API_KEY in your .env.local file");
+if (!API_KEY) {
+  console.error("🔑 GEMINI API_KEY is not set.");
+  console.log("📝 Please create .env.local file with: VITE_GEMINI_API_KEY=your_actual_api_key");
+  console.log("🌐 Get API key from: https://makersuite.google.com/app/apikey");
 }
 
-const genAI = API_KEY && API_KEY !== 'your_api_key_here' ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+const genAI = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const getSystemInstruction = (digitalTwin?: DigitalTwin): string => {
   let instruction = `You are an AI Tutor for a student learning Python.
@@ -47,8 +46,21 @@ export const startChatSession = async (digitalTwin: DigitalTwin): Promise<string
 
 export const sendMessageToGemini = async (message: string, digitalTwin?: DigitalTwin): Promise<string> => {
   if (!genAI) {
-    console.error("Gemini API not initialized because API_KEY is missing.");
-    return "I'm sorry, but I cannot respond right now because the Gemini API is not properly configured. Please check your API key setup.";
+    console.error("🔑 Gemini API not initialized because API_KEY is missing.");
+    return `🤖 **AI Tutor is currently unavailable**
+
+I'm sorry, but I cannot respond right now because the Gemini API is not properly configured.
+
+**To fix this:**
+1. Create a file called \`.env.local\` in your project root
+2. Add this line: \`VITE_GEMINI_API_KEY=your_actual_api_key\`
+3. Get your API key from: https://makersuite.google.com/app/apikey
+4. Restart the development server
+
+**For now, you can still:**
+- Complete learning modules and quizzes
+- View your progress and achievements
+- Browse course content`;
   }
 
   try {
