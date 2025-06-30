@@ -1,45 +1,46 @@
 {
   "twin_id": "did:learntwin:student004",
-  "owner_did": "did:learner:0x456AbC",
+  "owner_did": "did:learner:0xJkL123",
   "profile": {
-    "full_name": "Lê Hoàng Giang",
-    "birth_year": 2004,
+    "full_name": "Huỳnh Quốc Khánh",
+    "birth_year": 2005,
     "institution": "UIT",
-    "program": "Computer Science",
-    "enrollment_date": "2024-09-01"
+    "program": "Cybersecurity",
+    "enrollment_date": "2025-09-01"
   },
   "learning_state": {
     "progress": {
-      "Lập trình hướng đối tượng": 0.8,
-      "Python cơ bản": 0.85
+      "Network Security": 0.8,
+      "Cryptography": 0.6
     },
     "checkpoint_history": [
       {
-        "module": "Lập trình hướng đối tượng",
-        "completed_at": "2025-05-20",
-        "tokenized": true,
-        "nft_cid": "QmAbCdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIjKlMnOpQr"
+        "module": "Network Security",
+        "completed_at": "2025-06-20",
+        "tokenized": false,
+        "nft_cid": null
       }
     ],
     "current_modules": [
-      "Nghiên cứu khoa học"
+      "Network Security",
+      "Cryptography"
     ]
   },
   "skill_profile": {
     "programming_languages": {
-      "Java": 0.8,
-      "Python": 0.85
+      "Python": 0.8,
+      "C": 0.6
     },
     "soft_skills": {
-      "teamwork": 0.8
+      "security_analysis": 0.8
     }
   },
   "interaction_logs": {
-    "last_llm_session": "2025-06-15T16:30:00+07:00",
+    "last_llm_session": "2025-06-20T10:00:00+07:00",
     "most_asked_topics": [
-      "inheritance in OOP",
-      "array vs linked list"
+      "Python",
+      "C"
     ],
-    "preferred_learning_style": "practice-first"
+    "preferred_learning_style": "code-first"
   }
 }

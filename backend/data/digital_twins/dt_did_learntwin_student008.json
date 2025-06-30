@@ -1,45 +1,46 @@
 {
   "twin_id": "did:learntwin:student008",
-  "owner_did": "did:learner:0x654Pqr",
+  "owner_did": "did:learner:0xVwX345",
   "profile": {
-    "full_name": "Võ Nguyễn Gia Quốc",
-    "birth_year": 2005,
+    "full_name": "Trần Tuấn Dũng",
+    "birth_year": 2003,
     "institution": "UIT",
-    "program": "Information Security",
-    "enrollment_date": "2025-09-01"
+    "program": "Data Science",
+    "enrollment_date": "2024-09-01"
   },
   "learning_state": {
     "progress": {
-      "Xử lý dữ liệu": 0.75,
-      "Python cơ bản": 0.88
+      "Data Analysis": 0.85,
+      "Machine Learning": 0.9
     },
     "checkpoint_history": [
       {
-        "module": "Xử lý dữ liệu",
-        "completed_at": "2025-05-05",
-        "tokenized": true,
-        "nft_cid": "QmEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIjKlMnOpQrStUv"
+        "module": "Data Analysis",
+        "completed_at": "2025-06-20",
+        "tokenized": false,
+        "nft_cid": null
       }
     ],
     "current_modules": [
-      "Nghiên cứu khoa học"
+      "Data Analysis",
+      "Machine Learning"
     ]
   },
   "skill_profile": {
     "programming_languages": {
-      "Python": 0.88,
-      "SQL": 0.7
+      "Python": 0.8,
+      "R": 0.7
     },
     "soft_skills": {
-      "data_analysis": 0.85
+      "data_analysis": 0.9
     }
   },
   "interaction_logs": {
-    "last_llm_session": "2025-06-19T23:00:00+07:00",
+    "last_llm_session": "2025-06-20T10:00:00+07:00",
     "most_asked_topics": [
-      "pandas",
-      "matplotlib"
+      "Python",
+      "R"
     ],
-    "preferred_learning_style": "theory-then-practice"
+    "preferred_learning_style": "code-first"
   }
 }

@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import { LearnerProfile, DigitalTwin, Nft, LearningModule, UpdateTwinPayload, LearningCheckpoint, KnowledgeArea, UserRole } from '../types';
-import { DEFAULT_LEARNER_PROFILE, INITIAL_DIGITAL_TWIN, LEARNING_MODULES } from '../constants';
+import { INITIAL_DIGITAL_TWIN, LEARNING_MODULES } from '../constants';
 import toast from 'react-hot-toast';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
@@ -126,7 +126,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       id: newNftId,
       name: `Completion: ${moduleName}`,
       description: `Certificate of completion for the learning module: ${moduleName}.`,
-      imageUrl: `https://picsum.photos/seed/${moduleId}/300/200`,
+      imageUrl: `https://via.placeholder.com/300x200/0ea5e9/ffffff?text=${encodeURIComponent(moduleName)}`,
       moduleId: moduleId,
       issuedDate: getCurrentVietnamTimeISO(),
       cid: `QmSimulatedNFT${moduleId}${Date.now().toString(36)}` // Simulated IPFS CID
@@ -190,8 +190,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [updateDigitalTwinState]);
 
   const updateLearnerProfile = useCallback((profile: LearnerProfile, userRole?: UserRole) => {
+    console.log('AppContext: updateLearnerProfile called with:', { profile, userRole });
     setLearnerProfile(profile);
-    if (userRole) setRole(userRole);
+    
+    // Cập nhật digitalTwin với DID mới
+    setDigitalTwin(prevTwin => ({
+      ...prevTwin,
+      learnerDid: profile.did
+    }));
+    
+    if (userRole) {
+      console.log('AppContext: Setting role to:', userRole);
+      setRole(userRole);
+    }
   }, []);
 
   const logout = useCallback(() => {

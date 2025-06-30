@@ -1,26 +1,43 @@
 {
   "twin_id": "did:learntwin:student099",
-  "owner_did": "did:learner:student099",
+  "owner_did": "did:learner:0xTest123",
   "latest_cid": null,
   "profile": {
-    "full_name": "testaccount",
-    "birth_year": null,
-    "institution": "BKU",
-    "program": "Computer Science",
-    "enrollment_date": "2025-06-28"
+    "full_name": "Test Student UIT",
+    "birth_year": 2005,
+    "institution": "UIT",
+    "program": "Cybersecurity",
+    "enrollment_date": "2025-09-01"
   },
   "learning_state": {
-    "progress": {},
-    "checkpoint_history": [],
-    "current_modules": []
+    "progress": {
+      "Introduction to Programming": 0.5
+    },
+    "checkpoint_history": [
+      {
+        "module": "Introduction to Programming",
+        "completed_at": "2025-06-20",
+        "tokenized": false,
+        "nft_cid": null
+      }
+    ],
+    "current_modules": [
+      "Introduction to Programming"
+    ]
   },
   "skill_profile": {
-    "programming_languages": {},
-    "soft_skills": {}
+    "programming_languages": {
+      "Python": 0.5
+    },
+    "soft_skills": {
+      "learning": 0.6
+    }
   },
   "interaction_logs": {
-    "last_llm_session": null,
-    "most_asked_topics": [],
+    "last_llm_session": "2025-06-20T10:00:00+07:00",
+    "most_asked_topics": [
+      "Python"
+    ],
     "preferred_learning_style": "code-first"
   }
 }

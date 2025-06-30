@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClockIcon, ChartBarIcon, UserIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { LearnerProgress } from '../types';
 
 interface LearnerProgressCardProps {

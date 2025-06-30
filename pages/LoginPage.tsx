@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole } from '../types';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 const LoginPage: React.FC = () => {
   const { updateLearnerProfile, setRole } = useAppContext();
   const [did, setDid] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -42,11 +44,18 @@ const LoginPage: React.FC = () => {
       
       const user = await res.json();
       const userRole: UserRole = user.role || UserRole.LEARNER;
-      updateLearnerProfile({
+      const profile = {
         did: user.did,
         name: user.name,
-        avatarUrl: user.avatarUrl || ''
-      }, userRole);
+        email: user.email,
+        avatarUrl: user.avatarUrl || '',
+        institution: user.institution,
+        program: user.program,
+        birth_year: user.birth_year,
+        enrollment_date: user.enrollment_date,
+        createdAt: user.createdAt
+      };
+      updateLearnerProfile(profile, userRole);
       setRole(userRole);
       if (userRole === UserRole.TEACHER) {
         navigate('/teacher', { replace: true });
@@ -81,14 +90,28 @@ const LoginPage: React.FC = () => {
             disabled={isLoading}
           />
           <label className="block mb-2 font-medium">Password</label>
-          <input
-            type="password"
-            className="w-full p-2 border rounded mb-4"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            disabled={isLoading}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              className="w-full p-2 pr-10 border rounded mb-4"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              disabled={isLoading}
+            />
+            <button
+              type="button"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              onClick={() => setShowPassword(!showPassword)}
+              disabled={isLoading}
+            >
+              {showPassword ? (
+                <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              ) : (
+                <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              )}
+            </button>
+          </div>
           {error && <div className="text-red-500 mb-2">{error}</div>}
           <button 
             type="submit" 

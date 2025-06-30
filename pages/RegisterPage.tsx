@@ -1,27 +1,40 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAppContext } from '../contexts/AppContext';
+import { Link } from 'react-router-dom';
 
 const RegisterPage: React.FC = () => {
-  const { learnerProfile } = useAppContext();
   const [did, setDid] = useState('');
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [program, setProgram] = useState('');
+  const [birthYear, setBirthYear] = useState('');
+  const [enrollmentDate, setEnrollmentDate] = useState('');
+
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!did.trim() || !name.trim() || !password.trim()) {
-      setError('Please enter DID, name and password!');
+    if (!did.trim() || !name.trim() || !password.trim() || !email.trim() || !program.trim() || !birthYear.trim() || !enrollmentDate.trim()) {
+      setError('Please fill in all required fields!');
       return;
     }
     try {
       const res = await fetch('http://localhost:8000/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ did, name, password, avatarUrl })
+        body: JSON.stringify({
+          did,
+          name,
+          email,
+          password,
+          avatarUrl,
+          institution: 'UIT',
+          program,
+          birth_year: parseInt(birthYear),
+          enrollment_date: enrollmentDate,
+          role: 'student'
+        })
       });
       if (res.status === 409) {
         setError('User already exists!');
@@ -62,6 +75,14 @@ const RegisterPage: React.FC = () => {
             onChange={e => setName(e.target.value)}
             placeholder="Your name"
           />
+          <label className="block mb-2 font-medium">Email</label>
+          <input
+            type="email"
+            className="w-full p-2 border rounded mb-4"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com"
+          />
           <label className="block mb-2 font-medium">Password</label>
           <input
             type="password"
@@ -69,6 +90,30 @@ const RegisterPage: React.FC = () => {
             value={password}
             onChange={e => setPassword(e.target.value)}
             placeholder="Enter your password"
+          />
+          <label className="block mb-2 font-medium">Program</label>
+          <input
+            type="text"
+            className="w-full p-2 border rounded mb-4"
+            value={program}
+            onChange={e => setProgram(e.target.value)}
+            placeholder="e.g. Computer Science, Cybersecurity"
+          />
+          <label className="block mb-2 font-medium">Birth Year</label>
+          <input
+            type="number"
+            className="w-full p-2 border rounded mb-4"
+            value={birthYear}
+            onChange={e => setBirthYear(e.target.value)}
+            placeholder="e.g. 2004"
+          />
+          <label className="block mb-2 font-medium">Enrollment Date</label>
+          <input
+            type="date"
+            className="w-full p-2 border rounded mb-4"
+            value={enrollmentDate}
+            onChange={e => setEnrollmentDate(e.target.value)}
+            placeholder="YYYY-MM-DD"
           />
           <label className="block mb-2 font-medium">Avatar URL (optional)</label>
           <input

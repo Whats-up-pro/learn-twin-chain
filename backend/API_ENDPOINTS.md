@@ -16,9 +16,12 @@ Content-Type: application/json
   "did": "did:learntwin:student001",
   "name": "Nguyen Van A",
   "password": "password123",
+  "role": "student",  // "student", "teacher", "employer"
   "avatarUrl": "https://example.com/avatar.jpg"
 }
 ```
+
+**Note:** Digital Twin files are only created for users with role "student". Teachers and employers do not have digital twin files.
 
 ### 2. User Login
 ```http
@@ -36,12 +39,16 @@ Content-Type: application/json
 GET /health
 ```
 
-## Digital Twin Management
+## Digital Twin Management (Students Only)
+
+**Important:** Digital Twin functionality is only available for students. Teachers and employers can view student data but do not have their own digital twins.
 
 ### 4. Get All Students (for Teacher/Employer Dashboard)
 ```http
 GET /api/v1/learning/students
 ```
+
+**Response:** Returns only users with role "student" and their digital twin data.
 
 ### 5. Get Student Twin by ID
 ```http
@@ -133,7 +140,7 @@ Content-Type: application/json
 }
 ```
 
-## NFT & Blockchain Integration
+## NFT & Blockchain Integration (Students Only)
 
 ### 15. Mint NFT for Skill Achievement
 ```http
@@ -181,7 +188,7 @@ Content-Type: application/json
 }
 ```
 
-## Analytics & Insights
+## Analytics & Insights (Students Only)
 
 ### 18. Analyze Learning Data
 ```http

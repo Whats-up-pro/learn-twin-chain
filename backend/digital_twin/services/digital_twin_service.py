@@ -35,9 +35,14 @@ def _pin_json_to_ipfs(json_data: Dict[str, Any]) -> str:
         "pinata_secret_api_key": PINATA_SECRET_API_KEY,
     }
     
+    # Đồng bộ tên file: DigitalTwin_{student_id}_v{version}.json
+    student_id = json_data.get('twin_id', 'unknown')
+    version = json_data.get('version', 1)
+    file_name = f"DigitalTwin_{student_id}_v{version}.json"
+
     body = {
         "pinataMetadata": {
-            "name": f"DigitalTwin_{json_data.get('twin_id', 'unknown')}_{get_current_vietnam_time_iso()}"
+            "name": file_name
         },
         "pinataContent": json_data
     }

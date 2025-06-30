@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Chat } from "@google/genai";
 import { ChatMessage, DigitalTwin } from '../types';
 import { GEMINI_MODEL_NAME } from '../constants';
@@ -40,48 +39,53 @@ If asked about topics outside of Python learning, politely steer the conversatio
   return instruction;
 };
 
+export const startChatSession = async (digitalTwin: any): Promise<string> => {
+  try {
+    const response = await fetch('/api/gemini/start-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        digitalTwin,
+        context: 'Starting a new AI tutoring session for Python learning.'
+      }),
+    });
 
-export const startChatSession = (digitalTwin?: DigitalTwin): void => {
-  if (!ai) {
-    console.error("Gemini API not initialized because API_KEY is missing.");
-    return;
-  }
-  const systemInstruction = getSystemInstruction(digitalTwin);
-  chatInstance = ai.chats.create({
-    model: GEMINI_MODEL_NAME,
-    config: {
-      systemInstruction: systemInstruction,
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  });
+
+    const data = await response.json();
+    return data.sessionId || 'session-' + Date.now();
+  } catch (error) {
+    console.error('Error starting chat session:', error);
+    return 'session-' + Date.now();
+  }
 };
 
-
-export const sendMessageToGemini = async (message: string, history: ChatMessage[]): Promise<string> => {
-  if (!ai) {
-    console.error("Gemini API not initialized because API_KEY is missing.");
-    return "Gemini API is not available. Please check the API key configuration.";
-  }
-  if (!chatInstance) {
-    console.warn("Chat session not started. Starting a new one with default context.");
-    startChatSession(); // Start with default context if not already started
-    if (!chatInstance) return "Failed to start chat session."; // Guard if startChatSession also fails
-  }
-
+export const sendMessageToGemini = async (message: string): Promise<string> => {
   try {
-    // Note: The @google/genai Chat object manages history internally based on `chat.sendMessage`.
-    // However, if you want to explicitly resend history or use a stateless model approach,
-    // you would construct the `contents` array differently.
-    // For this example, we rely on the stateful `chatInstance`.
+    const response = await fetch('/api/gemini/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        context: 'You are an AI tutor helping students learn Python programming. Provide clear, helpful explanations and code examples when appropriate.'
+      }),
+    });
 
-    const response: GenerateContentResponse = await chatInstance.sendMessage({ message: message });
-    return response.text;
-  } catch (error) {
-    console.error("Error sending message to Gemini:", error);
-    // More specific error handling can be added here
-    if (error instanceof Error) {
-        return `Error interacting with AI Tutor: ${error.message}. Please try again.`;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return "An unknown error occurred while contacting the AI Tutor.";
+
+    const data = await response.json();
+    return data.response || 'Sorry, I could not process your request.';
+  } catch (error) {
+    console.error('Error sending message to Gemini:', error);
+    return 'Sorry, I encountered an error. Please try again.';
   }
 };
 
@@ -100,7 +104,7 @@ export const generateContentStateless = async (prompt: string, digitalTwin?: Dig
         systemInstruction: systemInstruction,
       }
     });
-    return response.text;
+    return response.text || 'No response generated';
   } catch (error) {
     console.error("Error generating content from Gemini:", error);
      if (error instanceof Error) {

@@ -2,15 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { LearningModule, ModuleContentItem } from '../types';
-import LoadingSpinner from '../components/LoadingSpinner';
 import QuizComponent from '../components/QuizComponent';
-import { LightBulbIcon, CodeBracketIcon, PhotoIcon, PlayCircleIcon } from '@heroicons/react/24/outline';
+import { LightBulbIcon, CodeBracketIcon, PlayCircleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 const ModulePage: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
-  const { getModuleById, digitalTwin, updateKnowledge, completeCheckpoint, mintNftForModule, updateBehavior, updateSkills } = useAppContext();
+  const { getModuleById, digitalTwin, updateKnowledge, updateBehavior } = useAppContext();
   const [module, setModule] = useState<LearningModule | null | undefined>(undefined); // undefined for loading, null if not found
   const navigate = useNavigate();
 
@@ -24,45 +23,32 @@ const ModulePage: React.FC = () => {
     }
   }, [moduleId, getModuleById, updateBehavior]);
 
-  const handleQuizComplete = (score: number, correctAnswers: number, totalQuestions: number) => {
-    if (module) {
-      updateKnowledge({ [module.title]: score });
-      
-      // Update overall quiz accuracy (simple average for now)
-      const oldTotalScore = digitalTwin.behavior.quizAccuracy * (digitalTwin.checkpoints.length); // approximate old total based on completed
-      const newCheckpointCount = digitalTwin.checkpoints.length + (digitalTwin.checkpoints.find(cp => cp.moduleId === module.id) ? 0 : 1);
-      const newAverageAccuracy = newCheckpointCount > 0 ? (oldTotalScore + score) / newCheckpointCount : score;
-      updateBehavior({ quizAccuracy: parseFloat(newAverageAccuracy.toFixed(2))});
-      
-      // Improve skills slightly based on quiz performance
-      const skillIncrement = score * 0.05; // Max 5% increase per quiz
-      updateSkills(
-        Math.min(1, digitalTwin.skills.problemSolving + skillIncrement),
-        Math.min(1, digitalTwin.skills.logicalThinking + skillIncrement),
-        Math.min(1, digitalTwin.skills.selfLearning + skillIncrement * 0.5) // Self-learning a bit less direct impact
-      );
+  const handleQuizComplete = (score: number) => {
+    const newKnowledge = Math.min(1.0, (digitalTwin.knowledge[module?.title || ''] || 0) + (score / 100) * 0.3);
+    
+    updateKnowledge({
+      [module?.title || '']: newKnowledge
+    });
 
-      if (score === 1) { // 100% correct
-        completeCheckpoint({ 
-          module: module.title, 
-          moduleId: module.id, 
-          completedAt: getCurrentVietnamTimeISO() 
-        });
-        mintNftForModule(module.id, module.title);
-        toast.success(`Module "${module.title}" completed and NFT minted!`, { duration: 4000 });
-      } else if (score >= 0.7) { // Partially completed
-         completeCheckpoint({ 
-           module: module.title, 
-           moduleId: module.id, 
-           completedAt: getCurrentVietnamTimeISO() 
-         });
-         toast(`Module "${module.title}" marked as substantially covered. Keep practicing!`, { icon: '👍' });
-      }
-    }
+    // Update behavior
+    updateBehavior({
+      quizAccuracy: (digitalTwin.behavior.quizAccuracy + (score / 100)) / 2,
+      lastLlmSession: getCurrentVietnamTimeISO()
+    });
+
+    toast.success(`Quiz completed! Score: ${score}%`);
+    
+    // Navigate back to dashboard after a short delay
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 2000);
   };
 
   if (module === undefined) {
-    return <div className="flex justify-center items-center h-64"><LoadingSpinner text="Loading module..." /></div>;
+    return <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-500"></div>
+      <span className="ml-2 text-gray-600">Loading module...</span>
+    </div>;
   }
 
   if (!module) {

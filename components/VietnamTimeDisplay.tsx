@@ -1,6 +1,5 @@
 import React from 'react';
 import { Typography, TypographyProps } from '@mui/material';
-import { getCurrentVietnamTimeDisplay } from '../utils/dateUtils';
 
 interface VietnamTimeDisplayProps extends Omit<TypographyProps, 'children'> {
   date: string | Date;
