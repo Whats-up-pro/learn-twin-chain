@@ -1,7 +1,7 @@
 import { LearningModule, LearnerProfile, DigitalTwin } from './types';
 import { getCurrentVietnamTimeISO } from './utils/dateUtils';
 
-export const GEMINI_MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
+export const GEMINI_MODEL_NAME = 'gemini-2.0-flash';
 export const APP_NAME = 'LearnTwinChain';
 
 export const DEFAULT_LEARNER_PROFILE: LearnerProfile = {
