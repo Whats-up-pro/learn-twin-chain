@@ -4,135 +4,334 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "./LearningDataRegistry.sol";
+import "./ZKLearningVerifier.sol";
 
-contract ModuleProgressNFT is ERC1155, ERC1155URIStorage, Ownable {
-    // Module completion tracking
-    mapping(string => uint256) public moduleToTokenId; // moduleId -> tokenId
-    mapping(address => mapping(uint256 => uint256)) public studentModuleProgress; // student -> tokenId -> amount
-    mapping(uint256 => string) public tokenIdToModule; // tokenId -> moduleId
+/**
+ * @title ModuleProgressNFT
+ * @dev ERC-1155 NFT contract for learning module completion tracking
+ * Features: ZK proof verification + learning data verification
+ */
+contract ModuleProgressNFT is ERC1155, ERC1155URIStorage, Ownable, ReentrancyGuard, Pausable {
     
-    // Learning milestones tracking
-    mapping(address => uint256) public studentTotalModules; // student -> total completed modules
-    mapping(address => uint256) public studentLearningLevel; // student -> learning level (1-5)
+    // ============ STRUCTS ============
+    struct ModuleCompletion {
+        address student;
+        string moduleId;
+        uint256 completionTime;
+        uint256 score;
+        bool isVerified;
+        bytes32 learningSessionHash;
+    }
     
-    // Token ID counter
-    uint256 private _nextTokenId = 1;
+    struct ZKProofData {
+        uint256[2] proofA;
+        uint256[2][2] proofB;
+        uint256[2] proofC;
+        uint256[8] publicInputs;
+    }
+
+    // Struct for minting parameters to reduce stack depth
+    struct MintParams {
+        string moduleId;
+        string metadataURI;
+        uint256 amount;
+        uint256 score;
+        bytes32 learningSessionHash;
+    }
+
+    // ============ STATE VARIABLES ============
+    mapping(bytes32 => bool) public usedProofs;
+    mapping(address => mapping(string => ModuleCompletion)) public moduleCompletions;
+    mapping(string => bool) public validModuleIds;
     
-    // Events
+    LearningDataRegistry public learningDataRegistry;
+    ZKLearningVerifier public zkLearningVerifier;
+    
+    uint256 public totalCompletions;
+    uint256 public minScoreThreshold = 70;
+    
+    // Temporary storage for proof hash calculation to reduce stack depth
+    bytes32 private tempProofHash;
+    uint256 private tempHashPart1;
+    uint256 private tempHashPart2;
+    uint256 private tempHashPart3;
+    uint256 private tempHashPart4;
+    
+    // ============ EVENTS ============
     event ModuleCompleted(
         address indexed student,
-        uint256 indexed tokenId,
-        string moduleId,
+        string indexed moduleId,
         uint256 amount,
-        string metadataURI
+        string metadataURI,
+        uint256 completionTime,
+        uint256 score,
+        bytes32 learningSessionHash,
+        bytes32 proofHash
     );
     
-    event LearningLevelUp(
-        address indexed student,
-        uint256 newLevel,
-        uint256 totalModules
-    );
+    event ProofUsed(bytes32 indexed proofHash, address indexed student, string moduleId);
+    event LearningDataRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
+    event ZKVerifierUpdated(address indexed oldVerifier, address indexed newVerifier);
 
-    constructor() ERC1155("") Ownable(msg.sender) {}
+    // ============ CONSTRUCTOR ============
+    constructor(
+        string memory baseURI,
+        address initialOwner,
+        address _learningDataRegistry,
+        address _zkLearningVerifier
+    ) ERC1155(baseURI) Ownable(initialOwner) {
+        learningDataRegistry = LearningDataRegistry(_learningDataRegistry);
+        zkLearningVerifier = ZKLearningVerifier(_zkLearningVerifier);
+    }
 
-    function mintModuleCompletion(
+    // ============ CORE FUNCTIONS ============
+    
+    /**
+     * @dev Student mints NFT using ZK proof + verified learning data
+     */
+    function mintWithZKProof(
+        MintParams calldata params,
+        ZKProofData calldata proofData
+    ) external whenNotPaused nonReentrant {
+        // Step 1: Basic validation
+        _validateBasicParams(params);
+        
+        // Step 2: Validate learning session
+        _validateLearningSession(msg.sender, params.moduleId, params.learningSessionHash);
+
+        // Step 3: Process proof and mint
+        _processProofAndMint(params, proofData);
+    }
+
+    function _validateBasicParams(MintParams calldata params) private view {
+        require(params.score >= minScoreThreshold, "Score below threshold");
+        require(params.amount > 0, "Amount must be greater than 0");
+        require(bytes(params.metadataURI).length > 0, "Empty metadata URI");
+        require(validModuleIds[params.moduleId], "Invalid module ID");
+        require(!moduleCompletions[msg.sender][params.moduleId].isVerified, "Already completed");
+    }
+
+    function _validateLearningSession(address student, string memory moduleId, bytes32 learningSessionHash) private view {
+        require(learningDataRegistry.isSessionVerified(learningSessionHash), "Learning session not verified");
+        
+        (address sessionStudent, string memory sessionModuleId,,,,,,,) = learningDataRegistry.getLearningSession(learningSessionHash);
+        require(sessionStudent == student, "Learning session not owned by student");
+        require(_compareStrings(sessionModuleId, moduleId), "Module ID mismatch");
+    }
+
+    function _processProofAndMint(MintParams calldata params, ZKProofData calldata proofData) private {
+        bytes32 proofHash = _calculateProofHash(proofData, params.learningSessionHash);
+        require(!usedProofs[proofHash], "Proof already used");
+
+        // Verify ZK proof
+        bool isValid = zkLearningVerifier.verifyModuleProgressProof(
+            proofData.proofA, 
+            proofData.proofB, 
+            proofData.proofC, 
+            proofData.publicInputs, 
+            params.metadataURI, 
+            params.score
+        );
+        require(isValid, "Invalid ZK proof");
+
+        // Execute mint
+        _executeMint(params, proofHash);
+    }
+
+    function _executeMint(MintParams calldata params, bytes32 proofHash) private {
+        usedProofs[proofHash] = true;
+        
+        // Store completion data
+        moduleCompletions[msg.sender][params.moduleId] = ModuleCompletion({
+            student: msg.sender,
+            moduleId: params.moduleId,
+            completionTime: block.timestamp,
+            score: params.score,
+            isVerified: true,
+            learningSessionHash: params.learningSessionHash
+        });
+        
+        totalCompletions++;
+        uint256 tokenId = _getTokenId(params.moduleId);
+        
+        _mint(msg.sender, tokenId, params.amount, "");
+        _setURI(tokenId, params.metadataURI);
+        
+        emit ModuleCompleted(
+            msg.sender, 
+            params.moduleId, 
+            params.amount, 
+            params.metadataURI, 
+            block.timestamp, 
+            params.score, 
+            params.learningSessionHash, 
+            proofHash
+        );
+    }
+
+    function _calculateProofHash(ZKProofData calldata proofData, bytes32 learningSessionHash) private returns (bytes32) {
+        // Break down the hash calculation to reduce stack depth
+        tempHashPart1 = proofData.proofA[0];
+        tempHashPart2 = proofData.proofA[1];
+        tempHashPart3 = proofData.proofB[0][0];
+        tempHashPart4 = proofData.proofB[0][1];
+        
+        // Calculate hash in parts to avoid stack overflow
+        bytes32 hash1 = keccak256(abi.encodePacked(
+            tempHashPart1, tempHashPart2, tempHashPart3, tempHashPart4
+        ));
+        
+        tempHashPart1 = proofData.proofB[1][0];
+        tempHashPart2 = proofData.proofB[1][1];
+        tempHashPart3 = proofData.proofC[0];
+        tempHashPart4 = proofData.proofC[1];
+        
+        bytes32 hash2 = keccak256(abi.encodePacked(
+            tempHashPart1, tempHashPart2, tempHashPart3, tempHashPart4
+        ));
+        
+        tempHashPart1 = proofData.publicInputs[0];
+        tempHashPart2 = proofData.publicInputs[1];
+        tempHashPart3 = proofData.publicInputs[2];
+        tempHashPart4 = proofData.publicInputs[3];
+        
+        bytes32 hash3 = keccak256(abi.encodePacked(
+            tempHashPart1, tempHashPart2, tempHashPart3, tempHashPart4
+        ));
+        
+        tempHashPart1 = proofData.publicInputs[4];
+        tempHashPart2 = proofData.publicInputs[5];
+        tempHashPart3 = proofData.publicInputs[6];
+        
+        bytes32 hash4 = keccak256(abi.encodePacked(
+            tempHashPart1, tempHashPart2, tempHashPart3, learningSessionHash
+        ));
+        
+        // Final hash combining all parts
+        tempProofHash = keccak256(abi.encodePacked(hash1, hash2, hash3, hash4));
+        return tempProofHash;
+    }
+
+    function _compareStrings(string memory a, string memory b) private pure returns (bool) {
+        return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
+
+    /**
+     * @dev Owner can mint directly (for testing or special cases)
+     */
+    function mintByOwner(
         address student,
         string memory moduleId,
         string memory metadataURI,
-        uint256 amount
-    ) public onlyOwner returns (uint256) {
-        // Check if module already has a token ID
-        uint256 tokenId = moduleToTokenId[moduleId];
+        uint256 amount,
+        uint256 score
+    ) external onlyOwner whenNotPaused {
+        require(score >= minScoreThreshold, "Score below threshold");
+        require(amount > 0, "Amount must be greater than 0");
+        require(validModuleIds[moduleId], "Invalid module ID");
         
-        if (tokenId == 0) {
-            // Create new token for this module
-            tokenId = _nextTokenId++;
-            moduleToTokenId[moduleId] = tokenId;
-            tokenIdToModule[tokenId] = moduleId;
-            _setURI(tokenId, metadataURI);
-        }
+        moduleCompletions[student][moduleId] = ModuleCompletion({
+            student: student,
+            moduleId: moduleId,
+            completionTime: block.timestamp,
+            score: score,
+            isVerified: true,
+            learningSessionHash: bytes32(0)
+        });
         
-        // Mint tokens to student
+        totalCompletions++;
+        uint256 tokenId = _getTokenId(moduleId);
+        
         _mint(student, tokenId, amount, "");
+        _setURI(tokenId, metadataURI);
         
-        // Update student progress
-        studentModuleProgress[student][tokenId] += amount;
-        studentTotalModules[student] += amount;
-        
-        // Check for level up
-        _checkAndUpdateLevel(student);
-        
-        emit ModuleCompleted(student, tokenId, moduleId, amount, metadataURI);
-        return tokenId;
+        emit ModuleCompleted(student, moduleId, amount, metadataURI, block.timestamp, score, bytes32(0), bytes32(0));
     }
 
-    function _checkAndUpdateLevel(address student) internal {
-        uint256 totalModules = studentTotalModules[student];
-        uint256 currentLevel = studentLearningLevel[student];
-        uint256 newLevel = _calculateLevel(totalModules);
-        
-        if (newLevel > currentLevel) {
-            studentLearningLevel[student] = newLevel;
-            emit LearningLevelUp(student, newLevel, totalModules);
-        }
+    // ============ ADMIN FUNCTIONS ============
+    
+    function addValidModule(string memory moduleId) external onlyOwner {
+        require(bytes(moduleId).length > 0, "Empty module ID");
+        require(!validModuleIds[moduleId], "Module ID already valid");
+        validModuleIds[moduleId] = true;
+    }
+    
+    function removeValidModule(string memory moduleId) external onlyOwner {
+        require(validModuleIds[moduleId], "Module ID not valid");
+        validModuleIds[moduleId] = false;
+    }
+    
+    function updateMinScoreThreshold(uint256 newThreshold) external onlyOwner {
+        require(newThreshold <= 100, "Invalid threshold");
+        minScoreThreshold = newThreshold;
+    }
+    
+    function updateLearningDataRegistry(address newRegistry) external onlyOwner {
+        require(newRegistry != address(0), "Invalid registry address");
+        address oldRegistry = address(learningDataRegistry);
+        learningDataRegistry = LearningDataRegistry(newRegistry);
+        emit LearningDataRegistryUpdated(oldRegistry, newRegistry);
+    }
+    
+    function updateZKLearningVerifier(address newVerifier) external onlyOwner {
+        require(newVerifier != address(0), "Invalid verifier address");
+        address oldVerifier = address(zkLearningVerifier);
+        zkLearningVerifier = ZKLearningVerifier(newVerifier);
+        emit ZKVerifierUpdated(oldVerifier, newVerifier);
+    }
+    
+    function pause() external onlyOwner {
+        _pause();
+    }
+    
+    function unpause() external onlyOwner {
+        _unpause();
     }
 
-    function _calculateLevel(uint256 totalModules) internal pure returns (uint256) {
-        if (totalModules >= 20) return 5; // Master
-        if (totalModules >= 15) return 4; // Advanced
-        if (totalModules >= 10) return 3; // Intermediate
-        if (totalModules >= 5) return 2;  // Beginner
-        return 1; // Novice
+    // ============ VIEW FUNCTIONS ============
+    
+    function _getTokenId(string memory moduleId) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(moduleId)));
     }
-
-    function getStudentProgress(address student) public view returns (
-        uint256 totalModules,
-        uint256 currentLevel,
-        uint256[] memory tokenIds,
-        uint256[] memory amounts
+    
+    function getModuleCompletion(address student, string memory moduleId) external view returns (
+        address studentAddr,
+        string memory module,
+        uint256 completionTime,
+        uint256 score,
+        bool isVerified,
+        bytes32 learningSessionHash
     ) {
-        totalModules = studentTotalModules[student];
-        currentLevel = studentLearningLevel[student];
-        
-        // Get all tokens owned by student
-        uint256 tokenCount = _nextTokenId - 1;
-        uint256[] memory tempTokenIds = new uint256[](tokenCount);
-        uint256[] memory tempAmounts = new uint256[](tokenCount);
-        uint256 actualCount = 0;
-        
-        for (uint256 i = 1; i < _nextTokenId; i++) {
-            uint256 balance = balanceOf(student, i);
-            if (balance > 0) {
-                tempTokenIds[actualCount] = i;
-                tempAmounts[actualCount] = balance;
-                actualCount++;
-            }
-        }
-        
-        // Create properly sized arrays
-        tokenIds = new uint256[](actualCount);
-        amounts = new uint256[](actualCount);
-        
-        for (uint256 i = 0; i < actualCount; i++) {
-            tokenIds[i] = tempTokenIds[i];
-            amounts[i] = tempAmounts[i];
-        }
+        ModuleCompletion storage completion = moduleCompletions[student][moduleId];
+        return (
+            completion.student,
+            completion.moduleId,
+            completion.completionTime,
+            completion.score,
+            completion.isVerified,
+            completion.learningSessionHash
+        );
     }
-
-    function getModuleTokenId(string memory moduleId) public view returns (uint256) {
-        return moduleToTokenId[moduleId];
+    
+    function hasCompletedModule(address student, string memory moduleId) external view returns (bool) {
+        return moduleCompletions[student][moduleId].isVerified;
     }
-
-    function getModuleFromTokenId(uint256 tokenId) public view returns (string memory) {
-        return tokenIdToModule[tokenId];
+    
+    function getZKLearningVerifier() external view returns (address) {
+        return address(zkLearningVerifier);
     }
-
-    // Override required functions for OpenZeppelin v5
+    
+    // ============ OVERRIDE FUNCTIONS ============
+    
+    function _update(address from, address to, uint256[] memory ids, uint256[] memory values)
+        internal override(ERC1155) {
+        super._update(from, to, ids, values);
+    }
+    
     function uri(uint256 tokenId) public view override(ERC1155, ERC1155URIStorage) returns (string memory) {
         return super.uri(tokenId);
-    }
-
-    function withdraw() public onlyOwner {
-        payable(owner()).transfer(address(this).balance);
     }
 }

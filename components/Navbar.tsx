@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { APP_NAME } from '../constants';
 import { useAppContext } from '../contexts/AppContext';
+import { blockchainService } from '../services/blockchainService';
 import { UserRole } from '../types';
 
 interface NavbarProps {
@@ -10,6 +11,8 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const { learnerProfile, logout, role } = useAppContext();
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [checkingWallet, setCheckingWallet] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
@@ -22,6 +25,29 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        setCheckingWallet(true);
+        const isConnected = await blockchainService.checkWalletConnection();
+        if (isConnected) {
+          const addr = await blockchainService.getStudentAddress();
+          setWalletAddress(addr);
+        } else {
+          setWalletAddress(null);
+        }
+      } finally {
+        setCheckingWallet(false);
+      }
+    };
+    init();
+  }, []);
+
+  const handleConnectWallet = async () => {
+    const addr = await blockchainService.connectWallet();
+    if (addr) setWalletAddress(addr);
   };
 
   const navLinkClasses = (path: string) =>
@@ -59,6 +85,23 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
           <div className="flex items-center">
             {isLoggedIn ? (
               <>
+                {/* Wallet status / connect */}
+                <div className="hidden md:flex items-center mr-3">
+                  {checkingWallet ? (
+                    <span className="text-xs text-sky-100">Checking wallet...</span>
+                  ) : walletAddress ? (
+                    <span className="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-100 rounded">
+                      {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={handleConnectWallet}
+                      className="px-2 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition"
+                    >
+                      Connect Wallet
+                    </button>
+                  )}
+                </div>
                 <Link to="/profile" className="flex items-center text-sky-100 hover:text-white">
                   <img
                     src={avatarUrl}

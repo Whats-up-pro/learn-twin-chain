@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 from ..services.blockchain_service import BlockchainService
 
-router = APIRouter(prefix="/api/v1/blockchain", tags=["blockchain"])
+router = APIRouter(tags=["blockchain"])
 
 # Initialize blockchain service
 blockchain_service = BlockchainService()
@@ -244,45 +244,33 @@ async def get_achievement_types():
         "achievement_types": [
             {
                 "type": "COURSE_COMPLETION",
-                "description": "Certificate for completing a course",
-                "standard": "ERC-721",
-                "expires": False
+                "description": "Certificate for completing a full course",
+                "nft_type": "ERC-721"
             },
             {
-                "type": "SKILL_MASTERY",
-                "description": "Certificate for mastering a skill",
-                "standard": "ERC-721",
-                "expires": True
-            },
-            {
-                "type": "MILESTONE_REACHED",
-                "description": "Achievement for reaching learning milestones",
-                "standard": "ERC-721",
-                "expires": False
+                "type": "SKILL_MASTERY", 
+                "description": "Certificate for mastering a specific skill",
+                "nft_type": "ERC-721"
             },
             {
                 "type": "CERTIFICATION",
                 "description": "Professional certification",
-                "standard": "ERC-721",
-                "expires": True
+                "nft_type": "ERC-721"
             },
             {
-                "type": "LEADERSHIP",
-                "description": "Leadership achievement",
-                "standard": "ERC-721",
-                "expires": False
+                "type": "MILESTONE",
+                "description": "Achievement for reaching learning milestones",
+                "nft_type": "ERC-721"
             },
             {
-                "type": "INNOVATION",
-                "description": "Innovation achievement",
-                "standard": "ERC-721",
-                "expires": False
+                "type": "SPECIAL_RECOGNITION",
+                "description": "Special recognition for exceptional performance",
+                "nft_type": "ERC-721"
+            },
+            {
+                "type": "MODULE_COMPLETION",
+                "description": "NFT for completing individual modules",
+                "nft_type": "ERC-1155"
             }
-        ],
-        "module_progress": {
-            "type": "MODULE_COMPLETION",
-            "description": "Module completion tracking",
-            "standard": "ERC-1155",
-            "expires": False
-        }
+        ]
     } 

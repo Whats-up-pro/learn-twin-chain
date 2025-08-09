@@ -19,6 +19,7 @@ import {
   StarIcon
 } from '@heroicons/react/24/outline';
 import { Nft } from '../types';
+import { blockchainService } from '../services/blockchainService';
 import toast from 'react-hot-toast';
 
 const DashboardPage: React.FC = () => {
@@ -48,11 +49,21 @@ const DashboardPage: React.FC = () => {
     toast.success(`Verifying NFT: ${nft.name}`);
   };
 
-  const handleStartLearning = (moduleId: string) => {
+  const handleStartLearning = async (moduleId: string) => {
+    const isConnected = await blockchainService.checkWalletConnection();
+    if (!isConnected) {
+      toast.error('Please connect your MetaMask wallet before learning to enable NFT minting.');
+      return;
+    }
     navigate(`/module/${moduleId}`);
   };
 
-  const handleContinueLearning = () => {
+  const handleContinueLearning = async () => {
+    const isConnected = await blockchainService.checkWalletConnection();
+    if (!isConnected) {
+      toast.error('Please connect your MetaMask wallet before continuing.');
+      return;
+    }
     const incompleteModule = learningModules.find(module => 
       !digitalTwin.checkpoints.some(cp => cp.moduleId === module.id)
     );
@@ -70,6 +81,10 @@ const DashboardPage: React.FC = () => {
   const handleOpenProfile = () => {
     navigate('/profile');
   };
+
+  // Derived views (kept minimal now; lists compute on demand)
+
+  const [nftTab, setNftTab] = useState<'owned'|'minting'|'all'>('owned');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -98,7 +113,7 @@ const DashboardPage: React.FC = () => {
               <p className="text-blue-200 text-sm mt-1">DID: <span className="font-mono">{displayDid}</span></p>
             </div>
             <div className="hidden lg:block">
-              <div className="text-right">
+              <div className="text-right animate-fade-in">
                 <div className="text-3xl font-bold">{overallProgress.toFixed(0)}%</div>
                 <div className="text-blue-200">Overall Progress</div>
               </div>
@@ -107,12 +122,12 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <button
             onClick={handleContinueLearning}
-            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
             <div className="relative flex items-center space-x-4">
               <div className="p-3 bg-white/20 rounded-xl">
                 <PlayIcon className="h-8 w-8" />
@@ -125,17 +140,33 @@ const DashboardPage: React.FC = () => {
           </button>
 
           <button
-            onClick={handleOpenTutor}
-            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            onClick={() => navigate('/achievements')}
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-500 to-orange-600 p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
             <div className="relative flex items-center space-x-4">
               <div className="p-3 bg-white/20 rounded-xl">
-                <CogIcon className="h-8 w-8" />
+                <TrophyIcon className="h-8 w-8" />
               </div>
               <div className="text-left">
-                <div className="text-xl font-bold">AI Tutor</div>
-                <div className="text-emerald-100">Get help anytime</div>
+                <div className="text-xl font-bold">Achievements</div>
+                <div className="text-yellow-100">View your trophies</div>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/nfts')}
+            className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            <div className="relative flex items-center space-x-4">
+              <div className="p-3 bg-white/20 rounded-xl">
+                <SparklesIcon className="h-8 w-8" />
+              </div>
+              <div className="text-left">
+                <div className="text-xl font-bold">NFT Collection</div>
+                <div className="text-purple-100">Manage your NFTs</div>
               </div>
             </div>
           </button>
@@ -192,8 +223,8 @@ const DashboardPage: React.FC = () => {
               <FireIcon className="h-8 w-8 text-orange-500 mr-3" />
               Your Learning Path
             </h2>
-            <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-              Python for Beginners
+          <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+              Python for Beginners · Blockchain Basics
             </div>
           </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -344,59 +375,41 @@ const DashboardPage: React.FC = () => {
 
         {/* NFT Section */}
         <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-            <TrophyIcon className="h-7 w-7 text-yellow-500 mr-3" />
-            Your Achievements
-          </h2>
-          {digitalTwin.checkpoints.filter((cp: any) => cp.tokenized).length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🏆</div>
-              <p className="text-gray-600 text-lg">Complete modules to earn NFTs!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {digitalTwin.checkpoints
-                .filter((cp: any) => cp.tokenized)
-                .map((checkpoint: any) => {
-                  const nftCid = checkpoint.nftCid;
-                  if (!nftCid) return null;
-                  
-                  const nft: Nft = {
-                    id: checkpoint.nftId || `nft-${checkpoint.moduleId}`,
-                    name: `${checkpoint.moduleName || checkpoint.module} Completion`,
-                    description: `Certificate for completing ${checkpoint.moduleName || checkpoint.module}`,
-                    imageUrl: `https://via.placeholder.com/300x200/0ea5e9/ffffff?text=${encodeURIComponent(checkpoint.moduleName || checkpoint.module)}`,
-                    moduleId: checkpoint.moduleId,
-                    issuedDate: checkpoint.completedAt,
-                    cid: nftCid
-                  };
-                  
-                  return (
-                    <div key={nft.id} className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-gray-100">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-gray-900">{nft.name}</h3>
-                        <div className="p-2 bg-green-100 rounded-full">
-                          <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                        </div>
-                      </div>
-                      <p className="text-gray-600 mb-4">{nft.description}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">
-                          {new Date(nft.issuedDate).toLocaleDateString()}
-                        </span>
-                        <button
-                          onClick={() => handleVerifyNft(nft)}
-                          className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                        >
-                          <EyeIcon className="h-4 w-4" />
-                          <span>Verify</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+              <TrophyIcon className="h-7 w-7 text-yellow-500 mr-3" />
+              Your Achievements
+            </h2>
+            <NftTabs active={nftTab} onChange={setNftTab} />
+          </div>
+
+          <NftLists active={nftTab} onVerify={handleVerifyNft} />
+          <div className="mt-4 text-xs text-gray-500">Tags: <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Module Progress NFT</span> <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 ml-2">Learning Achievement NFT</span></div>
+        </div>
+
+        {/* Achievements Gallery */}
+        <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+              <TrophyIcon className="h-7 w-7 text-yellow-500 mr-3" />
+              Achievement Gallery
+            </h2>
+            <div className="text-sm text-gray-600">Manage your achievements</div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {[
+              'https://cdn-icons-png.flaticon.com/512/2583/2583341.png',
+              'https://cdn-icons-png.flaticon.com/512/190/190411.png',
+              'https://cdn-icons-png.flaticon.com/512/992/992700.png',
+              'https://cdn-icons-png.flaticon.com/512/1828/1828884.png',
+              'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
+              'https://cdn-icons-png.flaticon.com/512/3004/3004458.png'
+            ].map((icon, idx) => (
+              <div key={idx} className="aspect-square rounded-2xl border border-gray-200 bg-white flex items-center justify-center shadow-sm hover:shadow-md transition">
+                <img src={icon} alt={`Achievement ${idx+1}`} className="h-12 w-12" />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Recommended Courses */}
@@ -726,3 +739,96 @@ const KnowledgeBar: React.FC<KnowledgeBarProps> = ({ name, value }) => (
 );
 
 export default DashboardPage;
+
+// Lightweight tabs and lists for NFTs
+const NftTabs: React.FC<{ active: 'owned'|'minting'|'all'; onChange: (v: 'owned'|'minting'|'all') => void }> = ({ active, onChange }) => {
+  return (
+    <div className="flex items-center bg-gray-100 rounded-xl p-1 text-sm">
+      {(['owned','minting','all'] as const).map(tab => (
+        <button
+          key={tab}
+          onClick={() => onChange(tab)}
+          className={`px-3 py-1 rounded-lg capitalize ${active===tab ? 'bg-white shadow text-gray-800' : 'text-gray-600'}`}
+        >
+          {tab === 'owned' ? 'Owned' : tab === 'minting' ? 'Minting' : 'All'}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const NftLists: React.FC<{ active: 'owned'|'minting'|'all'; onVerify: (nft: Nft) => void }>= ({ active, onVerify }) => {
+  const { digitalTwin, nfts } = useAppContext();
+  const checkpoints = (digitalTwin.checkpoints || []);
+
+  // Convert checkpoints to NFT-like items for display (module progress)
+  const checkpointNfts: (Nft & { minting?: boolean })[] = checkpoints
+    .filter((cp: any) => (active === 'minting' ? (cp.minting && !cp.tokenized) : true))
+    .filter((cp: any) => (active === 'owned' ? cp.tokenized : true))
+    .map((checkpoint: any) => ({
+      id: checkpoint.nftId || `nft-${checkpoint.moduleId}`,
+      name: `${checkpoint.moduleName || checkpoint.module} Completion`,
+      description: `Certificate for completing ${checkpoint.moduleName || checkpoint.module}`,
+      imageUrl: `https://via.placeholder.com/300x200/0ea5e9/ffffff?text=${encodeURIComponent(checkpoint.moduleName || checkpoint.module)}`,
+      moduleId: checkpoint.moduleId,
+      issuedDate: checkpoint.completedAt,
+      cid: checkpoint.nftCid,
+      nftType: 'module_progress' as const,
+      minting: Boolean(checkpoint.minting)
+    }));
+
+  // Include NFTs from state (module progress minted or learning achievements)
+  const ownedStateNfts: Nft[] = nfts.map((n) => ({
+    ...n,
+    nftType: n.nftType || (n.moduleId ? 'module_progress' : 'learning_achievement')
+  }));
+
+  // Filter by active tab
+  const displayNfts: (Nft & { minting?: boolean })[] = [
+    ...checkpointNfts,
+    ...(active === 'minting' ? [] : ownedStateNfts)
+  ].filter(n => active === 'all' ? true : active === 'minting' ? n.minting : !n.minting);
+
+  if (displayNfts.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">🏆</div>
+        <p className="text-gray-600 text-lg">Complete modules to earn NFTs!</p>
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {displayNfts.map((nft) => (
+        <div key={nft.id} className={`group bg-white rounded-2xl p-6 shadow-lg ${nft.minting ? 'border border-yellow-200' : 'border border-gray-100'} hover:shadow-2xl transition-all duration-300 hover:scale-105`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-gray-900">{nft.name}{nft.minting ? ' (Minting...)' : ''}</h3>
+            <div className={`p-2 rounded-full ${nft.minting ? 'bg-yellow-100' : 'bg-green-100'}`}>
+              {nft.minting ? '⏳' : <CheckCircleIcon className="h-5 w-5 text-green-600" />}
+            </div>
+          </div>
+          <p className="text-gray-600 mb-2">{nft.description}</p>
+          <div className="mb-4">
+            <span className={`inline-flex items-center gap-2 text-xs px-2 py-1 rounded-full ${nft.nftType === 'learning_achievement' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+              {nft.nftType === 'learning_achievement' ? 'Learning Achievement NFT' : 'Module Progress NFT'}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-gray-500">
+              {new Date(nft.issuedDate).toLocaleDateString()}
+            </span>
+            {!nft.minting && (
+              <button
+                onClick={() => onVerify(nft)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                <EyeIcon className="h-4 w-4" />
+                <span>Verify</span>
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};

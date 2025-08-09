@@ -14,7 +14,7 @@ interface AppContextType {
   updateLearnerProfile: (profile: LearnerProfile, userRole?: UserRole) => void;
   logout: () => void;
   updateDigitalTwin: (payload: Partial<UpdateTwinPayload>, description: string) => Promise<void>;
-  mintNftForModule: (moduleId: string, moduleName: string) => void;
+  mintNftForModule: (moduleId: string, moduleName: string, score?: number) => Promise<void>;
   getModuleById: (moduleId: string) => LearningModule | undefined;
   completeCheckpoint: (checkpoint: Omit<LearningCheckpoint, 'tokenized' | 'nftCid' | 'nftId'>) => void;
   updateKnowledge: (updates: KnowledgeArea) => void;
@@ -114,33 +114,117 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     toast.success(`Digital Twin updated: ${description}`, { id: 'dt-update' });
   }, [digitalTwin.learnerDid, updateDigitalTwinState]);
 
-  const mintNftForModule = useCallback((moduleId: string, moduleName: string) => {
+  const mintNftForModule = useCallback(async (moduleId: string, moduleName: string, score: number = 100) => {
     const existingNft = nfts.find(nft => nft.moduleId === moduleId);
     if (existingNft) {
       toast.error(`NFT for ${moduleName} already minted!`);
       return;
     }
 
-    const newNftId = `nft-${moduleId}-${Date.now()}`;
-    const newNft: Nft = {
-      id: newNftId,
-      name: `Completion: ${moduleName}`,
-      description: `Certificate of completion for the learning module: ${moduleName}.`,
-      imageUrl: `https://via.placeholder.com/300x200/0ea5e9/ffffff?text=${encodeURIComponent(moduleName)}`,
-      moduleId: moduleId,
-      issuedDate: getCurrentVietnamTimeISO(),
-      cid: `QmSimulatedNFT${moduleId}${Date.now().toString(36)}` // Simulated IPFS CID
-    };
-    setNfts(prevNfts => [...prevNfts, newNft]);
-    
-    updateDigitalTwinState(prevTwin => ({
-      ...prevTwin,
-      checkpoints: prevTwin.checkpoints.map(cp => 
-        cp.moduleId === moduleId ? { ...cp, tokenized: true, nftCid: newNft.cid, nftId: newNft.id } : cp
-      )
-    }));
-    toast.success(`NFT for "${moduleName}" minted successfully!`);
-  }, [nfts, updateDigitalTwinState]);
+    try {
+      // Import blockchain service dynamically to avoid circular dependencies
+      const { blockchainService } = await import('../services/blockchainService');
+      
+      // Check if blockchain is available
+      const isBlockchainAvailable = await blockchainService.checkBlockchainConnection();
+      
+      if (isBlockchainAvailable) {
+        // Require wallet connection
+        const isWalletConnected = await blockchainService.checkWalletConnection();
+        if (!isWalletConnected) {
+          toast.error('Please connect your MetaMask wallet before minting.');
+          return;
+        }
+        const studentAddress = await blockchainService.getStudentAddress();
+        if (!studentAddress) {
+          toast.error('Failed to get wallet address.');
+          return;
+        }
+        
+        const nftRequest = {
+          student_address: studentAddress,
+          student_did: digitalTwin.learnerDid,
+          module_id: moduleId,
+          module_title: moduleName,
+          completion_data: {
+            score: score,
+            time_spent: 3600, // Default 1 hour
+            attempts: 1,
+            completed_at: getCurrentVietnamTimeISO(),
+            use_student_wallet: true
+          }
+        };
+
+        // Mark checkpoint as minting
+        updateDigitalTwinState(prevTwin => ({
+          ...prevTwin,
+          checkpoints: prevTwin.checkpoints.map(cp => 
+            cp.moduleId === moduleId ? { ...cp, minting: true } : cp
+          )
+        }));
+
+        const result = await blockchainService.mintModuleCompletionNFT(nftRequest);
+        
+        if (result.success) {
+          // Create NFT object with real blockchain data
+          const newNft: Nft = {
+            id: `nft-${moduleId}-${result.tx_hash || result.txHash || Date.now()}`,
+            name: `Completion: ${moduleName}`,
+            description: `Certificate of completion for the learning module: ${moduleName}. Minted on blockchain.`,
+            imageUrl: `https://via.placeholder.com/300x200/0ea5e9/ffffff?text=${encodeURIComponent(moduleName)}`,
+            moduleId: moduleId,
+            issuedDate: getCurrentVietnamTimeISO(),
+            cid: result.metadata_uri || result.metadataUri,
+            txHash: result.tx_hash || result.txHash,
+            tokenId: result.token_id || result.nft_token_id,
+            contractAddress: result.contract_address
+          };
+          
+          setNfts(prevNfts => [...prevNfts, newNft]);
+          
+          updateDigitalTwinState(prevTwin => ({
+            ...prevTwin,
+            checkpoints: prevTwin.checkpoints.map(cp => 
+              cp.moduleId === moduleId ? { 
+                ...cp, 
+                tokenized: true, 
+                nftCid: newNft.cid, 
+                nftId: newNft.id,
+                txHash: result.tx_hash,
+                blockchainMinted: true,
+                minting: false
+              } : cp
+            )
+          }));
+        }
+      } else {
+        // Fallback to simulation if blockchain not available
+        console.warn('Blockchain not available, using simulation mode');
+        const newNftId = `nft-${moduleId}-${Date.now()}`;
+        const newNft: Nft = {
+          id: newNftId,
+          name: `Completion: ${moduleName}`,
+          description: `Certificate of completion for the learning module: ${moduleName}. (Simulated)`,
+          imageUrl: `https://via.placeholder.com/300x200/0ea5e9/ffffff?text=${encodeURIComponent(moduleName)}`,
+          moduleId: moduleId,
+          issuedDate: getCurrentVietnamTimeISO(),
+          cid: `QmSimulatedNFT${moduleId}${Date.now().toString(36)}` // Simulated IPFS CID
+        };
+        setNfts(prevNfts => [...prevNfts, newNft]);
+        
+        updateDigitalTwinState(prevTwin => ({
+          ...prevTwin,
+          checkpoints: prevTwin.checkpoints.map(cp => 
+            cp.moduleId === moduleId ? { ...cp, tokenized: true, nftCid: newNft.cid, nftId: newNft.id } : cp
+          )
+        }));
+        toast.success(`NFT for "${moduleName}" minted successfully! (Simulated)`);
+      }
+    } catch (error) {
+      console.error('Error minting NFT:', error);
+      toast.error(`Failed to mint NFT: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, [nfts, updateDigitalTwinState, digitalTwin.learnerDid]);
 
   const getModuleById = useCallback((moduleId: string): LearningModule | undefined => {
     return learningModules.find(module => module.id === moduleId);

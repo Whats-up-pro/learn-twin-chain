@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: learntwinchain_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: learntwinchain
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - learntwinchain
+
+  redis:
+    image: redis:7-alpine
+    container_name: learntwinchain_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - learntwinchain
+
+  # Optional: IPFS node for local development
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: learntwinchain_ipfs
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # Gateway
+      - "5001:5001"  # API
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - learntwinchain
+    environment:
+      - IPFS_PROFILE=server
+
+volumes:
+  mongodb_data:
+  redis_data:
+  ipfs_data:
+
+networks:
+  learntwinchain:
+    driver: bridge

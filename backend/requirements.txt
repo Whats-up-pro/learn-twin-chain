@@ -1,6 +1,7 @@
 # FastAPI and server
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+starlette==0.27.0
 
 # Data validation and settings
 pydantic==2.4.2
@@ -18,6 +19,29 @@ pytz>=2023.3
 # JSON schema validation
 jsonschema==4.21.1
 
+# Database - MongoDB
+motor==3.3.2
+pymongo==4.6.0
+beanie==1.23.6
+
+# Redis for session management and SIWE nonces
+redis==5.0.1
+aioredis==2.0.1
+
+# Authentication and security
+argon2-cffi==23.1.0
+passlib[argon2]==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart
+
+# Email services
+fastapi-mail==1.4.1
+jinja2==3.1.2
+
+# Session management
+fastapi-sessions==0.3.2
+itsdangerous==2.1.2
+
 # Google GenAI for Gemini integration
 google-genai>=0.3.0
 
@@ -26,7 +50,7 @@ web3>=6.0.0,<7.0.0
 eth-account>=0.11.0
 py-solc-x>=1.1.1
 eth-tester[py-evm]>=0.8.0b1
-python-multipart
+siwe==4.2.0
 
 # Cryptography and signing
 ecdsa>=0.18.0
@@ -37,3 +61,17 @@ py-solc-x>=2.0.0
 # Additional blockchain utilities
 eth-utils>=2.0.0
 hexbytes>=0.3.0
+
+# IPFS integration
+ipfshttpclient==0.8.0a2
+requests-toolbelt==1.0.0
+
+# Background tasks and workers
+celery==5.3.4
+kombu==5.3.4
+
+# ZK-SNARKs dependencies
+circomlibjs==2.0.5
+snarkjs==0.7.0
+websnark==0.0.8
+py-snark==0.0.1

@@ -1,0 +1,271 @@
+{
+  "course_id": "blockchain_fundamentals_001",
+  "course_type": "blockchain",
+  "title": "Blockchain and Web3 Development Fundamentals",
+  "description": "Master blockchain technology, Ethereum development, and Web3 applications",
+  "instructor": "did:learntwin:instructor002",
+  "institution": "UIT",
+  "difficulty": "intermediate",
+  "estimated_hours": 50,
+  "prerequisites": ["basic_programming"],
+  "learning_objectives": [
+    "Understand blockchain technology fundamentals",
+    "Learn Ethereum and smart contract development",
+    "Master Web3 development concepts",
+    "Build decentralized applications (DApps)",
+    "Understand DeFi and NFT concepts"
+  ],
+  "tags": ["blockchain", "ethereum", "solidity", "web3", "defi"],
+  "modules": [
+    {
+      "module_id": "blockchain_fundamentals_001_module_01",
+      "title": "Introduction to Blockchain",
+      "description": "Learn the fundamental concepts of blockchain technology",
+      "category": "blockchain",
+      "difficulty": "beginner",
+      "estimated_hours": 8,
+      "prerequisites": [],
+      "learning_objectives": [
+        "Understand what blockchain is and how it works",
+        "Learn about decentralization and consensus mechanisms",
+        "Explore real-world blockchain applications",
+        "Understand Bitcoin and cryptocurrency basics"
+      ],
+      "tags": ["blockchain", "basics", "bitcoin", "consensus"],
+      "content": {
+        "lessons": [
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_01_lesson_01",
+            "title": "What is Blockchain?",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=SSo_EIwHSd4",
+            "content_cid": "QmBlockchainIntroVideoHash",
+            "duration_minutes": 20,
+            "order": 1,
+            "description": "Introduction to blockchain technology and its revolutionary impact"
+          },
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_01_lesson_02",
+            "title": "How Blockchain Works",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=yubzJw0uiE4",
+            "content_cid": "QmBlockchainWorkingHash",
+            "duration_minutes": 25,
+            "order": 2,
+            "description": "Deep dive into how blockchain networks function"
+          },
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_01_lesson_03",
+            "title": "Bitcoin and Cryptocurrency",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=kubGCSj5y3k",
+            "content_cid": "QmBitcoinBasicsHash",
+            "duration_minutes": 30,
+            "order": 3,
+            "description": "Understanding Bitcoin as the first blockchain application"
+          }
+        ],
+        "exercises": [
+          {
+            "exercise_id": "blockchain_fundamentals_001_module_01_exercise_01",
+            "title": "Blockchain Concepts Quiz",
+            "type": "quiz",
+            "content_cid": "QmBlockchainQuizHash",
+            "points": 15,
+            "estimated_time": 20,
+            "description": "Test your understanding of blockchain fundamentals"
+          }
+        ],
+        "assessments": [
+          {
+            "assessment_id": "blockchain_fundamentals_001_module_01_assessment_01",
+            "title": "Module 1 Final Assessment",
+            "type": "quiz",
+            "content_cid": "QmModule1BlockchainAssessmentHash",
+            "passing_score": 80,
+            "time_limit": 45,
+            "description": "Comprehensive assessment covering blockchain basics"
+          }
+        ]
+      },
+      "verification": {
+        "min_score_required": 80,
+        "max_time_allowed": 7200,
+        "max_attempts_allowed": 3,
+        "zk_proof_required": true
+      }
+    },
+    {
+      "module_id": "blockchain_fundamentals_001_module_02",
+      "title": "Ethereum and Smart Contracts",
+      "description": "Learn Ethereum blockchain and smart contract development",
+      "category": "ethereum",
+      "difficulty": "intermediate",
+      "estimated_hours": 12,
+      "prerequisites": ["blockchain_fundamentals_001_module_01"],
+      "learning_objectives": [
+        "Understand Ethereum blockchain architecture",
+        "Learn Solidity programming language",
+        "Create and deploy smart contracts",
+        "Understand gas and transaction fees"
+      ],
+      "tags": ["ethereum", "solidity", "smart_contracts", "gas"],
+      "content": {
+        "lessons": [
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_02_lesson_01",
+            "title": "Introduction to Ethereum",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=jxLkbJozKbY",
+            "content_cid": "QmEthereumIntroHash",
+            "duration_minutes": 25,
+            "order": 1,
+            "description": "Understanding Ethereum as a programmable blockchain"
+          },
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_02_lesson_02",
+            "title": "Smart Contracts Basics",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=ZE2HxTmxfrI",
+            "content_cid": "QmSmartContractsHash",
+            "duration_minutes": 30,
+            "order": 2,
+            "description": "Learn what smart contracts are and how they work"
+          },
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_02_lesson_03",
+            "title": "Solidity Programming",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=ipwxYa-F1uY",
+            "content_cid": "QmSolidityBasicsHash",
+            "duration_minutes": 40,
+            "order": 3,
+            "description": "Introduction to Solidity programming language"
+          }
+        ],
+        "exercises": [
+          {
+            "exercise_id": "blockchain_fundamentals_001_module_02_exercise_01",
+            "title": "First Smart Contract",
+            "type": "coding",
+            "content_cid": "QmFirstSmartContractHash",
+            "points": 25,
+            "estimated_time": 45,
+            "description": "Write and deploy your first smart contract"
+          }
+        ],
+        "assessments": [
+          {
+            "assessment_id": "blockchain_fundamentals_001_module_02_assessment_01",
+            "title": "Ethereum and Smart Contracts Assessment",
+            "type": "quiz",
+            "content_cid": "QmEthereumAssessmentHash",
+            "passing_score": 85,
+            "time_limit": 60,
+            "description": "Test your knowledge of Ethereum and smart contracts"
+          }
+        ]
+      },
+      "verification": {
+        "min_score_required": 85,
+        "max_time_allowed": 10800,
+        "max_attempts_allowed": 3,
+        "zk_proof_required": true
+      }
+    },
+    {
+      "module_id": "blockchain_fundamentals_001_module_03",
+      "title": "Web3 and DApp Development",
+      "description": "Build decentralized applications using Web3 technologies",
+      "category": "web3",
+      "difficulty": "advanced",
+      "estimated_hours": 15,
+      "prerequisites": ["blockchain_fundamentals_001_module_02"],
+      "learning_objectives": [
+        "Understand Web3 architecture and concepts",
+        "Learn to interact with smart contracts from frontend",
+        "Build full-stack decentralized applications",
+        "Understand IPFS and decentralized storage"
+      ],
+      "tags": ["web3", "dapp", "ipfs", "frontend"],
+      "content": {
+        "lessons": [
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_03_lesson_01",
+            "title": "Web3 Fundamentals",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=nHhAEkG1y2U",
+            "content_cid": "QmWeb3FundamentalsHash",
+            "duration_minutes": 35,
+            "order": 1,
+            "description": "Understanding Web3 and decentralized web concepts"
+          },
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_03_lesson_02",
+            "title": "Building DApps",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=coQ5dg8wM2o",
+            "content_cid": "QmDAppDevelopmentHash",
+            "duration_minutes": 45,
+            "order": 2,
+            "description": "Learn to build decentralized applications from scratch"
+          },
+          {
+            "lesson_id": "blockchain_fundamentals_001_module_03_lesson_03",
+            "title": "IPFS and Decentralized Storage",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=5Uj6uR3fp-U",
+            "content_cid": "QmIPFSBasicsHash",
+            "duration_minutes": 30,
+            "order": 3,
+            "description": "Understanding IPFS and decentralized storage solutions"
+          }
+        ],
+        "exercises": [
+          {
+            "exercise_id": "blockchain_fundamentals_001_module_03_exercise_01",
+            "title": "Full DApp Project",
+            "type": "project",
+            "content_cid": "QmDAppProjectHash",
+            "points": 40,
+            "estimated_time": 120,
+            "description": "Build a complete decentralized application"
+          }
+        ],
+        "assessments": [
+          {
+            "assessment_id": "blockchain_fundamentals_001_module_03_assessment_01",
+            "title": "Web3 Development Assessment",
+            "type": "practical",
+            "content_cid": "QmWeb3AssessmentHash",
+            "passing_score": 80,
+            "time_limit": 90,
+            "description": "Practical assessment of Web3 development skills"
+          }
+        ]
+      },
+      "verification": {
+        "min_score_required": 80,
+        "max_time_allowed": 12600,
+        "max_attempts_allowed": 3,
+        "zk_proof_required": true
+      }
+    }
+  ],
+  "metadata": {
+    "created_at": "2024-12-19T10:00:00Z",
+    "updated_at": "2024-12-19T10:00:00Z",
+    "version": "1.0",
+    "platform": "LearnTwin Chain",
+    "data_type": "course"
+  },
+  "storage": {
+    "course_metadata_cid": "QmBlockchainFundamentalsCourseMetadataHash",
+    "module_content_cids": [
+      "QmBlockchainModule1ContentHash",
+      "QmBlockchainModule2ContentHash",
+      "QmBlockchainModule3ContentHash"
+    ],
+    "blockchain_registry": "blockchain_fundamentals_001_hash"
+  }
+}

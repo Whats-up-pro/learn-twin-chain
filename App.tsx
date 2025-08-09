@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import DashboardPage from './pages/DashboardPage';
 import ModulePage from './pages/ModulePage';
+import VideoLearningPage from './pages/VideoLearningPage';
+import AchievementsPage from './pages/AchievementsPage';
+import NFTManagementPage from './pages/NFTManagementPage';
 import AiTutorPage from './pages/AiTutorPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import TeacherDashboardPage from './pages/TeacherDashboardPage';
 import EmployerDashboardPage from './pages/EmployerDashboardPage';
 import { Toaster } from 'react-hot-toast';
@@ -47,7 +51,7 @@ const AppContent: React.FC = () => {
   }, [learnerProfile, updateLearnerProfile]);
 
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
-  const hideNavbar = location.pathname === '/login' || location.pathname === '/register';
+  const hideNavbar = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/verify-email';
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -61,6 +65,7 @@ const AppContent: React.FC = () => {
           <Route path="/register" element={
             isLoggedIn ? <Navigate to={role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard"} replace /> : <RegisterPage />
           } />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/login"} />} />
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
@@ -82,6 +87,21 @@ const AppContent: React.FC = () => {
               <ModulePage />
             </ProtectedRoute>
           } />
+          <Route path="/course/:courseId/learn" element={
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <VideoLearningPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/achievements" element={
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <AchievementsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/nfts" element={
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <NFTManagementPage />
+            </ProtectedRoute>
+          } />
           <Route path="/tutor" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
               <AiTutorPage />
@@ -101,9 +121,9 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => (
-  <HashRouter>
+  <BrowserRouter>
     <AppContent />
-  </HashRouter>
+  </BrowserRouter>
 );
 
 export default App;

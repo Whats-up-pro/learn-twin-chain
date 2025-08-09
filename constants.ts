@@ -49,12 +49,40 @@ export const LEARNING_MODULES: LearningModule[] = [
       { type: 'text', value: 'Welcome to the world of Python! Python is a high-level, interpreted programming language known for its readability and versatility.' },
       { type: 'text', value: 'It was created by Guido van Rossum and first released in 1991. Python\'s design philosophy emphasizes code readability with its notable use of significant indentation.' },
       { type: 'code', value: '# This is a simple Python comment\nprint("Hello, Python!")', language: 'python' },
-      { type: 'image', value: 'https://via.placeholder.com/600x300/0ea5e9/ffffff?text=Python+Introduction' },
+      { type: 'video', value: 'https://www.youtube.com/watch?v=kqtD5dpn9C8' },
     ],
     quiz: [
       { id: 'q1m1', text: 'Who created Python?', options: [{ id: 'a', text: 'James Gosling' }, { id: 'b', text: 'Guido van Rossum' }, { id: 'c', text: 'Bjarne Stroustrup' }], correctOptionId: 'b', explanation: 'Guido van Rossum is the creator of Python.' },
       { id: 'q2m1', text: 'When was Python first released?', options: [{ id: 'a', text: '1991' }, { id: 'b', text: '2000' }, { id: 'c', text: '1985' }], correctOptionId: 'a', explanation: 'Python was first released in 1991.' },
     ],
+  },
+  {
+    id: 'module_blockchain_1',
+    title: 'Blockchain Basics',
+    description: 'Understand the fundamentals of blockchain, blocks, and consensus mechanisms.',
+    estimatedTime: '1 hour',
+    content: [
+      { type: 'text', value: 'Blockchain is a distributed ledger technology enabling trustless systems.' },
+      { type: 'video', value: 'https://www.youtube.com/watch?v=SSo_EIwHSd4' },
+      { type: 'text', value: 'Bitcoin and Ethereum are two major blockchains with different designs.' }
+    ],
+    quiz: [
+      { id: 'q1b1', text: 'What is stored in a blockchain block?', options: [{id:'a', text:'Images'}, {id:'b', text:'Transactions/records'}, {id:'c', text:'Videos'}], correctOptionId: 'b' },
+      { id: 'q2b1', text: 'What does consensus ensure?', options: [{id:'a', text:'Faster UI'}, {id:'b', text:'Network agreement on the ledger state'}, {id:'c', text:'Lower gas fees'}], correctOptionId: 'b' }
+    ]
+  },
+  {
+    id: 'module_blockchain_2',
+    title: 'Smart Contracts Intro',
+    description: 'Learn what smart contracts are and how Ethereum executes them.',
+    estimatedTime: '1.5 hours',
+    content: [
+      { type: 'text', value: 'Smart contracts are self-executing programs stored on the blockchain.' },
+      { type: 'video', value: 'https://www.youtube.com/watch?v=ipwxYa-F1uY' }
+    ],
+    quiz: [
+      { id: 'q1b2', text: 'Smart contracts run on which layer of Ethereum?', options: [{id:'a', text:'Application layer off-chain'}, {id:'b', text:'EVM on-chain'}, {id:'c', text:'Database server'}], correctOptionId: 'b' }
+    ]
   },
   {
     id: 'module2',
@@ -65,6 +93,7 @@ export const LEARNING_MODULES: LearningModule[] = [
       { type: 'text', value: 'Variables are containers for storing data values. Python has no command for declaring a variable. A variable is created the moment you first assign a value to it.' },
       { type: 'code', value: 'x = 5         # x is of type int\ny = "Hello"   # y is of type str\npi = 3.14     # pi is of type float\nis_learning = True # is_learning is of type bool', language: 'python' },
       { type: 'text', value: 'Common data types include integers (int), floating-point numbers (float), strings (str), and booleans (bool).' },
+      { type: 'video', value: 'https://www.youtube.com/watch?v=HGOBQPFzWKo' },
     ],
     quiz: [
       { id: 'q1m2', text: 'What is the data type of `x = 10`?', options: [{ id: 'a', text: 'str' }, { id: 'b', text: 'int' }, { id: 'c', text: 'float' }], correctOptionId: 'b' },
@@ -81,6 +110,7 @@ export const LEARNING_MODULES: LearningModule[] = [
       { type: 'code', value: 'age = 18\nif age >= 18:\n  print("You are an adult.")\nelse:\n  print("You are a minor.")', language: 'python' },
       { type: 'text', value: '`for` loops are used for iterating over a sequence (like a list, tuple, dictionary, set, or string). `while` loops repeat as long as a certain boolean condition is met.'},
       { type: 'code', value: '# For loop\nfruits = ["apple", "banana", "cherry"]\nfor fruit in fruits:\n  print(fruit)\n\n# While loop\ni = 1\nwhile i < 6:\n  print(i)\n  i += 1', language: 'python' },
+      { type: 'video', value: 'https://www.youtube.com/watch?v=f4KOjWS_KZs' },
     ],
     quiz: [
       { id: 'q1m3', text: 'Which keyword is used for conditional execution?', options: [{id: 'a', text: 'loop'}, {id: 'b', text: 'if'}, {id: 'c', text: 'for'}], correctOptionId: 'b'},
@@ -96,6 +126,7 @@ export const LEARNING_MODULES: LearningModule[] = [
       { type: 'text', value: 'A function is a block of code which only runs when it is called. You can pass data, known as parameters, into a function. A function can return data as a result.'},
       { type: 'code', value: 'def greet(name):\n  """This function greets the person passed in as a parameter."""\n  print(f"Hello, {name}!")\n\ngreet("Alice") # Calling the function', language: 'python' },
       { type: 'text', value: 'Functions help break down complex problems into smaller, manageable pieces.'},
+      { type: 'video', value: 'https://www.youtube.com/watch?v=9Os0o3wzS_I' },
     ],
     quiz: [
       { id: 'q1m4', text: 'Which keyword is used to define a function in Python?', options: [{id: 'a', text: 'fun'}, {id: 'b', text: 'define'}, {id: 'c', text: 'def'}], correctOptionId: 'c'},
