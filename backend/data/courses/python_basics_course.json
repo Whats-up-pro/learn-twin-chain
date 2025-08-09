@@ -1,0 +1,302 @@
+{
+  "course_id": "python_basics_001",
+  "course_type": "programming",
+  "title": "Python Programming Fundamentals",
+  "description": "Learn Python programming from scratch with hands-on exercises and real-world projects",
+  "instructor": "did:learntwin:instructor001",
+  "institution": "UIT",
+  "difficulty": "beginner",
+  "estimated_hours": 40,
+  "prerequisites": [],
+  "learning_objectives": [
+    "Understand Python syntax and basic concepts",
+    "Master data types and variables",
+    "Learn control structures and functions",
+    "Work with data structures and file handling",
+    "Build real-world Python applications"
+  ],
+  "tags": ["python", "programming", "beginner", "fundamentals"],
+  "modules": [
+    {
+      "module_id": "python_basics_001_module_01",
+      "title": "Introduction to Python",
+      "description": "Get started with Python programming language",
+      "category": "python",
+      "difficulty": "beginner",
+      "estimated_hours": 6,
+      "prerequisites": [],
+      "learning_objectives": [
+        "Install Python and set up development environment",
+        "Write your first Python program",
+        "Understand Python syntax and indentation",
+        "Use print() function and comments"
+      ],
+      "tags": ["python", "basics", "setup"],
+      "content": {
+        "lessons": [
+          {
+            "lesson_id": "python_basics_001_module_01_lesson_01",
+            "title": "What is Python?",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=Y8Tko2YC5hA",
+            "content_cid": "QmPythonIntroVideoHash",
+            "duration_minutes": 15,
+            "order": 1,
+            "description": "Introduction to Python programming language and its applications"
+          },
+          {
+            "lesson_id": "python_basics_001_module_01_lesson_02",
+            "title": "Setting up Python Environment",
+            "content_type": "interactive",
+            "content_cid": "QmPythonSetupGuideHash",
+            "duration_minutes": 20,
+            "order": 2,
+            "description": "Step-by-step guide to install Python and set up your development environment"
+          },
+          {
+            "lesson_id": "python_basics_001_module_01_lesson_03",
+            "title": "Your First Python Program",
+            "content_type": "text",
+            "content_cid": "QmFirstPythonProgramHash",
+            "duration_minutes": 25,
+            "order": 3,
+            "description": "Write and run your first Python program using print() function"
+          }
+        ],
+        "exercises": [
+          {
+            "exercise_id": "python_basics_001_module_01_exercise_01",
+            "title": "Hello World Program",
+            "type": "coding",
+            "content_cid": "QmHelloWorldExerciseHash",
+            "points": 10,
+            "estimated_time": 15,
+            "description": "Create a simple program that prints 'Hello, World!' to the console"
+          },
+          {
+            "exercise_id": "python_basics_001_module_01_exercise_02",
+            "title": "Python Environment Quiz",
+            "type": "quiz",
+            "content_cid": "QmPythonEnvQuizHash",
+            "points": 5,
+            "estimated_time": 10,
+            "description": "Test your knowledge about Python installation and environment setup"
+          }
+        ],
+        "assessments": [
+          {
+            "assessment_id": "python_basics_001_module_01_assessment_01",
+            "title": "Module 1 Final Assessment",
+            "type": "quiz",
+            "content_cid": "QmModule1AssessmentHash",
+            "passing_score": 80,
+            "time_limit": 30,
+            "description": "Comprehensive assessment covering all topics in Module 1"
+          }
+        ]
+      },
+      "verification": {
+        "min_score_required": 80,
+        "max_time_allowed": 7200,
+        "max_attempts_allowed": 3,
+        "zk_proof_required": true
+      }
+    },
+    {
+      "module_id": "python_basics_001_module_02",
+      "title": "Variables and Data Types",
+      "description": "Learn about variables, data types, and basic operations in Python",
+      "category": "python",
+      "difficulty": "beginner",
+      "estimated_hours": 8,
+      "prerequisites": ["python_basics_001_module_01"],
+      "learning_objectives": [
+        "Understand variables and naming conventions",
+        "Master different data types (int, float, str, bool)",
+        "Learn type conversion and basic operations",
+        "Work with strings and string methods"
+      ],
+      "tags": ["python", "variables", "data_types", "strings"],
+      "content": {
+        "lessons": [
+          {
+            "lesson_id": "python_basics_001_module_02_lesson_01",
+            "title": "Variables in Python",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=cQT33yu9pY8",
+            "content_cid": "QmVariablesLessonHash",
+            "duration_minutes": 20,
+            "order": 1,
+            "description": "Learn how to create and use variables in Python"
+          },
+          {
+            "lesson_id": "python_basics_001_module_02_lesson_02",
+            "title": "Numbers and Basic Operations",
+            "content_type": "interactive",
+            "content_cid": "QmNumbersOperationsHash",
+            "duration_minutes": 25,
+            "order": 2,
+            "description": "Work with integers, floats, and mathematical operations"
+          },
+          {
+            "lesson_id": "python_basics_001_module_02_lesson_03",
+            "title": "Strings and String Methods",
+            "content_type": "text",
+            "content_cid": "QmStringsMethodsHash",
+            "duration_minutes": 30,
+            "order": 3,
+            "description": "Master string manipulation and built-in string methods"
+          },
+          {
+            "lesson_id": "python_basics_001_module_02_lesson_04",
+            "title": "Boolean and Type Conversion",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=9O9Aw5tZeNg",
+            "content_cid": "QmBooleanTypeConversionHash",
+            "duration_minutes": 20,
+            "order": 4,
+            "description": "Learn about boolean values and converting between data types"
+          }
+        ],
+        "exercises": [
+          {
+            "exercise_id": "python_basics_001_module_02_exercise_01",
+            "title": "Variable Practice",
+            "type": "coding",
+            "content_cid": "QmVariablePracticeHash",
+            "points": 15,
+            "estimated_time": 20,
+            "description": "Practice creating variables of different types and performing operations"
+          },
+          {
+            "exercise_id": "python_basics_001_module_02_exercise_02",
+            "title": "String Manipulation",
+            "type": "coding",
+            "content_cid": "QmStringManipulationHash",
+            "points": 20,
+            "estimated_time": 25,
+            "description": "Create a program that demonstrates various string methods and operations"
+          }
+        ],
+        "assessments": [
+          {
+            "assessment_id": "python_basics_001_module_02_assessment_01",
+            "title": "Data Types Assessment",
+            "type": "quiz",
+            "content_cid": "QmDataTypesAssessmentHash",
+            "passing_score": 85,
+            "time_limit": 45,
+            "description": "Test your understanding of Python data types and operations"
+          }
+        ]
+      },
+      "verification": {
+        "min_score_required": 85,
+        "max_time_allowed": 9000,
+        "max_attempts_allowed": 3,
+        "zk_proof_required": true
+      }
+    },
+    {
+      "module_id": "python_basics_001_module_03",
+      "title": "Control Structures",
+      "description": "Learn about conditional statements and loops in Python",
+      "category": "python",
+      "difficulty": "beginner",
+      "estimated_hours": 10,
+      "prerequisites": ["python_basics_001_module_02"],
+      "learning_objectives": [
+        "Master if, elif, and else statements",
+        "Learn different types of loops (for, while)",
+        "Understand loop control statements (break, continue)",
+        "Practice nested control structures"
+      ],
+      "tags": ["python", "control_structures", "loops", "conditionals"],
+      "content": {
+        "lessons": [
+          {
+            "lesson_id": "python_basics_001_module_03_lesson_01",
+            "title": "Conditional Statements",
+            "content_type": "video",
+            "content_url": "https://www.youtube.com/watch?v=DZwmZ8Usvnk",
+            "content_cid": "QmConditionalStatementsHash",
+            "duration_minutes": 25,
+            "order": 1,
+            "description": "Learn how to use if, elif, and else statements for decision making"
+          },
+          {
+            "lesson_id": "python_basics_001_module_03_lesson_02",
+            "title": "For Loops",
+            "content_type": "interactive",
+            "content_cid": "QmForLoopsHash",
+            "duration_minutes": 30,
+            "order": 2,
+            "description": "Master for loops and iteration in Python"
+          },
+          {
+            "lesson_id": "python_basics_001_module_03_lesson_03",
+            "title": "While Loops",
+            "content_type": "text",
+            "content_cid": "QmWhileLoopsHash",
+            "duration_minutes": 25,
+            "order": 3,
+            "description": "Learn while loops and loop control statements"
+          }
+        ],
+        "exercises": [
+          {
+            "exercise_id": "python_basics_001_module_03_exercise_01",
+            "title": "Number Guessing Game",
+            "type": "coding",
+            "content_cid": "QmNumberGuessingGameHash",
+            "points": 25,
+            "estimated_time": 30,
+            "description": "Build a number guessing game using conditional statements and loops"
+          },
+          {
+            "exercise_id": "python_basics_001_module_03_exercise_02",
+            "title": "Pattern Printing",
+            "type": "coding",
+            "content_cid": "QmPatternPrintingHash",
+            "points": 20,
+            "estimated_time": 25,
+            "description": "Create various patterns using nested loops"
+          }
+        ],
+        "assessments": [
+          {
+            "assessment_id": "python_basics_001_module_03_assessment_01",
+            "title": "Control Structures Assessment",
+            "type": "quiz",
+            "content_cid": "QmControlStructuresAssessmentHash",
+            "passing_score": 80,
+            "time_limit": 60,
+            "description": "Comprehensive test on conditional statements and loops"
+          }
+        ]
+      },
+      "verification": {
+        "min_score_required": 80,
+        "max_time_allowed": 10800,
+        "max_attempts_allowed": 3,
+        "zk_proof_required": true
+      }
+    }
+  ],
+  "metadata": {
+    "created_at": "2024-12-19T10:00:00Z",
+    "updated_at": "2024-12-19T10:00:00Z",
+    "version": "1.0",
+    "platform": "LearnTwin Chain",
+    "data_type": "course"
+  },
+  "storage": {
+    "course_metadata_cid": "QmPythonBasicsCourseMetadataHash",
+    "module_content_cids": [
+      "QmModule1ContentHash",
+      "QmModule2ContentHash", 
+      "QmModule3ContentHash"
+    ],
+    "blockchain_registry": "python_basics_001_hash"
+  }
+} 

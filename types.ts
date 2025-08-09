@@ -35,8 +35,12 @@ export interface LearningCheckpoint {
   completedAt: string; // ISO date string
   score?: number; // Score achieved in the module (0-100)
   tokenized: boolean;
-  nftCid?: string; // Simulated IPFS CID for NFT metadata
+  nftCid?: string; // IPFS CID for NFT metadata
   nftId?: string;
+  txHash?: string; // Blockchain transaction hash
+  blockchainMinted?: boolean; // Whether NFT was actually minted on blockchain
+  tokenId?: number; // Blockchain token ID
+  contractAddress?: string; // Smart contract address
 }
 
 export interface DigitalTwin {
@@ -61,6 +65,14 @@ export interface Nft {
   verified?: boolean; // Whether the NFT has been verified by institution
   issuer?: string; // Institution that issued the NFT
   institutionPublicKey?: string; // Public key of the issuing institution
+  // Blockchain-specific properties
+  txHash?: string; // Blockchain transaction hash
+  tokenId?: number; // Blockchain token ID
+  contractAddress?: string; // Smart contract address
+  blockchainMinted?: boolean; // Whether NFT was actually minted on blockchain
+  studentAddress?: string; // Blockchain address of the student
+  nftType?: 'module_progress' | 'learning_achievement';
+  minting?: boolean;
 }
 
 export interface LearningModule {
@@ -74,8 +86,8 @@ export interface LearningModule {
 }
 
 export interface ModuleContentItem {
-  type: 'text' | 'code' | 'image' | 'video_placeholder';
-  value: string; // Text, code content, image URL, or video placeholder text
+  type: 'text' | 'code' | 'image' | 'video' | 'video_placeholder';
+  value: string; // Text, code content, image URL, or video URL/placeholder text
   language?: string; // For code blocks, e.g., 'python'
 }
 

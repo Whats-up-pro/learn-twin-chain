@@ -10,10 +10,17 @@ const StudentZKPSection: React.FC = () => {
     setLoading(true);
     setZkpResult(null);
     try {
-      const res = await fetch('/api/v1/zkp/prove-score', {
+      const res = await fetch('/api/v1/zkp/generate-learning-proof', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({score: Number(score), min_score: Number(minScore)})
+        body: JSON.stringify({
+          student_address: '0x0000000000000000000000000000000000000000',
+          module_id: 'demo-module',
+          score: Number(score),
+          time_spent: 3600,
+          attempts: 1,
+          study_materials: ['notes']
+        })
       });
       const data = await res.json();
       setZkpResult(data);

@@ -5,6 +5,7 @@ module.exports = {
   solidity: {
     version: "0.8.30",
     settings: {
+      viaIR: true,
       optimizer: {
         enabled: true,
         runs: 200
@@ -18,6 +19,11 @@ module.exports = {
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 1337
+    },
+    sepolia: {
+      url: process.env.BLOCKCHAIN_RPC_URL || "https://sepolia.infura.io/v3/31c6f41e16fe4968a5ecfd07c2aedb9f",
+      accounts: process.env.BLOCKCHAIN_PRIVATE_KEY ? [process.env.BLOCKCHAIN_PRIVATE_KEY] : [],
+      chainId: 11155111
     }
   },
   paths: {

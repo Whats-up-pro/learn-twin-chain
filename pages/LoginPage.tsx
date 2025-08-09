@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole } from '../types';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 
 const LoginPage: React.FC = () => {
   const { updateLearnerProfile, setRole } = useAppContext();
@@ -24,36 +24,49 @@ const LoginPage: React.FC = () => {
     setError('');
     
     try {
-      const res = await fetch('http://localhost:8000/login', {
+      let res = await fetch('http://localhost:8000/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ did, password })
+        body: JSON.stringify({ identifier: did, password })
       });
       
-      if (res.status === 401) {
-        const errorData = await res.json();
-        setError(errorData.detail || 'Invalid credentials');
-        return;
-      }
-      
       if (!res.ok) {
-        const errorData = await res.json();
-        setError(errorData.detail || 'Login failed!');
-        return;
+        // Handle known auth errors
+        const errorData = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          setError(errorData.detail || 'Invalid credentials');
+          return;
+        }
+        if (res.status === 400 && (errorData.detail || '').toLowerCase().includes('email')) {
+          setError(errorData.detail || 'Email not verified. Please check your inbox.');
+          return;
+        }
+        // Fallback to legacy endpoint for local JSON users
+        res = await fetch('http://localhost:8000/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ did, password })
+        });
+        if (!res.ok) {
+          const legacyError = await res.json().catch(() => ({}));
+          setError(legacyError.detail || legacyError.message || 'Login failed!');
+          return;
+        }
       }
       
-      const user = await res.json();
+      const payload = await res.json();
+      const user = payload.user || payload;
       const userRole: UserRole = user.role || UserRole.LEARNER;
       const profile = {
         did: user.did,
         name: user.name,
         email: user.email,
-        avatarUrl: user.avatarUrl || '',
+        avatarUrl: user.avatar_url || user.avatarUrl || '',
         institution: user.institution,
         program: user.program,
         birth_year: user.birth_year,
         enrollment_date: user.enrollment_date,
-        createdAt: user.createdAt
+        createdAt: user.created_at || user.createdAt
       };
       updateLearnerProfile(profile, userRole);
       setRole(userRole);
@@ -73,60 +86,138 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-sky-100 via-sky-200 to-sky-300">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <div className="flex flex-col items-center mb-6">
-          <span className="text-3xl font-extrabold text-sky-600 tracking-wide drop-shadow-md">LearnTwinChain</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -inset-10 opacity-30">
+          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+          <div className="absolute top-3/4 right-1/4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+          <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
         </div>
-        <h2 className="text-2xl font-bold mb-4 text-center">Sign In</h2>
-        <form onSubmit={handleLogin}>
-          <label className="block mb-2 font-medium">DID or Username</label>
-          <input
-            type="text"
-            className="w-full p-2 border rounded mb-4"
-            value={did}
-            onChange={e => setDid(e.target.value)}
-            placeholder="did:learntwin:student001 or username"
-            disabled={isLoading}
-          />
-          <label className="block mb-2 font-medium">Password</label>
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              className="w-full p-2 pr-10 border rounded mb-4"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              disabled={isLoading}
-            />
-            <button
-              type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              onClick={() => setShowPassword(!showPassword)}
+      </div>
+      
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
+        <div className="hidden lg:block relative rounded-3xl overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-10 text-white shadow-2xl transform hover:scale-105 transition-transform duration-500">
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/30 via-transparent to-transparent"></div>
+          <div className="absolute top-4 right-4">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-ping"></div>
+          </div>
+          
+          <h1 className="text-4xl font-extrabold mb-4 animate-fade-in">Welcome back to LearnTwin</h1>
+          <p className="text-blue-100 mb-8 text-lg animate-fade-in animation-delay-500">Continue your learning journey with AI-powered education, blockchain verification, and NFT achievements.</p>
+          
+          <div className="space-y-4 animate-fade-in animation-delay-1000">
+            <div className="flex items-center space-x-3 group">
+              <div className="w-3 h-3 bg-emerald-400 rounded-full group-hover:scale-125 transition-transform"></div>
+              <span className="text-blue-100">Interactive video learning modules</span>
+            </div>
+            <div className="flex items-center space-x-3 group">
+              <div className="w-3 h-3 bg-yellow-400 rounded-full group-hover:scale-125 transition-transform"></div>
+              <span className="text-blue-100">Module Progress & Achievement NFTs</span>
+            </div>
+            <div className="flex items-center space-x-3 group">
+              <div className="w-3 h-3 bg-pink-400 rounded-full group-hover:scale-125 transition-transform"></div>
+              <span className="text-blue-100">Steam-like achievement system</span>
+            </div>
+            <div className="flex items-center space-x-3 group">
+              <div className="w-3 h-3 bg-purple-400 rounded-full group-hover:scale-125 transition-transform"></div>
+              <span className="text-blue-100">ZK-proof verified learning</span>
+            </div>
+          </div>
+          
+          <div className="mt-10 p-4 bg-white/10 rounded-2xl backdrop-blur-sm animate-fade-in animation-delay-1500">
+            <div className="text-sm text-blue-200 font-medium">Powered by blockchain technology</div>
+            <div className="text-xs text-blue-300 mt-1">Secure • Verifiable • Decentralized</div>
+          </div>
+        </div>
+        
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl p-8 lg:p-10 transform hover:shadow-3xl transition-all duration-300">
+          <div className="flex items-center justify-between mb-8">
+            <div className="animate-fade-in">
+              <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+                Sign in to your account
+              </div>
+              <div className="text-sm text-gray-500 mt-2">Welcome back! Please enter your details.</div>
+            </div>
+            <div className="animate-bounce">
+              <ArrowRightOnRectangleIcon className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-6 animate-fade-in animation-delay-300">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Email or DID</label>
+              <input
+                type="text"
+                className="w-full p-4 border-2 border-gray-200 rounded-xl transition-all duration-300 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 hover:border-gray-300 bg-gray-50/50 focus:bg-white"
+                value={did}
+                onChange={e => setDid(e.target.value)}
+                placeholder="did:learntwin:student001 or your@email.com"
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="w-full p-4 pr-12 border-2 border-gray-200 rounded-xl transition-all duration-300 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 hover:border-gray-300 bg-gray-50/50 focus:bg-white"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center transition-colors hover:scale-110 transform duration-200"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                  )}
+                </button>
+              </div>
+            </div>
+            
+            {error && (
+              <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg animate-shake">
+                <div className="text-red-700 text-sm font-medium">{error}</div>
+              </div>
+            )}
+            
+            <button 
+              type="submit" 
+              className={`w-full py-4 rounded-xl font-semibold text-white text-lg bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:via-blue-800 hover:to-indigo-800 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ${isLoading ? 'opacity-60 cursor-not-allowed scale-100' : ''}`}
               disabled={isLoading}
             >
-              {showPassword ? (
-                <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+              {isLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Signing In...</span>
+                </div>
               ) : (
-                <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                'Sign In'
               )}
             </button>
+            
+            <div className="text-center">
+              <Link to="/register" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                Forgot your password?
+              </Link>
+            </div>
+          </form>
+          
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="text-center text-sm text-gray-600">
+              Don't have an account? 
+              <Link to="/register" className="ml-1 font-semibold text-blue-600 hover:text-blue-800 transition-colors hover:underline">
+                Sign Up
+              </Link>
+            </div>
           </div>
-          {error && <div className="text-red-500 mb-2">{error}</div>}
-          <button 
-            type="submit" 
-            className={`w-full py-2 rounded transition ${
-              isLoading 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-sky-600 hover:bg-sky-700'
-            } text-white`}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Signing In...' : 'Sign In'}
-          </button>
-        </form>
-        <div className="mt-4 text-center">
-          Don't have an account? <Link to="/register" className="text-sky-600 hover:underline">Sign Up</Link>
         </div>
       </div>
     </div>

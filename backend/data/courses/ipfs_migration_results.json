@@ -1,0 +1,32 @@
+{
+  "migration_date": 1754296088,
+  "total_courses": 2,
+  "successful_migrations": 2,
+  "failed_migrations": 0,
+  "results": [
+    {
+      "success": true,
+      "course_id": "blockchain_fundamentals_001",
+      "course_metadata_cid": "QmYXCFottL3fsHmDhySuepJN9o2BnYjBoAMw7PDN2AHd1c",
+      "course_index_cid": "QmWQAHSrk8VFN9uZSEsmr71TQaWFkRYuKEjHQszeWUrDTu",
+      "module_cids": [
+        "QmPAwsAvBBb8Fxxd9S5UvxFyZeZXGZxZwmgESHKpkyXiaF",
+        "QmfLrMJtzXPEhqkeXFXrm7jB88SWgVJYqEyoSPtEuT2iaJ",
+        "QmakiPGUEEmpVYycK4tP4Vffveq8QkqokLH9XowoCZEcBG"
+      ],
+      "total_modules": 3
+    },
+    {
+      "success": true,
+      "course_id": "python_basics_001",
+      "course_metadata_cid": "QmcXoCBdjvnQvsj1499ZLsBFeDwuXbNVsPKhhmTRkau9rh",
+      "course_index_cid": "QmbbuqbzZu3KwCeqJxJwfPTJBfVQ1WW5tg9h3ZiTQYGdWb",
+      "module_cids": [
+        "QmdEXknvMk1nVwCePTpgiUP5uRkNsvLUdiGst13w3yn3yi",
+        "Qmeo9yc8zBhKJjkjwBvUauTLM5EPmeyUHhq7MHPPbvmGsU",
+        "QmfGydMbMCJoG9KXAprajbotFVLeozeHGjcavnn9JLTAmw"
+      ],
+      "total_modules": 3
+    }
+  ]
+}

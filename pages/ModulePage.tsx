@@ -5,6 +5,7 @@ import { LearningModule, ModuleContentItem } from '../types';
 import QuizComponent from '../components/QuizComponent';
 import { LightBulbIcon, CodeBracketIcon, PlayCircleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { blockchainService } from '../services/blockchainService';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
 const ModulePage: React.FC = () => {
@@ -14,11 +15,20 @@ const ModulePage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Require wallet connection before accessing module
+    (async () => {
+      const isConnected = await blockchainService.checkWalletConnection();
+      if (!isConnected) {
+        toast.error('Please connect your MetaMask wallet before learning.');
+        navigate('/dashboard');
+        return;
+      }
+    })();
     if (moduleId) {
       const foundModule = getModuleById(moduleId);
       setModule(foundModule);
       if(foundModule) {
-        updateBehavior({lastLlmSession: getCurrentVietnamTimeISO()}); // Update interaction log
+        updateBehavior({lastLlmSession: getCurrentVietnamTimeISO()});
       }
     }
   }, [moduleId, getModuleById, updateBehavior]);
@@ -72,8 +82,12 @@ const ModulePage: React.FC = () => {
 
       // If module is completed (score >= 80%), mint NFT
       if (score >= 80) {
-        setTimeout(() => {
-          mintNftForModule(module.id, module.title);
+        setTimeout(async () => {
+          try {
+            await mintNftForModule(module.id, module.title, score);
+          } catch (error) {
+            console.error('Error minting NFT:', error);
+          }
         }, 1000); // Small delay to ensure checkpoint is created first
       }
     }
@@ -127,6 +141,37 @@ const ModulePage: React.FC = () => {
         );
       case 'image':
         return <img key={index} src={item.value} alt={`Module content ${index + 1}`} className="my-4 rounded-lg shadow-md max-w-full h-auto mx-auto" />;
+      case 'video': {
+        // Support YouTube embed links or direct video URLs
+        const isYouTube = item.value.includes('youtube.com') || item.value.includes('youtu.be');
+        if (isYouTube) {
+          // Normalize to embed URL
+          let embedUrl = item.value;
+          if (embedUrl.includes('watch?v=')) {
+            embedUrl = embedUrl.replace('watch?v=', 'embed/');
+          }
+          if (embedUrl.includes('youtu.be/')) {
+            embedUrl = embedUrl.replace('youtu.be/', 'www.youtube.com/embed/');
+          }
+          return (
+            <div key={index} className="my-4 aspect-video w-full overflow-hidden rounded-xl shadow">
+              <iframe
+                className="w-full h-full"
+                src={embedUrl}
+                title={`Video ${index + 1}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          );
+        }
+        return (
+          <video key={index} controls className="my-4 w-full rounded-xl shadow">
+            <source src={item.value} />
+            Your browser does not support the video tag.
+          </video>
+        );
+      }
       case 'video_placeholder':
          return (
           <div key={index} className="my-4 p-4 border border-dashed border-gray-400 rounded-lg bg-gray-50 text-center">

@@ -1,0 +1,93 @@
+{
+  "course_structure": {
+    "version": "1.0",
+    "description": "Course structure template for decentralized learning platform",
+    "metadata": {
+      "created_at": "2024-12-19T10:00:00Z",
+      "platform": "LearnTwin Chain",
+      "data_type": "course_structure"
+    },
+    "course_types": {
+      "programming": {
+        "description": "Programming and software development courses",
+        "categories": ["python", "javascript", "solidity", "data_structures", "algorithms"],
+        "difficulty_levels": ["beginner", "intermediate", "advanced"]
+      },
+      "blockchain": {
+        "description": "Blockchain and Web3 development courses",
+        "categories": ["ethereum", "smart_contracts", "defi", "nft", "zk_proofs"],
+        "difficulty_levels": ["beginner", "intermediate", "advanced"]
+      },
+      "ai_ml": {
+        "description": "Artificial Intelligence and Machine Learning courses",
+        "categories": ["machine_learning", "deep_learning", "nlp", "computer_vision"],
+        "difficulty_levels": ["beginner", "intermediate", "advanced"]
+      }
+    },
+    "module_structure": {
+      "metadata": {
+        "module_id": "string",
+        "title": "string",
+        "description": "string",
+        "category": "string",
+        "difficulty": "string",
+        "estimated_hours": "number",
+        "prerequisites": ["module_ids"],
+        "learning_objectives": ["string"],
+        "tags": ["string"]
+      },
+      "content": {
+        "lessons": [
+          {
+            "lesson_id": "string",
+            "title": "string",
+            "content_type": "video|text|interactive|quiz",
+            "content_cid": "string",
+            "duration_minutes": "number",
+            "order": "number"
+          }
+        ],
+        "exercises": [
+          {
+            "exercise_id": "string",
+            "title": "string",
+            "type": "coding|quiz|project",
+            "content_cid": "string",
+            "points": "number",
+            "estimated_time": "number"
+          }
+        ],
+        "assessments": [
+          {
+            "assessment_id": "string",
+            "title": "string",
+            "type": "quiz|exam|project",
+            "content_cid": "string",
+            "passing_score": "number",
+            "time_limit": "number"
+          }
+        ]
+      },
+      "verification": {
+        "min_score_required": "number",
+        "max_time_allowed": "number",
+        "max_attempts_allowed": "number",
+        "zk_proof_required": "boolean"
+      }
+    },
+    "storage_mapping": {
+      "ipfs_storage": {
+        "course_metadata": "QmCourseMetadataHash",
+        "module_content": "QmModuleContentHash",
+        "lesson_content": "QmLessonContentHash",
+        "exercise_content": "QmExerciseContentHash",
+        "assessment_content": "QmAssessmentContentHash"
+      },
+      "blockchain_storage": {
+        "course_registry": "course_hash",
+        "module_completions": "session_hash",
+        "nft_metadata": "nft_hash"
+      }
+    }
+  }
+} 

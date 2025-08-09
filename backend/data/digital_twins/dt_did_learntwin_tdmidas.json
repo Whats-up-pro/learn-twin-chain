@@ -1,0 +1,26 @@
+{
+  "twin_id": "did:learntwin:tdmidas",
+  "owner_did": "did:learner:tdmidas",
+  "latest_cid": null,
+  "version": 0,
+  "profile": {
+    "full_name": "Minh Dai",
+    "birth_year": 2000,
+    "institution": "UIT",
+    "program": "Computer Science",
+    "enrollment_date": "2025-08-08"
+  },
+  "learning_state": {
+    "current_modules": [],
+    "progress": {},
+    "checkpoint_history": []
+  },
+  "skill_profile": {
+    "programming_languages": {},
+    "soft_skills": {}
+  },
+  "interaction_logs": {
+    "most_asked_topics": [],
+    "preferred_learning_style": "code-first"
+  }
+}

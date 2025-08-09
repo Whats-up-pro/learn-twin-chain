@@ -350,5 +350,21 @@
     "createdAt": "2025-06-30T15:53:28.303829",
     "NFT_list": [],
     "metadata": {}
+  },
+  {
+    "did": "tdmidas",
+    "name": "Minh Dai",
+    "email": "tdmidas@gmail.com",
+    "password": "mutoyugi",
+    "role": "student",
+    "avatarUrl": "",
+    "institution": "UIT",
+    "program": "CyberSecurity",
+    "birth_year": 2004,
+    "enrollment_date": "2025-08-22",
+    "id": "tdmidas",
+    "createdAt": "2025-08-08T16:09:00.338893",
+    "NFT_list": [],
+    "metadata": {}
   }
 ]

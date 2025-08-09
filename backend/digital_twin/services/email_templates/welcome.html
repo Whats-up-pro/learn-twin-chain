@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Welcome to LearnTwinChain!</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .feature { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #667eea; }
+        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Welcome to LearnTwinChain!</h1>
+        </div>
+        <div class="content">
+            <p>Hello {{ name }},</p>
+            <p>Congratulations! Your email has been verified and your account is now active.</p>
+            
+            <h3>What you can do now:</h3>
+            
+            <div class="feature">
+                <h4>🎓 Start Learning</h4>
+                <p>Browse our courses and begin your personalized learning journey</p>
+            </div>
+            
+            <div class="feature">
+                <h4>🔗 Connect Your Wallet</h4>
+                <p>Link your MetaMask wallet to earn NFT certificates for your achievements</p>
+            </div>
+            
+            <div class="feature">
+                <h4>👤 Build Your Digital Twin</h4>
+                <p>Your learning progress and skills will be tracked in your personal digital twin</p>
+            </div>
+            
+            <p style="text-align: center;">
+                <a href="{{ dashboard_url }}" class="button">Go to Dashboard</a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2024 LearnTwinChain. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
