@@ -227,8 +227,8 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
                         <div 
                           className={`h-2 rounded-full transition-all duration-500 ${
                             unlocked 
-                              ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' 
-                              : 'bg-gradient-to-r from-blue-400 to-blue-600'
+                              ? 'bg-gradient-to-r from-[#0093cb] to-[#6dd7fd]' 
+                              : 'bg-gradient-to-r from-[#005acd] to-[#0093cb]'
                           }`}
                           style={{ width: `${progress}%` }}
                         />
@@ -239,15 +239,15 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
                     <div className="mt-3 flex items-center space-x-2">
                       <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                         milestone.type === 'learning_achievement'
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-blue-100 text-blue-700'
+                          ? 'bg-[#bef0ff] text-[#005acd]'
+                          : 'bg-[#6dd7fd] text-[#005acd]'
                       }`}>
                         {milestone.type === 'learning_achievement' ? '🏆 Achievement NFT' : '📊 Progress NFT'}
                       </div>
                       <div className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                        milestone.rarity === 'gold' ? 'bg-yellow-100 text-yellow-700' :
-                        milestone.rarity === 'silver' ? 'bg-gray-100 text-gray-700' :
-                        'bg-amber-100 text-amber-700'
+                        milestone.rarity === 'gold' ? 'bg-[#f5ffff] text-[#005acd]' :
+                        milestone.rarity === 'silver' ? 'bg-[#bef0ff] text-[#0093cb]' :
+                        'bg-[#6dd7fd] text-[#005acd]'
                       }`}>
                         {milestone.rarity}
                       </div>

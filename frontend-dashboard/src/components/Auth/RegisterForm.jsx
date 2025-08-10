@@ -142,7 +142,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
           </p>
           <button
             onClick={onSwitchToLogin}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md"
+            className="w-full bg-primary-400 hover:bg-primary-500 text-white font-medium py-2 px-4 rounded-md"
           >
             Go to Sign In
           </button>
@@ -178,7 +178,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
                   value="student"
                   checked={formData.role === 'student'}
                   onChange={handleChange}
-                  className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                  className="focus:ring-primary-400 h-4 w-4 text-primary-400 border-gray-300"
                 />
                 <span className="ml-2 text-sm text-gray-700">Student</span>
               </label>
@@ -189,7 +189,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
                   value="teacher"
                   checked={formData.role === 'teacher'}
                   onChange={handleChange}
-                  className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
+                  className="focus:ring-primary-400 h-4 w-4 text-primary-400 border-gray-300"
                 />
                 <span className="ml-2 text-sm text-gray-700">Teacher</span>
               </label>
@@ -207,7 +207,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                 formErrors.name ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Enter your full name"
@@ -229,7 +229,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
               name="did"
               value={formData.did}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                 formErrors.did ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="did:learntwin:yourname"
@@ -251,7 +251,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                 formErrors.email ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Enter your email"
@@ -274,7 +274,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                   formErrors.password ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Create a strong password"
@@ -308,7 +308,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                 formErrors.confirmPassword ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Confirm your password"
@@ -330,7 +330,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
               name="institution"
               value={formData.institution}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                 formErrors.institution ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Your school/university"
@@ -353,7 +353,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
                 name="program"
                 value={formData.program}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                   formErrors.program ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="e.g., Computer Science"
@@ -376,7 +376,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
                 name="department"
                 value={formData.department}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                   formErrors.department ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="e.g., Computer Science Department"
@@ -401,7 +401,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
               onChange={handleChange}
               min="1900"
               max="2010"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400"
               placeholder="e.g., 2000"
               disabled={loading}
             />
@@ -415,18 +415,18 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
                 name="acceptTerms"
                 checked={formData.acceptTerms}
                 onChange={handleChange}
-                className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
+                className={`h-4 w-4 text-primary-400 focus:ring-primary-400 border-gray-300 rounded ${
                   formErrors.acceptTerms ? 'border-red-500' : ''
                 }`}
                 disabled={loading}
               />
               <span className="ml-2 text-sm text-gray-700">
                 I accept the{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
+                <a href="#" className="text-primary-400 hover:text-primary-300">
                   Terms and Conditions
                 </a>{' '}
                 and{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-500">
+                <a href="#" className="text-primary-400 hover:text-primary-300">
                   Privacy Policy
                 </a>
               </span>
@@ -442,7 +442,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
             className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
               loading
                 ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                : 'bg-primary-400 hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-400'
             }`}
           >
             {loading ? (
@@ -462,7 +462,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }) {
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-primary-400 hover:text-primary-300"
             >
               Sign in here
             </button>

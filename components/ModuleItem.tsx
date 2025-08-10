@@ -23,7 +23,7 @@ const ModuleItem: React.FC<ModuleItemProps> = ({ module, isCompleted, isLocked, 
       `}
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className={`text-xl font-semibold ${isLocked ? 'text-gray-500' : 'text-sky-700'}`}>{module.title}</h3>
+        <h3 className={`text-xl font-semibold ${isLocked ? 'text-gray-500' : 'text-[#005acd]'}`}>{module.title}</h3>
         {isCompleted && <CheckCircleIcon className="h-7 w-7 text-green-500" />}
         {isLocked && !isCompleted && <LockClosedIcon className="h-7 w-7 text-gray-400" />}
       </div>
@@ -34,7 +34,7 @@ const ModuleItem: React.FC<ModuleItemProps> = ({ module, isCompleted, isLocked, 
       {!isLocked && (
         <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
           <div 
-            className={`h-1.5 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-sky-500'}`} 
+            className={`h-1.5 rounded-full ${isCompleted ? 'bg-green-500' : 'bg-[#0093cb]'}`} 
             style={{ width: `${progress * 100}%` }}
           ></div>
         </div>

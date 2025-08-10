@@ -78,7 +78,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }) {
               name="identifier"
               value={formData.identifier}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                 formErrors.identifier ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Enter your email or DID"
@@ -100,7 +100,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }) {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-400 ${
                   formErrors.password ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Enter your password"
@@ -126,7 +126,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }) {
                 id="remember-me"
                 name="remember-me"
                 type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-primary-400 focus:ring-primary-400 border-gray-300 rounded"
               />
               <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                 Remember me
@@ -136,7 +136,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }) {
             <div className="text-sm">
               <button
                 type="button"
-                className="font-medium text-blue-600 hover:text-blue-500"
+                className="font-medium text-primary-400 hover:text-primary-300"
                 onClick={() => {/* Handle forgot password */}}
               >
                 Forgot password?
@@ -150,7 +150,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }) {
             className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
               loading
                 ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                : 'bg-primary-400 hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-400'
             }`}
           >
             {loading ? (
@@ -180,7 +180,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }) {
               <button
                 type="button"
                 onClick={onSwitchToRegister}
-                className="font-medium text-blue-600 hover:text-blue-500"
+                className="font-medium text-primary-400 hover:text-primary-300"
               >
                 Sign up here
               </button>

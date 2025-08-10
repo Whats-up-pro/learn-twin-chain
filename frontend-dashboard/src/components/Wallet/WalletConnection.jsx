@@ -105,7 +105,7 @@ export default function WalletConnection({ onSuccess, required = false }) {
             className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
               isConnecting || loading
                 ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                : 'bg-primary-400 hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-400'
             }`}
           >
             {isConnecting ? (
@@ -149,7 +149,7 @@ export default function WalletConnection({ onSuccess, required = false }) {
             <button
               onClick={handleConnectWallet}
               disabled={isConnecting || loading}
-              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+              className="text-sm text-primary-400 hover:text-primary-300 font-medium"
             >
               + Add Another
             </button>
@@ -175,7 +175,7 @@ export default function WalletConnection({ onSuccess, required = false }) {
                         {formatAddress(wallet.address)}
                       </p>
                       {wallet.is_primary && (
-                        <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                        <span className="ml-2 px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded-full">
                           Primary
                         </span>
                       )}
@@ -190,7 +190,7 @@ export default function WalletConnection({ onSuccess, required = false }) {
                   {!wallet.is_primary && wallets.length > 1 && (
                     <button
                       onClick={() => handleSetPrimary(wallet.address)}
-                      className="text-xs text-blue-600 hover:text-blue-500"
+                      className="text-xs text-primary-400 hover:text-primary-300"
                     >
                       Set Primary
                     </button>

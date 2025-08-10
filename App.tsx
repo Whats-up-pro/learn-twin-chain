@@ -113,7 +113,7 @@ const AppContent: React.FC = () => {
           <Route path="*" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/login"} />} />
         </Routes>
       </main>
-      <footer className="bg-slate-800 text-white text-center p-4 shadow-md">
+      <footer className="bg-gradient-to-r from-brand-400 to-brand-300 text-white text-center p-4 shadow-md">
         © 2025 LearnTwinChain. Empowering Learners.
       </footer>
     </div>

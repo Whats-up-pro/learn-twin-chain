@@ -19,7 +19,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
   const avatarUrl = learnerProfile && learnerProfile.avatarUrl && learnerProfile.avatarUrl.trim() !== ''
     ? learnerProfile.avatarUrl
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=0ea5e9&color=fff&size=40`;
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=005acd&color=fff&size=40`;
   const displayName = learnerProfile && learnerProfile.name ? learnerProfile.name : 'User';
 
   const handleLogout = () => {
@@ -52,18 +52,18 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
   const navLinkClasses = (path: string) =>
     `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150 ${
-      location.pathname === path ? 'bg-sky-600 text-white' : 'text-sky-100 hover:bg-sky-500 hover:text-white'
+      location.pathname === path ? 'bg-[#005acd] text-white' : 'text-[#f5ffff] hover:bg-[#0093cb] hover:text-white'
     }`;
 
   return (
-    <nav className="bg-sky-700 shadow-lg">
+    <nav className="bg-gradient-to-r from-[#005acd] to-[#0093cb] shadow-lg">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             {onToggleSidebar && (
               <button
                 onClick={onToggleSidebar}
-                className="mr-2 text-sky-100 hover:text-white focus:outline-none md:hidden"
+                className="mr-2 text-[#f5ffff] hover:text-white focus:outline-none md:hidden"
                 aria-label="Toggle sidebar"
               >
                 <svg className="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
@@ -88,45 +88,45 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                 {/* Wallet status / connect */}
                 <div className="hidden md:flex items-center mr-3">
                   {checkingWallet ? (
-                    <span className="text-xs text-sky-100">Checking wallet...</span>
+                    <span className="text-xs text-[#f5ffff]">Checking wallet...</span>
                   ) : walletAddress ? (
-                    <span className="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-100 rounded">
+                    <span className="px-2 py-1 text-xs bg-[#6dd7fd]/20 text-[#005acd] rounded">
                       {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
                     </span>
                   ) : (
                     <button
                       onClick={handleConnectWallet}
-                      className="px-2 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition"
+                      className="px-2 py-1 text-xs bg-[#6dd7fd] text-[#005acd] rounded hover:bg-[#0093cb] hover:text-white transition"
                     >
                       Connect Wallet
                     </button>
                   )}
                 </div>
-                <Link to="/profile" className="flex items-center text-sky-100 hover:text-white">
+                <Link to="/profile" className="flex items-center text-[#f5ffff] hover:text-white">
                   <img
                     src={avatarUrl}
                     alt={learnerProfile?.name || 'User'}
-                    className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
+                    className="h-8 w-8 rounded-full mr-2 border-2 border-[#6dd7fd]"
                     onError={e => {
                       const target = e.target as HTMLImageElement;
-                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=0ea5e9&color=fff&size=40`;
+                      target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=005acd&color=fff&size=40`;
                     }}
                   />
                   <span className="hidden sm:inline text-sm">{displayName}</span>
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="ml-4 px-3 py-1 bg-sky-600 text-white rounded hover:bg-sky-700 transition text-sm"
+                  className="ml-4 px-3 py-1 bg-[#005acd] text-white rounded hover:bg-[#0093cb] transition text-sm"
                 >
                   Logout
                 </button>
               </>
             ) : (
-              <div className="flex items-center text-sky-100">
+              <div className="flex items-center text-[#f5ffff]">
                 <img
-                  src={'https://ui-avatars.com/api/?name=User&background=0ea5e9&color=fff&size=40'}
+                  src={'https://ui-avatars.com/api/?name=User&background=005acd&color=fff&size=40'}
                   alt="Guest"
-                  className="h-8 w-8 rounded-full mr-2 border-2 border-sky-500"
+                  className="h-8 w-8 rounded-full mr-2 border-2 border-[#6dd7fd]"
                 />
                 <span className="hidden sm:inline text-sm">Guest</span>
               </div>

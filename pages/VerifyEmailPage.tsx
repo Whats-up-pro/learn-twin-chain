@@ -34,13 +34,13 @@ const VerifyEmailPage: React.FC = () => {
   }, [searchParams, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-900 via-blue-800 to-indigo-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#005acd] via-[#0093cb] to-[#6dd7fd] p-4">
       <div className={`w-full max-w-md rounded-3xl shadow-2xl p-8 text-center ${status==='success' ? 'bg-white' : 'bg-white'}`}>
         <div className="text-5xl mb-4">{status==='verifying' ? '⏳' : status==='success' ? '✅' : '❌'}</div>
         <div className="text-2xl font-bold mb-2 text-gray-800">{status==='success' ? 'Verified' : status==='error' ? 'Verification Failed' : 'Verifying...'}</div>
         <p className="text-gray-600 mb-6">{message}</p>
         {status!=='verifying' && (
-          <Link to="/login" className="inline-block px-6 py-3 rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow">Go to Sign In</Link>
+          <Link to="/login" className="inline-block px-6 py-3 rounded-xl text-white bg-gradient-to-r from-[#005acd] to-[#0093cb] hover:from-[#0047a3] hover:to-[#0077a3] shadow">Go to Sign In</Link>
         )}
       </div>
     </div>

@@ -109,10 +109,10 @@ const ProfilePage: React.FC = () => {
   const completedModules = digitalTwin?.knowledge ? Object.values(digitalTwin.knowledge).filter(v => v >= 1).length : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5ffff] via-[#bef0ff] to-[#6dd7fd]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 p-8 text-white shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#005acd] via-[#0093cb] to-[#6dd7fd] p-8 text-white shadow-2xl">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10 text-center">
             <div className="relative inline-block">
@@ -122,14 +122,14 @@ const ProfilePage: React.FC = () => {
                 className="w-32 h-32 rounded-3xl border-4 border-white/20 shadow-xl mx-auto mb-6"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile.name || 'User')}&background=0ea5e9&color=fff&size=128`;
+                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile.name || 'User')}&background=005acd&color=fff&size=128`;
                 }}
               />
             </div>
             <h1 className="text-4xl font-bold mb-2">{learnerProfile.name || 'User'}</h1>
-            <div className="flex items-center justify-center space-x-2 text-blue-100 mb-4">
+            <div className="flex items-center justify-center space-x-2 text-[#bef0ff] mb-4">
               <span className="font-mono text-sm break-all">{learnerProfile.did || 'DID not available'}</span>
-              <button onClick={handleCopyDid} title="Copy DID" className="text-white hover:text-blue-200 transition-colors">
+              <button onClick={handleCopyDid} title="Copy DID" className="text-white hover:text-[#6dd7fd] transition-colors">
                 <AcademicCapIcon className="h-5 w-5"/>
               </button>
             </div>

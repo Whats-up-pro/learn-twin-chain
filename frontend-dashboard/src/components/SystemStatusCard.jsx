@@ -4,7 +4,7 @@ export default function SystemStatusCard() {
   return (
     <Card sx={{ mb: 3 }}>
       <CardContent>
-        <Typography variant="h6" sx={{ bgcolor: '#00bcd4', color: '#fff', p: 1, borderRadius: 1, mb: 2 }}>
+        <Typography variant="h6" sx={{ bgcolor: 'primary.400', color: '#fff', p: 1, borderRadius: 1, mb: 2 }}>
           System Status
         </Typography>
         <Grid container spacing={2}>

@@ -7,7 +7,7 @@
 /* Base styles */
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #f8fafc;
+  background-color: theme('colors.primary.50');
 }
 
 /* Custom utilities */
@@ -34,14 +34,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: theme('colors.primary.100');
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: theme('colors.primary.200');
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: theme('colors.primary.300');
 }

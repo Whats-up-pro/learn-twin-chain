@@ -66,14 +66,14 @@ const RoleSelectionPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5ffff] to-[#bef0ff]">
       <div className="container mx-auto px-4 py-16">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-[#005acd] mb-4">
             Welcome to LearnTwinChain
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-[#0093cb] max-w-2xl mx-auto">
             Choose your role to access personalized features and start your journey with AI-powered learning and digital twin technology.
           </p>
         </div>

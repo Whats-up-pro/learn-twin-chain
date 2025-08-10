@@ -87,10 +87,10 @@ const DashboardPage: React.FC = () => {
   const [nftTab, setNftTab] = useState<'owned'|'minting'|'all'>('owned');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5ffff] via-[#bef0ff] to-[#6dd7fd]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 p-8 text-white shadow-2xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#005acd] via-[#0093cb] to-[#6dd7fd] p-8 text-white shadow-2xl">
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10 flex items-center space-x-6">
             <div className="relative">
@@ -100,7 +100,7 @@ const DashboardPage: React.FC = () => {
                 className="h-24 w-24 rounded-2xl border-4 border-white/20 shadow-xl"
                 onError={e => {
                   const target = e.target as HTMLImageElement;
-                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=0ea5e9&color=fff&size=96`;
+                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=005acd&color=fff&size=96`;
                 }}
               />
               <div className="absolute -bottom-2 -right-2 h-8 w-8 bg-green-400 rounded-full border-4 border-white flex items-center justify-center">
@@ -109,13 +109,13 @@ const DashboardPage: React.FC = () => {
             </div>
             <div className="flex-1">
               <h1 className="text-4xl font-bold mb-2">Welcome back, {displayName}! 👋</h1>
-              <p className="text-blue-100 text-lg">Ready to continue your learning journey?</p>
-              <p className="text-blue-200 text-sm mt-1">DID: <span className="font-mono">{displayDid}</span></p>
+              <p className="text-[#bef0ff] text-lg">Ready to continue your learning journey?</p>
+              <p className="text-[#6dd7fd] text-sm mt-1">DID: <span className="font-mono">{displayDid}</span></p>
             </div>
             <div className="hidden lg:block">
               <div className="text-right animate-fade-in">
                 <div className="text-3xl font-bold">{overallProgress.toFixed(0)}%</div>
-                <div className="text-blue-200">Overall Progress</div>
+                <div className="text-[#6dd7fd]">Overall Progress</div>
               </div>
             </div>
           </div>
@@ -731,7 +731,7 @@ const KnowledgeBar: React.FC<KnowledgeBarProps> = ({ name, value }) => (
     </div>
     <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
       <div 
-        className="h-2 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-1000"
+        className="h-2 rounded-full bg-gradient-to-r from-[#0093cb] to-[#005acd] transition-all duration-1000"
         style={{ width: `${value * 100}%` }}
       ></div>
     </div>

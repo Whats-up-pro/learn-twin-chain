@@ -12,10 +12,10 @@ export default function Settings() {
   if (!isAuthenticated) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        <h2 className="text-2xl font-bold text-[#005acd] mb-4">
           Sign in to access settings
         </h2>
-        <p className="text-gray-600">
+        <p className="text-[#0093cb]">
           Manage your profile, preferences, and wallet connections
         </p>
       </div>
@@ -33,10 +33,10 @@ export default function Settings() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-[#005acd] mb-2">
           Settings
         </h1>
-        <p className="text-gray-600">
+        <p className="text-[#0093cb]">
           Manage your account settings and preferences
         </p>
       </div>
@@ -52,8 +52,8 @@ export default function Settings() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md ${
                     activeTab === tab.id
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50'
+                      ? 'bg-[#bef0ff] text-[#005acd]'
+                      : 'text-[#0093cb] hover:bg-[#f5ffff]'
                   }`}
                 >
                   <span className="mr-3">{tab.icon}</span>
@@ -100,14 +100,14 @@ function ProfileSettings({ user }) {
 
   return (
     <div className="p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">
+      <h2 className="text-lg font-semibold text-[#005acd] mb-6">
         Profile Information
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#005acd] mb-1">
               Full Name
             </label>
             <input
@@ -115,27 +115,27 @@ function ProfileSettings({ user }) {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#005acd] mb-1">
               Email
             </label>
             <input
               type="email"
               value={user?.email || ''}
               disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md bg-[#f5ffff] text-[#0093cb]"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Email cannot be changed. Contact support if needed.
+            <p className="mt-1 text-xs text-[#0093cb]">
+              Email cannot be changed after registration
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-[#005acd] mb-1">
               Institution
             </label>
             <input
@@ -143,26 +143,26 @@ function ProfileSettings({ user }) {
               name="institution"
               value={formData.institution}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {user?.role === 'student' ? 'Program' : 'Department'}
+            <label className="block text-sm font-medium text-[#005acd] mb-1">
+              Program
             </label>
             <input
               type="text"
-              name={user?.role === 'student' ? 'program' : 'department'}
-              value={user?.role === 'student' ? formData.program : formData.department}
+              name="program"
+              value={formData.program}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-[#005acd] mb-1">
             Bio
           </label>
           <textarea
@@ -170,7 +170,7 @@ function ProfileSettings({ user }) {
             value={formData.bio}
             onChange={handleChange}
             rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             placeholder="Tell us about yourself..."
           />
         </div>
@@ -178,7 +178,7 @@ function ProfileSettings({ user }) {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium"
+            className="bg-[#005acd] hover:bg-[#0093cb] text-white px-6 py-2 rounded-md font-medium"
           >
             Save Changes
           </button>
@@ -191,7 +191,7 @@ function ProfileSettings({ user }) {
 function WalletSettings() {
   return (
     <div className="p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">
+      <h2 className="text-lg font-semibold text-[#005acd] mb-6">
         Wallet Management
       </h2>
       <WalletConnection />
@@ -224,30 +224,30 @@ function SecuritySettings({ user, isEmailVerified }) {
 
   return (
     <div className="p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900">
+      <h2 className="text-lg font-semibold text-[#005acd]">
         Security Settings
       </h2>
 
       {/* Email Verification Status */}
-      <div className="border border-gray-200 rounded-lg p-4">
+      <div className="border border-[#6dd7fd] rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-medium text-gray-900">Email Verification</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="font-medium text-[#005acd]">Email Verification</h3>
+            <p className="text-sm text-[#0093cb]">
               {isEmailVerified ? 'Your email is verified' : 'Please verify your email address'}
             </p>
           </div>
           <div className="flex items-center">
             {isEmailVerified ? (
-              <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+              <span className="px-3 py-1 bg-[#bef0ff] text-[#005acd] text-sm font-medium rounded-full">
                 ✅ Verified
               </span>
             ) : (
               <div className="space-x-2">
-                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
+                <span className="px-3 py-1 bg-[#f5ffff] text-[#005acd] text-sm font-medium rounded-full">
                   ⚠️ Unverified
                 </span>
-                <button className="text-blue-600 hover:text-blue-500 text-sm font-medium">
+                <button className="text-[#005acd] hover:text-[#0093cb] text-sm font-medium">
                   Resend Email
                 </button>
               </div>
@@ -257,17 +257,17 @@ function SecuritySettings({ user, isEmailVerified }) {
       </div>
 
       {/* Password Change */}
-      <div className="border border-gray-200 rounded-lg p-4">
+      <div className="border border-[#6dd7fd] rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-medium text-gray-900">Password</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="font-medium text-[#005acd]">Password</h3>
+            <p className="text-sm text-[#0093cb]">
               Update your password to keep your account secure
             </p>
           </div>
           <button
             onClick={() => setShowChangePassword(!showChangePassword)}
-            className="text-blue-600 hover:text-blue-500 text-sm font-medium"
+            className="text-[#005acd] hover:text-[#0093cb] text-sm font-medium"
           >
             {showChangePassword ? 'Cancel' : 'Change Password'}
           </button>
@@ -276,7 +276,7 @@ function SecuritySettings({ user, isEmailVerified }) {
         {showChangePassword && (
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#005acd] mb-1">
                 Current Password
               </label>
               <input
@@ -284,13 +284,13 @@ function SecuritySettings({ user, isEmailVerified }) {
                 name="currentPassword"
                 value={passwordData.currentPassword}
                 onChange={handlePasswordChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#005acd] mb-1">
                 New Password
               </label>
               <input
@@ -298,14 +298,14 @@ function SecuritySettings({ user, isEmailVerified }) {
                 name="newPassword"
                 value={passwordData.newPassword}
                 onChange={handlePasswordChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
                 minLength={8}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-[#005acd] mb-1">
                 Confirm New Password
               </label>
               <input
@@ -313,7 +313,7 @@ function SecuritySettings({ user, isEmailVerified }) {
                 name="confirmPassword"
                 value={passwordData.confirmPassword}
                 onChange={handlePasswordChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
                 minLength={8}
                 required
               />
@@ -322,7 +322,7 @@ function SecuritySettings({ user, isEmailVerified }) {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium"
+                className="bg-[#005acd] hover:bg-[#0093cb] text-white px-4 py-2 rounded-md font-medium"
               >
                 Update Password
               </button>
@@ -332,21 +332,21 @@ function SecuritySettings({ user, isEmailVerified }) {
       </div>
 
       {/* Account Information */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h3 className="font-medium text-gray-900 mb-3">Account Information</h3>
+      <div className="border border-[#6dd7fd] rounded-lg p-4">
+        <h3 className="font-medium text-[#005acd] mb-3">Account Information</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-500">Account Type:</span>
+            <span className="text-[#0093cb]">Account Type:</span>
             <span className="font-medium">{user?.role}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500">Member Since:</span>
+            <span className="text-[#0093cb]">Member Since:</span>
             <span className="font-medium">
               {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500">DID:</span>
+            <span className="text-[#0093cb]">DID:</span>
             <span className="font-mono text-xs">{user?.did}</span>
           </div>
         </div>
@@ -376,13 +376,13 @@ function PreferencesSettings() {
 
   return (
     <div className="p-6 space-y-6">
-      <h2 className="text-lg font-semibold text-gray-900">
+      <h2 className="text-lg font-semibold text-[#005acd]">
         Preferences
       </h2>
 
       {/* Notifications */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h3 className="font-medium text-gray-900 mb-4">Notifications</h3>
+      <div className="border border-[#6dd7fd] rounded-lg p-4">
+        <h3 className="font-medium text-[#005acd] mb-4">Notifications</h3>
         <div className="space-y-3">
           {[
             { key: 'emailNotifications', label: 'Email Notifications', description: 'Receive important updates via email' },
@@ -392,8 +392,8 @@ function PreferencesSettings() {
           ].map((item) => (
             <div key={item.key} className="flex items-center justify-between">
               <div>
-                <div className="font-medium text-gray-900">{item.label}</div>
-                <div className="text-sm text-gray-500">{item.description}</div>
+                <div className="font-medium text-[#005acd]">{item.label}</div>
+                <div className="text-sm text-[#0093cb]">{item.description}</div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -402,7 +402,7 @@ function PreferencesSettings() {
                   onChange={(e) => handlePreferenceChange(item.key, e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-[#bef0ff] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#6dd7fd] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#6dd7fd] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#005acd]"></div>
               </label>
             </div>
           ))}
@@ -410,17 +410,17 @@ function PreferencesSettings() {
       </div>
 
       {/* Display Settings */}
-      <div className="border border-gray-200 rounded-lg p-4">
-        <h3 className="font-medium text-gray-900 mb-4">Display</h3>
+      <div className="border border-[#6dd7fd] rounded-lg p-4">
+        <h3 className="font-medium text-[#005acd] mb-4">Display</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[#005acd] mb-2">
               Theme
             </label>
             <select
               value={preferences.theme}
               onChange={(e) => handlePreferenceChange('theme', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             >
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -429,13 +429,13 @@ function PreferencesSettings() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-[#005acd] mb-2">
               Language
             </label>
             <select
               value={preferences.language}
               onChange={(e) => handlePreferenceChange('language', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             >
               <option value="en">English</option>
               <option value="vi">Tiếng Việt</option>
@@ -448,7 +448,7 @@ function PreferencesSettings() {
       <div className="flex justify-end">
         <button
           onClick={handleSave}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium"
+          className="bg-[#005acd] hover:bg-[#0093cb] text-white px-6 py-2 rounded-md font-medium"
         >
           Save Preferences
         </button>

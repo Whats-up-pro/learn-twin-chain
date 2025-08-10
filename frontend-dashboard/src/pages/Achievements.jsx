@@ -54,10 +54,10 @@ export default function Achievements() {
   if (!isAuthenticated) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        <h2 className="text-2xl font-bold text-[#005acd] mb-4">
           Sign in to view your achievements
         </h2>
-        <p className="text-gray-600">
+        <p className="text-[#0093cb]">
           Track your learning progress and blockchain-verified certificates
         </p>
       </div>
@@ -68,17 +68,17 @@ export default function Achievements() {
     return (
       <div className="text-center py-12">
         <div className="mb-8">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+          <svg className="mx-auto h-12 w-12 text-[#0093cb]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        <h2 className="text-2xl font-bold text-[#005acd] mb-4">
           Connect your wallet to view achievements
         </h2>
-        <p className="text-gray-600 mb-6">
+        <p className="text-[#0093cb] mb-6">
           Your NFT certificates and blockchain-verified achievements are stored in your wallet
         </p>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg">
+        <button className="bg-[#005acd] hover:bg-[#0093cb] text-white px-6 py-3 rounded-lg">
           Connect Wallet
         </button>
       </div>
@@ -91,15 +91,15 @@ export default function Achievements() {
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl font-bold text-[#005acd] mb-2">
               Your Achievements 🏆
             </h1>
-            <p className="text-gray-600">
+            <p className="text-[#0093cb]">
               Blockchain-verified certificates and learning milestones
             </p>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-500">Connected Wallet</div>
+            <div className="text-sm text-[#0093cb]">Connected Wallet</div>
             <div className="font-mono text-sm">
               {primaryWallet ? primaryWallet.address.slice(0, 6) + '...' + primaryWallet.address.slice(-4) : 'No wallet'}
             </div>
@@ -112,13 +112,13 @@ export default function Achievements() {
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-blue-600">🎓</span>
+              <div className="w-8 h-8 bg-[#bef0ff] rounded-lg flex items-center justify-center">
+                <span className="text-[#005acd]">🎓</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Total NFTs</p>
-              <p className="text-2xl font-semibold text-gray-900">{achievements.length}</p>
+              <p className="text-sm font-medium text-[#0093cb]">Total NFTs</p>
+              <p className="text-2xl font-semibold text-[#005acd]">{achievements.length}</p>
             </div>
           </div>
         </div>
@@ -126,13 +126,13 @@ export default function Achievements() {
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-green-600">✅</span>
+              <div className="w-8 h-8 bg-[#bef0ff] rounded-lg flex items-center justify-center">
+                <span className="text-[#005acd]">✅</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Verified</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm font-medium text-[#0093cb]">Verified</p>
+              <p className="text-2xl font-semibold text-[#005acd]">
                 {achievements.filter(a => a.verified).length}
               </p>
             </div>
@@ -142,13 +142,13 @@ export default function Achievements() {
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <span className="text-purple-600">📚</span>
+              <div className="w-8 h-8 bg-[#6dd7fd] rounded-lg flex items-center justify-center">
+                <span className="text-[#005acd]">📚</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Courses</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm font-medium text-[#0093cb]">Courses</p>
+              <p className="text-2xl font-semibold text-[#005acd]">
                 {achievements.filter(a => a.type === 'course_completion').length}
               </p>
             </div>
@@ -158,13 +158,13 @@ export default function Achievements() {
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <span className="text-yellow-600">🛠️</span>
+              <div className="w-8 h-8 bg-[#f5ffff] rounded-lg flex items-center justify-center">
+                <span className="text-[#005acd]">🛠️</span>
               </div>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">Skills</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-sm font-medium text-[#0093cb]">Skills</p>
+              <p className="text-2xl font-semibold text-[#005acd]">
                 {achievements.filter(a => a.type === 'skill_verification').length}
               </p>
             </div>
@@ -174,17 +174,17 @@ export default function Achievements() {
 
       {/* Achievements Grid */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">
-          Your NFT Certificates
+        <h2 className="text-lg font-semibold text-[#005acd] mb-6">
+          Recent Achievements
         </h2>
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 3 }).map((_, index) => (
               <div key={index} className="animate-pulse">
-                <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                <div className="bg-[#bef0ff] h-48 rounded-lg mb-4"></div>
+                <div className="h-4 bg-[#bef0ff] rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-[#bef0ff] rounded w-1/2"></div>
               </div>
             ))}
           </div>
@@ -196,18 +196,16 @@ export default function Achievements() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="mb-4">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <svg className="mx-auto h-12 w-12 text-[#0093cb]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-lg font-medium text-[#005acd] mb-2">
               No achievements yet
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-[#0093cb] mb-6">
               Start learning and completing courses to earn your first NFT certificate!
             </p>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg">
+            <button className="bg-[#005acd] hover:bg-[#0093cb] text-white px-6 py-3 rounded-lg">
               Browse Courses
             </button>
           </div>
@@ -229,16 +227,16 @@ function AchievementCard({ achievement }) {
 
   const getTypeColor = (type) => {
     const colors = {
-      'course_completion': 'bg-blue-100 text-blue-800',
-      'skill_verification': 'bg-green-100 text-green-800',
-      'module_completion': 'bg-purple-100 text-purple-800'
+      'course_completion': 'bg-[#bef0ff] text-[#005acd]',
+      'skill_verification': 'bg-[#6dd7fd] text-[#005acd]',
+      'module_completion': 'bg-[#0093cb] text-white'
     };
-    return colors[type] || 'bg-gray-100 text-gray-800';
+    return colors[type] || 'bg-[#f5ffff] text-[#005acd]';
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-      <div className="aspect-square bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center">
+    <div className="bg-gradient-to-br from-[#f5ffff] to-[#bef0ff] rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      <div className="aspect-square bg-gradient-to-br from-[#005acd] to-[#0093cb] flex items-center justify-center">
         <div className="text-white text-6xl">
           {getTypeIcon(achievement.type)}
         </div>
@@ -250,29 +248,29 @@ function AchievementCard({ achievement }) {
             {achievement.type.replace('_', ' ').toUpperCase()}
           </span>
           {achievement.verified && (
-            <span className="text-green-500" title="Blockchain Verified">
-              ✅
+            <span className="text-[#005acd]" title="Blockchain Verified">
+              🔗
             </span>
           )}
         </div>
         
-        <h3 className="font-semibold text-gray-900 mb-2">
+        <h3 className="font-semibold text-[#005acd] mb-2">
           {achievement.title}
         </h3>
         
-        <p className="text-sm text-gray-600 mb-3">
+        <p className="text-sm text-[#0093cb] mb-3">
           {achievement.description}
         </p>
         
-        <div className="text-xs text-gray-500 mb-3">
+        <div className="text-xs text-[#0093cb] mb-3">
           Earned on {new Date(achievement.date).toLocaleDateString()}
         </div>
         
         <div className="flex items-center justify-between">
-          <span className="text-xs font-mono text-gray-400">
+          <span className="text-xs font-mono text-[#0093cb]">
             Token: {achievement.nft_token_id?.slice(0, 8)}...
           </span>
-          <button className="text-blue-600 hover:text-blue-500 text-sm font-medium">
+          <button className="text-[#005acd] hover:text-[#0093cb] text-sm font-medium">
             View Details
           </button>
         </div>

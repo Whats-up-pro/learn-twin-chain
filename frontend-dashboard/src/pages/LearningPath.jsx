@@ -56,10 +56,10 @@ export default function LearningPath() {
   if (!isAuthenticated) {
     return (
       <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        <h2 className="text-2xl font-bold text-[#005acd] mb-4">
           Sign in to access learning paths
         </h2>
-        <p className="text-gray-600">
+        <p className="text-[#0093cb]">
           Create an account to browse courses and track your progress
         </p>
       </div>
@@ -70,10 +70,10 @@ export default function LearningPath() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-[#005acd] mb-2">
           Learning Paths
         </h1>
-        <p className="text-gray-600">
+        <p className="text-[#0093cb]">
           Discover courses and build your skills with blockchain-verified certificates
         </p>
       </div>
@@ -87,14 +87,14 @@ export default function LearningPath() {
               placeholder="Search courses..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             />
           </div>
           <div>
             <select
               value={filters.difficulty_level}
               onChange={(e) => setFilters(prev => ({ ...prev, difficulty_level: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             >
               <option value="">All Levels</option>
               <option value="beginner">Beginner</option>
@@ -108,7 +108,7 @@ export default function LearningPath() {
               placeholder="Institution"
               value={filters.institution}
               onChange={(e) => setFilters(prev => ({ ...prev, institution: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[#6dd7fd] rounded-md focus:outline-none focus:ring-2 focus:ring-[#005acd]"
             />
           </div>
         </div>
@@ -120,10 +120,10 @@ export default function LearningPath() {
           // Loading skeletons
           Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="bg-white shadow rounded-lg p-6 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="h-20 bg-gray-200 rounded mb-4"></div>
-              <div className="h-8 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-[#bef0ff] rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-[#bef0ff] rounded w-1/2 mb-4"></div>
+              <div className="h-20 bg-[#bef0ff] rounded mb-4"></div>
+              <div className="h-8 bg-[#bef0ff] rounded"></div>
             </div>
           ))
         ) : courses.length > 0 ? (
@@ -137,7 +137,7 @@ export default function LearningPath() {
           ))
         ) : (
           <div className="col-span-full text-center py-12">
-            <p className="text-gray-500">No courses found</p>
+            <p className="text-[#0093cb]">No courses found</p>
           </div>
         )}
       </div>
@@ -148,46 +148,46 @@ export default function LearningPath() {
 function CourseCard({ course, onEnroll, canEnroll }) {
   const getDifficultyColor = (level) => {
     const colors = {
-      'beginner': 'bg-green-100 text-green-800',
-      'intermediate': 'bg-yellow-100 text-yellow-800',
-      'advanced': 'bg-red-100 text-red-800'
+      'beginner': 'bg-[#bef0ff] text-[#005acd]',
+      'intermediate': 'bg-[#6dd7fd] text-[#005acd]',
+      'advanced': 'bg-[#0093cb] text-white'
     };
-    return colors[level] || 'bg-gray-100 text-gray-800';
+    return colors[level] || 'bg-[#f5ffff] text-[#005acd]';
   };
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       <div className="p-6">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-[#005acd]">
             {course.title}
           </h3>
           {course.completion_nft_enabled && (
-            <span className="text-yellow-500" title="NFT Certificate Available">
+            <span className="text-[#005acd]" title="NFT Certificate Available">
               🏆
             </span>
           )}
         </div>
         
-        <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+        <p className="text-[#0093cb] text-sm mb-4 line-clamp-3">
           {course.description}
         </p>
 
         <div className="space-y-2 mb-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Institution:</span>
+            <span className="text-[#0093cb]">Institution:</span>
             <span className="font-medium">{course.institution}</span>
           </div>
           
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Duration:</span>
+            <span className="text-[#0093cb]">Duration:</span>
             <span className="font-medium">
               {course.metadata?.estimated_hours || 'N/A'} hours
             </span>
           </div>
           
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Level:</span>
+            <span className="text-[#0093cb]">Level:</span>
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(course.metadata?.difficulty_level)}`}>
               {course.metadata?.difficulty_level || 'Not specified'}
             </span>
@@ -200,13 +200,13 @@ function CourseCard({ course, onEnroll, canEnroll }) {
               {course.metadata.tags.slice(0, 3).map((tag, index) => (
                 <span
                   key={index}
-                  className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                  className="px-2 py-1 bg-[#bef0ff] text-[#005acd] text-xs rounded-full"
                 >
                   {tag}
                 </span>
               ))}
               {course.metadata.tags.length > 3 && (
-                <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                <span className="px-2 py-1 bg-[#f5ffff] text-[#005acd] text-xs rounded-full">
                   +{course.metadata.tags.length - 3} more
                 </span>
               )}
@@ -219,8 +219,8 @@ function CourseCard({ course, onEnroll, canEnroll }) {
           disabled={!canEnroll}
           className={`w-full py-2 px-4 rounded-md text-sm font-medium ${
             canEnroll
-              ? 'bg-blue-600 hover:bg-blue-700 text-white'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-[#005acd] hover:bg-[#0093cb] text-white'
+              : 'bg-[#bef0ff] text-[#0093cb] cursor-not-allowed'
           }`}
         >
           {canEnroll ? 'Enroll Now' : 'Connect Wallet to Enroll'}

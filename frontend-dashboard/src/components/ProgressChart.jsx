@@ -10,7 +10,7 @@ export default function ProgressChart({ progress }) {
         <XAxis dataKey="module" angle={-25} textAnchor="end" interval={0} tick={{ fontSize: 12 }} />
         <YAxis domain={[0, 1]} />
         <Tooltip />
-        <Line type="monotone" dataKey="value" stroke="#1976d2" />
+        <Line type="monotone" dataKey="value" stroke="#005acd" />
       </LineChart>
     </ResponsiveContainer>
   );

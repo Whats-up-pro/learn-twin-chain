@@ -9,7 +9,7 @@ export default function SkillRadar({ skills }) {
         <PolarGrid />
         <PolarAngleAxis dataKey="skill" tick={{ fontSize: 14 }} />
         <PolarRadiusAxis angle={45} domain={[0, 1]} />
-        <Radar name="Skill" dataKey="value" stroke="#1976d2" fill="#1976d2" fillOpacity={0.6} />
+        <Radar name="Skill" dataKey="value" stroke="#005acd" fill="#005acd" fillOpacity={0.6} />
         <Tooltip />
       </RadarChart>
     </ResponsiveContainer>

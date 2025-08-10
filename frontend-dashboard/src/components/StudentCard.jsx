@@ -77,7 +77,7 @@ export default function StudentCard({ student }) {
                 <Box>
                   <Typography variant="subtitle1" fontWeight={500}>Learning State</Typography>
                   <Typography><strong>Current Modules:</strong> {(learningState.current_modules && learningState.current_modules.join(', ')) || 'N/A'}</Typography>
-                  <Box sx={{ mt: 1, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px' }}>
+                  <Box sx={{ mt: 1, p: 2, border: '1px solid', borderColor: 'primary.100', borderRadius: '4px' }}>
                     <ProgressChart progress={learningState.progress} />
                   </Box>
                 </Box>
@@ -86,13 +86,13 @@ export default function StudentCard({ student }) {
                   <Stack spacing={2} sx={{ mt: 1 }}>
                     <Box>
                       <Typography align="center">Programming Skills</Typography>
-                      <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: '4px', mt: 1 }}>
+                      <Box sx={{ p: 2, border: '1px solid', borderColor: 'primary.100', borderRadius: '4px', mt: 1 }}>
                         <SkillRadar skills={skillProfile.programming_languages} />
                       </Box>
                     </Box>
                     <Box>
                       <Typography align="center">Soft Skills</Typography>
-                      <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: '4px', mt: 1 }}>
+                      <Box sx={{ p: 2, border: '1px solid', borderColor: 'primary.100', borderRadius: '4px', mt: 1 }}>
                         <SkillRadar skills={skillProfile.soft_skills} />
                       </Box>
                     </Box>
@@ -126,7 +126,7 @@ export default function StudentCard({ student }) {
               <Grid container spacing={3}>
                 <Grid item xs={6} sx={{ display: 'flex', flexDirection: 'column' }}>
                   <Typography variant="subtitle1" fontWeight={500}>Interaction Logs</Typography>
-                  <Box sx={{ mt: 1, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px', flexGrow: 1 }}>
+                  <Box sx={{ mt: 1, p: 2, border: '1px solid', borderColor: 'primary.100', borderRadius: '4px', flexGrow: 1 }}>
                     {student.latest_cid && (
                       <Typography>
                         <strong>Latest CID:</strong>{' '}
@@ -146,7 +146,7 @@ export default function StudentCard({ student }) {
                 </Grid>
                 <Grid item xs={6} sx={{ display: 'flex', flexDirection: 'column' }}>
                   <Typography variant="subtitle1" fontWeight={500}>Raw JSON</Typography>
-                  <Box sx={{ mt: 1, p: 2, border: '1px solid #e0e0e0', borderRadius: '4px', flexGrow: 1, overflow: 'auto' }}>
+                  <Box sx={{ mt: 1, p: 2, border: '1px solid', borderColor: 'primary.100', borderRadius: '4px', flexGrow: 1, overflow: 'auto' }}>
                     <pre style={{ fontSize: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-all', margin: 0 }}>
                       {JSON.stringify(student, null, 2)}
                     </pre>

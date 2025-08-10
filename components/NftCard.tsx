@@ -9,7 +9,7 @@ interface NftCardProps {
 const NftCard: React.FC<NftCardProps> = ({ nft, onVerify }) => {
   const imageUrl = nft.imageUrl && nft.imageUrl.trim() !== '' 
     ? nft.imageUrl 
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(nft.name)}&background=0ea5e9&color=fff&size=200`;
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(nft.name)}&background=005acd&color=fff&size=200`;
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">

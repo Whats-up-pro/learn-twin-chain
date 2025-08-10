@@ -118,25 +118,25 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4 relative overflow-hidden fixed inset-0">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#005acd] via-[#0093cb] to-[#6dd7fd] flex items-center justify-center p-4 relative overflow-hidden fixed inset-0">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -inset-10 opacity-30">
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-          <div className="absolute top-3/4 right-1/4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-          <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-[#6dd7fd] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+          <div className="absolute top-3/4 right-1/4 w-72 h-72 bg-[#0093cb] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+          <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-[#005acd] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
         </div>
       </div>
 
       <div className="relative w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
-        <div className="hidden lg:block relative rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-600 via-blue-700 to-indigo-800 p-10 text-white shadow-2xl transform hover:scale-105 transition-transform duration-500">
+        <div className="hidden lg:block relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#005acd] via-[#0093cb] to-[#6dd7fd] p-10 text-white shadow-2xl transform hover:scale-105 transition-transform duration-500">
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/30 via-transparent to-transparent"></div>
           <div className="absolute top-4 right-4">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></div>
+            <div className="w-2 h-2 bg-[#6dd7fd] rounded-full animate-ping"></div>
           </div>
           
           <h1 className="text-4xl font-extrabold mb-4 animate-fade-in">Join LearnTwinChain</h1>
-          <p className="text-blue-100 mb-8 text-lg animate-fade-in animation-delay-500">Transform your learning journey with AI-powered education, digital twin tracking, and blockchain-verified achievements.</p>
+          <p className="text-[#bef0ff] mb-8 text-lg animate-fade-in animation-delay-500">Transform your learning journey with AI-powered education, digital twin tracking, and blockchain-verified achievements.</p>
           
           <div className="space-y-4 animate-fade-in animation-delay-1000">
             <div className="flex items-center space-x-3 group cursor-pointer">

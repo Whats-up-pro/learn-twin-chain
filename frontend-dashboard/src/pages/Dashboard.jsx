@@ -54,10 +54,10 @@ export default function Dashboard() {
       <div className="text-center py-12">
         <div className="max-w-md mx-auto">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-3xl font-bold text-[#005acd] mb-4">
               Welcome to LearnTwinChain
             </h1>
-            <p className="text-gray-600 mb-6">
+            <p className="text-[#0093cb] mb-6">
               Your personalized learning journey with blockchain-verified achievements
             </p>
           </div>
@@ -88,16 +88,16 @@ export default function Dashboard() {
 
           <button
             onClick={() => setShowAuthPrompt(true)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg"
+            className="w-full bg-[#005acd] hover:bg-[#0093cb] text-white font-medium py-3 px-6 rounded-lg"
           >
             Get Started - Sign Up Free
           </button>
 
-          <p className="mt-4 text-sm text-gray-500">
+          <p className="mt-4 text-sm text-[#0093cb]">
             Already have an account?{' '}
             <button
               onClick={() => setShowAuthPrompt(true)}
-              className="text-blue-600 hover:text-blue-500 font-medium"
+              className="text-[#005acd] hover:text-[#0093cb] font-medium"
             >
               Sign in here
             </button>
@@ -120,21 +120,21 @@ export default function Dashboard() {
         <div className="px-4 py-5 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-[#005acd]">
                 Welcome back, {user?.name}! 👋
               </h1>
-              <p className="mt-1 text-gray-600">
+              <p className="mt-1 text-[#0093cb]">
                 {user?.role === 'student' ? 'Continue your learning journey' : 'Manage your courses and students'}
               </p>
             </div>
             <div className="flex items-center space-x-2">
               {!isEmailVerified && (
-                <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
+                <span className="px-3 py-1 bg-[#bef0ff] text-[#005acd] text-sm font-medium rounded-full">
                   ⚠️ Verify Email
                 </span>
               )}
               {!hasConnectedWallet && (
-                <span className="px-3 py-1 bg-orange-100 text-orange-800 text-sm font-medium rounded-full">
+                <span className="px-3 py-1 bg-[#6dd7fd] text-[#005acd] text-sm font-medium rounded-full">
                   🔗 Connect Wallet
                 </span>
               )}
@@ -145,18 +145,18 @@ export default function Dashboard() {
 
       {/* Alert Messages */}
       {!isEmailVerified && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+        <div className="bg-[#f5ffff] border border-[#6dd7fd] rounded-md p-4">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-5 w-5 text-[#005acd]" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
+              <h3 className="text-sm font-medium text-[#005acd]">
                 Email Verification Required
               </h3>
-              <div className="mt-2 text-sm text-yellow-700">
+              <div className="mt-2 text-sm text-[#0093cb]">
                 <p>
                   Please check your email and click the verification link to access all features.
                 </p>
@@ -168,18 +168,18 @@ export default function Dashboard() {
 
       {/* Wallet Connection Prompt */}
       {isEmailVerified && !hasConnectedWallet && (
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+        <div className="bg-[#f5ffff] border border-[#6dd7fd] rounded-md p-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="h-5 w-5 text-[#005acd]" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="ml-3 flex-1">
-              <h3 className="text-sm font-medium text-blue-800">
+              <h3 className="text-sm font-medium text-[#005acd]">
                 Connect Your Wallet to Get Started
               </h3>
-              <div className="mt-2 text-sm text-blue-700">
+              <div className="mt-2 text-sm text-[#0093cb]">
                 <p>
                   Connect your MetaMask wallet to earn NFT certificates and access blockchain features.
                 </p>
@@ -197,25 +197,25 @@ export default function Dashboard() {
           {user?.role === 'student' && (
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+                <h3 className="text-lg leading-6 font-medium text-[#005acd] mb-4">
                   Your Learning Progress
                 </h3>
                 
                 {loading ? (
                   <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-4 bg-[#bef0ff] rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-[#bef0ff] rounded w-1/2"></div>
                   </div>
                 ) : enrollments.length > 0 ? (
                   <div className="space-y-4">
                     {enrollments.slice(0, 3).map((enrollment, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div key={index} className="border border-[#6dd7fd] rounded-lg p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="font-medium text-gray-900">
+                            <h4 className="font-medium text-[#005acd]">
                               {enrollment.course?.title || 'Course'}
                             </h4>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-[#0093cb]">
                               {enrollment.enrollment?.completion_percentage?.toFixed(0) || 0}% complete
                             </p>
                           </div>
@@ -250,7 +250,7 @@ export default function Dashboard() {
           {/* Digital Twin Overview (Legacy Component) */}
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+              <h3 className="text-lg leading-6 font-medium text-[#005acd] mb-4">
                 Digital Twin Analytics
               </h3>
               <StudentTwinOverview />
@@ -260,7 +260,7 @@ export default function Dashboard() {
           {/* Quick Actions */}
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+              <h3 className="text-lg leading-6 font-medium text-[#005acd] mb-4">
                 Quick Actions
               </h3>
               <div className="grid grid-cols-2 gap-4">
@@ -305,11 +305,11 @@ export default function Dashboard() {
           {/* Recent Activity */}
           <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+              <h3 className="text-lg leading-6 font-medium text-[#005acd] mb-4">
                 Recent Activity
               </h3>
               <div className="space-y-3">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-[#0093cb]">
                   No recent activity
                 </div>
               </div>

@@ -67,16 +67,16 @@ const AiTutorPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-150px)] max-w-3xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
-      <header className="bg-sky-600 text-white p-4 flex items-center space-x-2">
+      <header className="bg-[#005acd] text-white p-4 flex items-center space-x-2">
         <h1 className="text-xl font-semibold">AI Tutor (Gemini)</h1>
       </header>
       
-      <div className="flex-grow p-4 space-y-4 overflow-y-auto bg-gray-50">
+      <div className="flex-grow p-4 space-y-4 overflow-y-auto bg-[#f5ffff]">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-lg lg:max-w-xl px-4 py-2 rounded-xl shadow ${
                 msg.sender === 'user' 
-                ? 'bg-sky-500 text-white' 
+                ? 'bg-[#0093cb] text-white' 
                 : 'bg-white text-gray-800 border border-gray-200'
             }`}>
               <Markdown
@@ -103,7 +103,7 @@ const AiTutorPage: React.FC = () => {
               >
                 {msg.text}
               </Markdown>
-              <p className={`text-xs mt-1 ${msg.sender === 'user' ? 'text-sky-200' : 'text-gray-400'}`}>
+              <p className={`text-xs mt-1 ${msg.sender === 'user' ? 'text-[#bef0ff]' : 'text-gray-400'}`}>
                 {msg.timestamp.toLocaleTimeString()}
               </p>
             </div>
