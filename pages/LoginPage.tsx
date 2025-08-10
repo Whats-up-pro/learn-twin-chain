@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import { UserRole } from '../types';
-import { EyeIcon, EyeSlashIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon, ArrowRightOnRectangleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { jwtService } from '../services/jwtService';
 
 const LoginPage: React.FC = () => {
   const { updateLearnerProfile, setRole } = useAppContext();
@@ -10,8 +11,20 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check for success message from email verification
+  useEffect(() => {
+    if (location.state?.message && location.state?.type === 'success') {
+      setSuccessMessage(location.state.message);
+      // Clear the message after 5 seconds
+      const timer = setTimeout(() => setSuccessMessage(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +39,7 @@ const LoginPage: React.FC = () => {
     try {
       let res = await fetch('http://localhost:8000/api/v1/auth/login', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: did, password })
       });
@@ -44,6 +58,7 @@ const LoginPage: React.FC = () => {
         // Fallback to legacy endpoint for local JSON users
         res = await fetch('http://localhost:8000/login', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ did, password })
         });
@@ -68,6 +83,17 @@ const LoginPage: React.FC = () => {
         enrollment_date: user.enrollment_date,
         createdAt: user.created_at || user.createdAt
       };
+
+      // Save JWT tokens if available
+      if (payload.access_token) {
+        jwtService.storeTokens(
+          payload.access_token, 
+          payload.refresh_token || '', 
+          payload.token_type || 'bearer'
+        );
+        console.log('JWT tokens saved');
+      }
+
       updateLearnerProfile(profile, userRole);
       setRole(userRole);
       if (userRole === UserRole.TEACHER) {
@@ -182,6 +208,16 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
             
+            {/* Success message from email verification */}
+            {successMessage && (
+              <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
+                <div className="flex items-center">
+                  <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
+                  <div className="text-green-700 text-sm font-medium">{successMessage}</div>
+                </div>
+              </div>
+            )}
+
             {error && (
               <div className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg animate-shake">
                 <div className="text-red-700 text-sm font-medium">{error}</div>

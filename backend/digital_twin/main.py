@@ -18,6 +18,9 @@ if backend_dir not in sys.path:
 # Import API routers
 from digital_twin.api.auth_api import router as auth_router
 from digital_twin.api.course_api import router as course_router
+from digital_twin.api.lesson_api import router as lesson_router
+from digital_twin.api.quiz_api import router as quiz_router
+from digital_twin.api.achievement_api import router as achievement_router
 from digital_twin.api.twin_api import router as twin_router
 from digital_twin.api.learning_api import router as learning_router
 from digital_twin.api.analytics_api import router as analytics_router
@@ -118,6 +121,9 @@ app.add_middleware(
 # Include API routers
 app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(course_router, prefix="/api/v1", tags=["Courses"])
+app.include_router(lesson_router, prefix="/api/v1", tags=["Lessons"])
+app.include_router(quiz_router, prefix="/api/v1", tags=["Quizzes"])
+app.include_router(achievement_router, prefix="/api/v1", tags=["Achievements"])
 app.include_router(twin_router, prefix="/api/v1", tags=["Digital Twins"])
 app.include_router(learning_router, prefix="/api/v1", tags=["Learning"])
 app.include_router(analytics_router, prefix="/api/v1", tags=["Analytics"])
@@ -284,23 +290,32 @@ async def submit_teacher_feedback(feedback: TeacherFeedback):
         raise HTTPException(status_code=500, detail="Feedback submission failed")
 
 # Error handlers
+from fastapi.responses import JSONResponse
+from starlette.requests import Request
+
 @app.exception_handler(404)
-async def not_found_handler(request, exc):
-    return {
-        "error": "Not Found",
-        "message": "The requested resource was not found",
-        "status_code": 404,
-        "path": str(request.url)
-    }
+async def not_found_handler(request: Request, exc):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "Not Found",
+            "message": "The requested resource was not found",
+            "status_code": 404,
+            "path": str(request.url)
+        }
+    )
 
 @app.exception_handler(500)
-async def internal_error_handler(request, exc):
+async def internal_error_handler(request: Request, exc):
     logger.error(f"Internal server error: {exc}")
-    return {
-        "error": "Internal Server Error",
-        "message": "An internal server error occurred",
-        "status_code": 500
-    }
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "message": "An internal server error occurred",
+            "status_code": 500
+        }
+    )
 
 if __name__ == "__main__":
     uvicorn.run(

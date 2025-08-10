@@ -191,6 +191,59 @@ class Enrollment(Document):
             IndexModel("certificate_issued")
         ]
 
+class Lesson(Document):
+    """Lesson document with individual content tracking"""
+    
+    # Core identification
+    lesson_id: Indexed(str, unique=True) = Field(..., description="Unique lesson identifier")
+    module_id: Indexed(str) = Field(..., description="Parent module identifier")
+    course_id: Indexed(str) = Field(..., description="Parent course identifier")
+    
+    # Lesson details
+    title: str = Field(..., description="Lesson title")
+    description: str = Field(default="", description="Lesson description")
+    
+    # Content management
+    content_type: str = Field(..., description="Content type: video, text, interactive, quiz, assignment")
+    content_url: Optional[str] = Field(default=None, description="Content URL (e.g., YouTube link)")
+    content_cid: Optional[str] = Field(default=None, description="IPFS CID for content")
+    
+    # Structure and timing
+    duration_minutes: int = Field(default=30, description="Estimated lesson duration in minutes")
+    order: int = Field(default=0, description="Lesson order within module")
+    
+    # Learning design
+    learning_objectives: List[str] = Field(default_factory=list, description="Lesson learning objectives")
+    keywords: List[str] = Field(default_factory=list, description="Lesson keywords/tags")
+    
+    # Status
+    status: str = Field(default="published", description="Lesson status")  # draft, review, published, archived
+    is_mandatory: bool = Field(default=True, description="Required for module completion")
+    
+    # Prerequisites
+    prerequisites: List[str] = Field(default_factory=list, description="Required prerequisite lessons")
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    class Settings:
+        name = "lessons"
+        indexes = [
+            IndexModel("lesson_id", unique=True),
+            IndexModel("module_id"),
+            IndexModel("course_id"),
+            IndexModel("order"),
+            IndexModel("content_type"),
+            IndexModel("status"),
+            IndexModel("is_mandatory"),
+            IndexModel("created_at")
+        ]
+    
+    def update_timestamp(self):
+        """Update the updated_at timestamp"""
+        self.updated_at = datetime.now(timezone.utc)
+
 class ModuleProgress(Document):
     """Detailed module progress tracking"""
     

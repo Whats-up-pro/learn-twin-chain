@@ -83,6 +83,121 @@ export interface LearningModule {
   content: ModuleContentItem[];
   quiz: QuizQuestion[];
   prerequisites?: string[];
+  // Extended to match backend
+  module_id?: string;
+  course_id?: string;
+  order?: number;
+  parent_module?: string;
+  learning_objectives?: string[];
+  estimated_duration?: number;
+  assessments?: Array<{
+    assessment_id: string;
+    title: string;
+    type: string;
+    max_score: number;
+    passing_score: number;
+  }>;
+  completion_criteria?: Record<string, any>;
+  status?: string;
+  is_mandatory?: boolean;
+  completion_nft_enabled?: boolean;
+  content_cid?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// New interface matching backend Module exactly
+export interface ApiModule {
+  module_id: string;
+  course_id: string;
+  title: string;
+  description: string;
+  content: Array<{
+    content_type: string;
+    content_cid?: string;
+    content_url?: string;
+    duration_minutes: number;
+    order: number;
+  }>;
+  content_cid?: string;
+  order: number;
+  parent_module?: string;
+  learning_objectives: string[];
+  estimated_duration: number;
+  assessments: Array<{
+    assessment_id: string;
+    title: string;
+    type: string;
+    questions_cid?: string;
+    rubric_cid?: string;
+    max_score: number;
+    passing_score: number;
+    time_limit_minutes?: number;
+  }>;
+  completion_criteria: Record<string, any>;
+  status: string;
+  is_mandatory: boolean;
+  prerequisites: string[];
+  completion_nft_enabled: boolean;
+  nft_metadata_cid?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// New interface for Lesson
+export interface ApiLesson {
+  lesson_id: string;
+  module_id: string;
+  course_id: string;
+  title: string;
+  description: string;
+  content_type: string;
+  content_url?: string;
+  content_cid?: string;
+  duration_minutes: number;
+  order: number;
+  learning_objectives: string[];
+  keywords: string[];
+  status: string;
+  is_mandatory: boolean;
+  prerequisites: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+// Enrollment and Progress interfaces
+export interface ApiEnrollment {
+  user_id: string;
+  course_id: string;
+  enrolled_at: string;
+  status: string;
+  completed_modules: string[];
+  current_module?: string;
+  completion_percentage: number;
+  completed_at?: string;
+  final_grade?: number;
+  certificate_issued: boolean;
+  certificate_nft_token_id?: string;
+  notes?: string;
+}
+
+export interface ApiModuleProgress {
+  user_id: string;
+  course_id: string;
+  module_id: string;
+  started_at: string;
+  last_accessed: string;
+  completed_at?: string;
+  content_progress: Record<string, number>;
+  time_spent_minutes: number;
+  assessment_scores: Record<string, number>;
+  best_score: number;
+  attempts: number;
+  status: string;
+  completion_percentage: number;
+  nft_minted: boolean;
+  nft_token_id?: string;
+  nft_tx_hash?: string;
 }
 
 export interface ModuleContentItem {
@@ -205,6 +320,67 @@ export interface Course {
   createdAt: string;
   teacherId: string;
   isPublished: boolean;
+  // Extended properties to match backend
+  course_id?: string;
+  created_by?: string;
+  institution?: string;
+  instructors?: string[];
+  status?: string;
+  published_at?: string;
+  metadata?: {
+    difficulty_level?: string;
+    estimated_hours?: number;
+    prerequisites?: string[];
+    learning_objectives?: string[];
+    skills_taught?: string[];
+    tags?: string[];
+    language?: string;
+  };
+  enrollment_start?: string;
+  enrollment_end?: string;
+  course_start?: string;
+  course_end?: string;
+  max_enrollments?: number;
+  is_public?: boolean;
+  requires_approval?: boolean;
+  completion_nft_enabled?: boolean;
+  content_cid?: string;
+  updated_at?: string;
+}
+
+// New interface that matches backend exactly
+export interface ApiCourse {
+  course_id: string;
+  title: string;
+  description: string;
+  created_by: string;
+  institution: string;
+  instructors: string[];
+  version: number;
+  status: string;
+  published_at?: string;
+  metadata: {
+    difficulty_level: string;
+    estimated_hours: number;
+    prerequisites: string[];
+    learning_objectives: string[];
+    skills_taught: string[];
+    tags: string[];
+    language: string;
+  };
+  enrollment_start?: string;
+  enrollment_end?: string;
+  course_start?: string;
+  course_end?: string;
+  max_enrollments?: number;
+  is_public: boolean;
+  requires_approval: boolean;
+  completion_nft_enabled: boolean;
+  syllabus_cid?: string;
+  content_cid?: string;
+  nft_contract_address?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Application {

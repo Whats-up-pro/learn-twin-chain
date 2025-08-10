@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AcademicCapIcon, UserGroupIcon, ChartBarIcon, PlusIcon, EyeIcon, PencilIcon, TrashIcon, CheckCircleIcon, UserIcon, ArrowPathIcon, CodeBracketIcon, HeartIcon, BookOpenIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
-import { Course, LearnerProgress } from '../types';
+import { Course, LearnerProgress, ApiCourse } from '../types';
+import { courseService } from '../services/courseService';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 
@@ -25,7 +26,39 @@ const TeacherDashboardPage: React.FC = () => {
     category: 'Programming'
   });
 
-  // Demo data for My Courses and Popular Modules (Python theme)
+  // Helper function to convert ApiCourse to Course
+  const convertApiCourseToLegacy = (apiCourse: ApiCourse): Course => {
+    return {
+      id: apiCourse.course_id,
+      title: apiCourse.title,
+      description: apiCourse.description,
+      modules: [], // Will be populated separately if needed
+      enrolledLearners: 0, // Would need separate API call
+      createdAt: apiCourse.created_at,
+      teacherId: apiCourse.created_by,
+      isPublished: apiCourse.status === 'published',
+      // Map additional properties
+      course_id: apiCourse.course_id,
+      created_by: apiCourse.created_by,
+      institution: apiCourse.institution,
+      instructors: apiCourse.instructors,
+      status: apiCourse.status,
+      published_at: apiCourse.published_at,
+      metadata: apiCourse.metadata,
+      enrollment_start: apiCourse.enrollment_start,
+      enrollment_end: apiCourse.enrollment_end,
+      course_start: apiCourse.course_start,
+      course_end: apiCourse.course_end,
+      max_enrollments: apiCourse.max_enrollments,
+      is_public: apiCourse.is_public,
+      requires_approval: apiCourse.requires_approval,
+      completion_nft_enabled: apiCourse.completion_nft_enabled,
+      content_cid: apiCourse.content_cid,
+      updated_at: apiCourse.updated_at
+    };
+  };
+
+  // Demo data fallback for My Courses
   const demoCourses: Course[] = [
     {
       id: 'python101',
@@ -148,34 +181,69 @@ const TeacherDashboardPage: React.FC = () => {
     toast.success('Course publication status updated');
   };
 
-  const handleSubmitCourse = (e: React.FormEvent) => {
+  const handleSubmitCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newCourse: Course = {
-      id: isEditing ? selectedCourse!.id : Date.now().toString(),
-      title: courseForm.title,
-      description: courseForm.description,
-      modules: [],
-      enrolledLearners: isEditing ? selectedCourse!.enrolledLearners : 0,
-      createdAt: isEditing ? selectedCourse!.createdAt : new Date().toISOString(),
-      teacherId: 'teacher1',
-      isPublished: false
-    };
+    try {
+      if (isEditing && selectedCourse) {
+        // Update existing course
+        const updates = {
+          title: courseForm.title,
+          description: courseForm.description,
+        };
+        
+        const response = await courseService.updateCourse(selectedCourse.course_id || selectedCourse.id, updates);
+        
+        if (response && response.course) {
+          const updatedCourse = convertApiCourseToLegacy(response.course);
+          setCourses(prev => prev.map(course => 
+            (course.course_id || course.id) === (selectedCourse.course_id || selectedCourse.id) 
+              ? updatedCourse 
+              : course
+          ));
+          toast.success('Course updated successfully');
+        }
+      } else {
+        // Create new course
+        const courseData = {
+          title: courseForm.title,
+          description: courseForm.description,
+          institution: 'Default Institution',
+          metadata: {
+            difficulty_level: 'intermediate',
+            estimated_hours: 10,
+            prerequisites: [],
+            learning_objectives: [],
+            skills_taught: [],
+            tags: [courseForm.category.toLowerCase()],
+            language: 'en'
+          },
+          is_public: true,
+          requires_approval: false,
+          completion_nft_enabled: true
+        };
+        
+        const response = await courseService.createCourse(courseData);
+        
+        if (response && response.course) {
+          const newCourse = convertApiCourseToLegacy(response.course);
+          setCourses(prev => [newCourse, ...prev]);
+          toast.success('Course created successfully');
+        }
+      }
 
-    if (isEditing) {
-      setCourses(prev => prev.map(course => course.id === newCourse.id ? newCourse : course));
-      toast.success('Course updated successfully');
-    } else {
-      setCourses(prev => [newCourse, ...prev]);
-      toast.success('Course created successfully');
+      setShowCourseModal(false);
+      setCourseForm({
+        title: '',
+        description: '',
+        category: 'Programming'
+      });
+      setSelectedCourse(null);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error submitting course:', error);
+      toast.error(`Failed to ${isEditing ? 'update' : 'create'} course`);
     }
-
-    setShowCourseModal(false);
-    setCourseForm({
-      title: '',
-      description: '',
-      category: 'Programming'
-    });
   };
 
   // Learner management functions
@@ -386,9 +454,43 @@ const TeacherDashboardPage: React.FC = () => {
     }
   };
 
-  // Gọi fetchStudents khi load trang
+  // Load data when component mounts
   useEffect(() => {
-    fetchStudents();
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Load courses from API
+        try {
+          const coursesResponse = await courseService.searchCourses({
+            limit: 20 // Get first 20 courses
+          });
+          
+          if (coursesResponse && coursesResponse.courses) {
+            const convertedCourses = coursesResponse.courses.map(convertApiCourseToLegacy);
+            setCourses(convertedCourses);
+            console.log('Loaded courses from API:', convertedCourses);
+          } else {
+            // Fallback to demo data
+            setCourses(demoCourses);
+            console.log('Using demo courses data');
+          }
+        } catch (error) {
+          console.error('Error loading courses from API:', error);
+          setCourses(demoCourses);
+          toast.error('Failed to load courses. Using demo data.');
+        }
+
+        // Load learner progress
+        await fetchStudents();
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   // Hàm đồng bộ dữ liệu

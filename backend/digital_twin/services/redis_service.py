@@ -254,5 +254,3 @@ class RedisService:
             logger.error(f"Redis health check failed: {e}")
             return False
 
-# Import time here to avoid circular imports
-import time

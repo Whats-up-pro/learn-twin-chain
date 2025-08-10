@@ -1,115 +1,372 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QuizQuestion } from '../types';
+import { quizService, ApiQuiz, ApiQuizQuestion } from '../services/quizService';
 import toast from 'react-hot-toast';
 
 interface QuizProps {
-  questions: QuizQuestion[];
+  quizId?: string;
+  moduleId?: string;
+  questions?: QuizQuestion[]; // Fallback for legacy usage
   onQuizComplete: (score: number) => void;
 }
 
-const QuizComponent: React.FC<QuizProps> = ({ questions, onQuizComplete }) => {
+const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQuestions, onQuizComplete }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
+  const [quiz, setQuiz] = useState<ApiQuiz | null>(null);
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+
+  // Load quiz data from API
+  useEffect(() => {
+    const loadQuiz = async () => {
+      if (!quizId && !moduleId && propQuestions) {
+        // Use legacy prop questions
+        setQuestions(propQuestions);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        let quizData;
+        if (quizId) {
+          // Load specific quiz
+          const response = await quizService.getQuiz(quizId);
+          quizData = response.quiz;
+        } else if (moduleId) {
+          // Load quizzes for module and use the first one
+          const response = await quizService.getModuleQuizzes(moduleId);
+          if (response.quizzes && response.quizzes.length > 0) {
+            quizData = response.quizzes[0];
+          }
+        }
+
+        if (quizData) {
+          setQuiz(quizData);
+          
+          // Convert API questions to frontend format
+          const convertedQuestions: QuizQuestion[] = quizData.questions.map((apiQ: ApiQuizQuestion) => ({
+            id: apiQ.question_id,
+            text: apiQ.question_text,
+            options: apiQ.options?.map(opt => ({
+              id: opt.option_id,
+              text: opt.text
+            })) || [],
+            correctOptionId: apiQ.options?.find(opt => opt.is_correct)?.option_id || '',
+            explanation: apiQ.explanation
+          }));
+          
+          setQuestions(convertedQuestions);
+        } else if (!propQuestions) {
+          throw new Error('No quiz found');
+        }
+      } catch (error) {
+        console.error('Failed to load quiz:', error);
+        toast.error('Failed to load quiz');
+        
+        // Fallback to demo questions if provided
+        if (propQuestions) {
+          setQuestions(propQuestions);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadQuiz();
+  }, [quizId, moduleId, propQuestions]);
 
   const handleOptionSelect = (questionId: string, optionId: string) => {
     setSelectedAnswers(prev => ({ ...prev, [questionId]: optionId }));
   };
 
-  const handleSubmitQuiz = () => {
+  const handleSubmitQuiz = async () => {
     if (Object.keys(selectedAnswers).length !== questions.length) {
       toast.error("Please answer all questions before submitting.");
       return;
     }
 
-    let correctCount = 0;
-    questions.forEach(q => {
-      if (selectedAnswers[q.id] === q.correctOptionId) {
-        correctCount++;
+    try {
+      let scorePercentage = 0;
+      
+      if (quiz && attemptId) {
+        // Submit via API
+        const response = await quizService.submitQuizAttempt(attemptId, selectedAnswers);
+        if (response && response.attempt) {
+          scorePercentage = response.attempt.percentage;
+          setScore(response.attempt.percentage / 100);
+        }
+      } else {
+        // Fallback: calculate locally for legacy usage
+        let correctCount = 0;
+        questions.forEach(q => {
+          if (selectedAnswers[q.id] === q.correctOptionId) {
+            correctCount++;
+          }
+        });
+        const calculatedScore = (correctCount / questions.length);
+        scorePercentage = Math.round(calculatedScore * 100);
+        setScore(calculatedScore);
       }
-    });
-    const calculatedScore = (correctCount / questions.length);
-    const scorePercentage = Math.round(calculatedScore * 100); // Convert to percentage 0-100
-    setScore(calculatedScore);
-    setShowResults(true);
-    onQuizComplete(scorePercentage); // Pass percentage score
-    toast.success(`Quiz submitted! You got ${correctCount}/${questions.length} correct (${scorePercentage}%).`);
+
+      setShowResults(true);
+      onQuizComplete(scorePercentage);
+      toast.success(`Quiz submitted! Score: ${scorePercentage}%`);
+    } catch (error) {
+      console.error('Failed to submit quiz:', error);
+      toast.error('Failed to submit quiz. Please try again.');
+    }
   };
 
-  if (showResults) {
+  const startQuizAttempt = async () => {
+    if (!quiz) return;
+    
+    try {
+      const response = await quizService.startQuizAttempt(quiz.quiz_id);
+      if (response && response.attempt) {
+        setAttemptId(response.attempt.attempt_id);
+      }
+    } catch (error) {
+      console.error('Failed to start quiz attempt:', error);
+      // Continue without attempt tracking for demo purposes
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="p-6 bg-white rounded-lg shadow-md">
-        <h3 className="text-2xl font-semibold text-sky-700 mb-4">Quiz Results</h3>
-        <p className="text-lg mb-2">You scored: <span className="font-bold">{(score * 100).toFixed(0)}%</span></p>
-        <p className="text-gray-700 mb-6">({(score * questions.length).toFixed(0)} out of {questions.length} correct)</p>
-        
-        {questions.map((q, index) => (
-          <div key={q.id} className={`mb-4 p-3 rounded border ${selectedAnswers[q.id] === q.correctOptionId ? 'border-green-400 bg-green-50' : 'border-red-400 bg-red-50'}`}>
-            <p className="font-medium text-gray-800">{index + 1}. {q.text}</p>
-            <p className="text-sm">Your answer: {q.options.find(opt => opt.id === selectedAnswers[q.id])?.text || 'Not answered'}</p>
-            {selectedAnswers[q.id] !== q.correctOptionId && (
-              <p className="text-sm text-green-700">Correct answer: {q.options.find(opt => opt.id === q.correctOptionId)?.text}</p>
-            )}
-            {q.explanation && <p className="text-xs text-gray-600 mt-1 italic">{q.explanation}</p>}
+      <div className="flex items-center justify-center p-8 bg-white rounded-xl shadow-lg border border-slate-200">
+        <div className="loading-spinner w-8 h-8"></div>
+        <span className="ml-3 text-slate-600">Loading quiz...</span>
+      </div>
+    );
+  }
+
+  if (showResults) {
+    const scorePercentage = Math.round(score * 100);
+    const passed = score >= 0.7;
+    const correctCount = Math.round(score * questions.length);
+    
+    return (
+      <div className="p-8 bg-white rounded-xl shadow-lg border border-slate-200">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 ${
+            passed ? 'bg-green-100 border-4 border-green-200' : 'bg-red-100 border-4 border-red-200'
+          }`}>
+            <span className={`text-2xl font-bold ${
+              passed ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {scorePercentage}%
+            </span>
           </div>
-        ))}
-        <button
-          onClick={() => { setShowResults(false); setSelectedAnswers({}); setCurrentQuestionIndex(0); setScore(0);}}
-          className="mt-4 bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-        >
-          Retake Quiz
-        </button>
+          <h3 className="text-3xl font-bold text-slate-900 mb-2">Quiz Completed!</h3>
+          <p className={`text-lg font-medium ${
+            passed ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {passed ? "🎉 Excellent work! You passed!" : "📚 Keep studying and try again."}
+          </p>
+          <p className="text-slate-600 mt-2">
+            You got {correctCount} out of {questions.length} questions correct
+          </p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex justify-between text-sm font-medium text-slate-600 mb-2">
+            <span>Your Score</span>
+            <span>{scorePercentage}% ({correctCount}/{questions.length})</span>
+          </div>
+          <div className="w-full bg-slate-200 rounded-full h-4">
+            <div 
+              className={`h-4 rounded-full transition-all duration-1000 ${
+                passed ? 'bg-green-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${scorePercentage}%` }}
+            ></div>
+          </div>
+        </div>
+
+        {/* Question Review */}
+        <div className="space-y-4 mb-8 max-h-64 overflow-y-auto">
+          {questions.map((q, index) => {
+            const isCorrect = selectedAnswers[q.id] === q.correctOptionId;
+            return (
+              <div key={q.id} className={`p-4 rounded-lg border ${
+                isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+              }`}>
+                <p className="font-medium text-slate-800 mb-2">{index + 1}. {q.text}</p>
+                <p className="text-sm text-slate-600 mb-1">
+                  <span className="font-medium">Your answer:</span> {
+                    q.options.find(opt => opt.id === selectedAnswers[q.id])?.text || 'Not answered'
+                  }
+                </p>
+                {!isCorrect && (
+                  <p className="text-sm text-green-700 mb-1">
+                    <span className="font-medium">Correct answer:</span> {
+                      q.options.find(opt => opt.id === q.correctOptionId)?.text
+                    }
+                  </p>
+                )}
+                {q.explanation && (
+                  <p className="text-xs text-slate-600 mt-2 p-2 bg-slate-100 rounded italic">
+                    💡 {q.explanation}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button 
+            onClick={() => {
+              setShowResults(false);
+              setCurrentQuestionIndex(0);
+              setSelectedAnswers({});
+              setScore(0);
+              setAttemptId(null);
+              if (quiz) {
+                startQuizAttempt();
+              }
+            }}
+            className="btn-secondary flex-1"
+          >
+            Retake Quiz
+          </button>
+          <button 
+            onClick={() => onQuizComplete(scorePercentage)}
+            className="btn-primary flex-1"
+          >
+            Continue Learning
+          </button>
+        </div>
       </div>
     );
   }
 
   const currentQuestion = questions[currentQuestionIndex];
 
-  return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      <h3 className="text-2xl font-semibold text-sky-700 mb-2">Quiz: Question {currentQuestionIndex + 1} of {questions.length}</h3>
-      <p className="text-lg text-gray-800 mb-6">{currentQuestion.text}</p>
-      <div className="space-y-3">
-        {currentQuestion.options.map(option => (
-          <button
-            key={option.id}
-            onClick={() => handleOptionSelect(currentQuestion.id, option.id)}
-            className={`
-              w-full text-left p-3 border rounded-lg transition-all
-              ${selectedAnswers[currentQuestion.id] === option.id 
-                ? 'bg-sky-500 text-white border-sky-600 ring-2 ring-sky-400' 
-                : 'bg-gray-50 hover:bg-sky-100 border-gray-300 text-gray-700'}
-            `}
-          >
-            {option.text}
-          </button>
-        ))}
+  if (!currentQuestion) {
+    return (
+      <div className="p-8 bg-white rounded-xl shadow-lg border border-slate-200 text-center">
+        <p className="text-slate-600">No quiz questions available.</p>
       </div>
-      <div className="mt-8 flex justify-between items-center">
+    );
+  }
+
+  return (
+    <div className="p-8 bg-white rounded-xl shadow-lg border border-slate-200">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-2xl font-bold text-slate-900">
+            {quiz?.title || 'Quiz'}
+          </h3>
+          <div className="flex items-center space-x-2">
+            <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+              {currentQuestionIndex + 1} of {questions.length}
+            </span>
+          </div>
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-200 rounded-full h-2 mb-2">
+          <div 
+            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+          ></div>
+        </div>
+        <p className="text-sm text-slate-600">
+          Progress: {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% complete
+        </p>
+      </div>
+
+      {/* Question */}
+      <div className="mb-8">
+        <h4 className="text-xl font-semibold text-slate-900 mb-6 leading-relaxed">
+          {currentQuestion.text}
+        </h4>
+        
+        {/* Options */}
+        <div className="space-y-3">
+          {currentQuestion.options.map((option, index) => {
+            const isSelected = selectedAnswers[currentQuestion.id] === option.id;
+            const optionLetter = String.fromCharCode(65 + index); // A, B, C, D...
+            
+            return (
+              <button
+                key={option.id}
+                onClick={() => handleOptionSelect(currentQuestion.id, option.id)}
+                className={`
+                  w-full text-left p-4 border-2 rounded-lg transition-all duration-200 group
+                  ${isSelected 
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-lg transform scale-[1.02]' 
+                    : 'bg-white border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50'}
+                `}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                    ${isSelected 
+                      ? 'bg-white text-blue-600' 
+                      : 'bg-slate-100 text-slate-600 group-hover:bg-blue-100'}
+                  `}>
+                    {optionLetter}
+                  </div>
+                  <span className="flex-1 text-base">{option.text}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between items-center">
         <button
           onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
           disabled={currentQuestionIndex === 0}
-          className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+          className="btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Previous
+          ← Previous
         </button>
+        
+        <div className="flex space-x-2">
+          {questions.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentQuestionIndex(index)}
+              className={`w-3 h-3 rounded-full transition-all ${
+                index === currentQuestionIndex
+                  ? 'bg-blue-600'
+                  : selectedAnswers[questions[index]?.id]
+                  ? 'bg-green-400'
+                  : 'bg-slate-300'
+              }`}
+            />
+          ))}
+        </div>
+        
         {currentQuestionIndex === questions.length - 1 ? (
           <button
             onClick={handleSubmitQuiz}
-             disabled={!selectedAnswers[currentQuestion.id]}
-            className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            disabled={Object.keys(selectedAnswers).length !== questions.length}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Submit Quiz
+            Submit Quiz →
           </button>
         ) : (
           <button
             onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
-            disabled={!selectedAnswers[currentQuestion.id]}
-            className="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            className="btn-primary"
           >
-            Next
+            Next →
           </button>
         )}
       </div>

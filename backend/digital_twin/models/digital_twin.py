@@ -10,29 +10,71 @@ from pymongo import IndexModel
 class LearningProgress(BaseModel):
     """Learning progress tracking"""
     module_id: str
+    course_id: str  # Added: Link to course structure
     completion_percentage: float = 0.0
     start_date: Optional[datetime] = None
     completion_date: Optional[datetime] = None
     time_spent_minutes: int = 0
-    quiz_scores: List[float] = []
+    lessons_completed: List[str] = []  # Added: List of completed lesson IDs
+    quiz_attempts: List[Dict[str, Any]] = []  # Added: Enhanced quiz tracking
+    last_accessed: Optional[datetime] = None
+    nft_minted: bool = False  # Added: Track if module completion NFT was minted
+    nft_token_id: Optional[str] = None  # Added: NFT token ID if minted
+
+class LessonProgress(BaseModel):
+    """Individual lesson progress tracking"""
+    lesson_id: str
+    module_id: str
+    course_id: str
+    completion_percentage: float = 0.0
+    start_date: Optional[datetime] = None
+    completion_date: Optional[datetime] = None
+    time_spent_minutes: int = 0
     last_accessed: Optional[datetime] = None
 
-class SkillAssessment(BaseModel):
-    """Skill assessment and competency tracking"""
-    skill_name: str
-    proficiency_level: str  # beginner, intermediate, advanced, expert
-    assessment_score: float = 0.0
-    verified: bool = False
-    verified_by: Optional[str] = None
-    verification_date: Optional[datetime] = None
-    evidence_cids: List[str] = []  # IPFS CIDs for evidence
+class QuizAttemptRecord(BaseModel):
+    """Quiz attempt tracking"""
+    quiz_id: str
+    lesson_id: Optional[str] = None  # Quiz might be associated with a lesson
+    module_id: str
+    course_id: str
+    attempt_number: int
+    start_time: datetime
+    completion_time: Optional[datetime] = None
+    score_percentage: float = 0.0
+    time_spent_minutes: int = 0
+    passed: bool = False
+
+class AchievementRecord(BaseModel):
+    """Achievement tracking"""
+    achievement_id: str
+    title: str
+    description: str
+    achievement_type: str  # LEARNING, COMPLETION, ASSESSMENT, SKILL, ENGAGEMENT
+    tier: str  # BRONZE, SILVER, GOLD, PLATINUM
+    earned_at: datetime
+    evidence: Dict[str, Any] = {}  # Evidence data (module_id, quiz_id, etc.)
+    nft_minted: bool = False
+    nft_token_id: Optional[str] = None
+    nft_contract_address: Optional[str] = None
+
+class EnrollmentRecord(BaseModel):
+    """Course enrollment tracking"""
+    course_id: str
+    enrolled_at: datetime
+    status: str  # enrolled, in_progress, completed, dropped
+    completion_percentage: float = 0.0
+    completed_at: Optional[datetime] = None
+    final_grade: Optional[float] = None
+    certificate_issued: bool = False
+    certificate_nft_token_id: Optional[str] = None
 
 class CheckpointRecord(BaseModel):
     """Learning checkpoint record"""
     checkpoint_id: str
     timestamp: datetime
     twin_state_cid: str  # IPFS CID of twin state at checkpoint
-    trigger_event: str  # module_completion, skill_verification, etc.
+    trigger_event: str  # module_completion, skill_verification, achievement_earned, etc.
     metadata: Dict[str, Any] = {}
 
 class DigitalTwin(Document):
@@ -45,7 +87,6 @@ class DigitalTwin(Document):
     # Version control
     version: int = Field(default=1, description="Twin version number")
     latest_cid: Optional[str] = Field(default=None, description="Latest IPFS CID")
-    previous_cids: List[str] = Field(default_factory=list, description="Historical IPFS CIDs")
     
     # On-chain anchoring
     on_chain_tx_hash: Optional[str] = Field(default=None, description="Blockchain transaction hash")
@@ -60,14 +101,14 @@ class DigitalTwin(Document):
     completed_modules: List[str] = Field(default_factory=list, description="Completed modules")
     learning_progress: List[LearningProgress] = Field(default_factory=list, description="Detailed progress")
     
-    # Skill assessment (for fast queries)
-    skill_assessments: List[SkillAssessment] = Field(default_factory=list, description="Skill evaluations")
-    verified_skills: List[str] = Field(default_factory=list, description="Verified skill names")
+    # Enhanced learning tracking
+    lesson_progress: List[LessonProgress] = Field(default_factory=list, description="Individual lesson progress")
+    quiz_attempts: List[QuizAttemptRecord] = Field(default_factory=list, description="Quiz attempt history")
+    achievements: List[AchievementRecord] = Field(default_factory=list, description="Earned achievements")
+    enrollments: List[EnrollmentRecord] = Field(default_factory=list, description="Course enrollments")
     
-    # Interaction patterns
+    # Interaction patterns (simplified)
     learning_style: str = Field(default="balanced", description="Identified learning style")
-    preferred_topics: List[str] = Field(default_factory=list, description="Preferred learning topics")
-    activity_pattern: Dict[str, Any] = Field(default_factory=dict, description="Learning activity patterns")
     
     # Checkpoint history
     checkpoint_history: List[CheckpointRecord] = Field(default_factory=list, description="Learning checkpoints")
@@ -76,13 +117,8 @@ class DigitalTwin(Document):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
-    # Privacy and sharing settings
+    # Privacy settings (simplified)
     privacy_level: str = Field(default="private", description="Privacy level: private, institution, public")
-    sharing_permissions: Dict[str, List[str]] = Field(default_factory=dict, description="Granular sharing permissions")
-    
-    # AI and analytics
-    ai_insights: Dict[str, Any] = Field(default_factory=dict, description="AI-generated insights")
-    prediction_models: Dict[str, Any] = Field(default_factory=dict, description="Predictive model data")
     
     class Settings:
         name = "digital_twins"
@@ -93,7 +129,15 @@ class DigitalTwin(Document):
             IndexModel("anchor_status"),
             IndexModel("updated_at"),
             IndexModel("privacy_level"),
-            IndexModel("verified_skills")
+            # Learning tracking indexes
+            IndexModel("current_modules"),
+            IndexModel("completed_modules"),
+            IndexModel("enrollments.course_id"),
+            IndexModel("achievements.achievement_type"),
+            IndexModel("achievements.tier"),
+            IndexModel("achievements.earned_at"),
+            IndexModel([("owner_did", 1), ("enrollments.course_id", 1)]),
+            IndexModel([("owner_did", 1), ("achievements.tier", 1)])
         ]
     
     def update_timestamp(self):
@@ -112,37 +156,9 @@ class DigitalTwin(Document):
         self.checkpoint_history.append(checkpoint)
         self.update_timestamp()
     
-    def update_skill_assessment(self, skill_name: str, proficiency_level: str, score: float, verified: bool = False, verified_by: str = None):
-        """Update or add skill assessment"""
-        # Find existing assessment
-        for assessment in self.skill_assessments:
-            if assessment.skill_name == skill_name:
-                assessment.proficiency_level = proficiency_level
-                assessment.assessment_score = score
-                if verified:
-                    assessment.verified = True
-                    assessment.verified_by = verified_by
-                    assessment.verification_date = datetime.now(timezone.utc)
-                    if skill_name not in self.verified_skills:
-                        self.verified_skills.append(skill_name)
-                break
-        else:
-            # Create new assessment
-            assessment = SkillAssessment(
-                skill_name=skill_name,
-                proficiency_level=proficiency_level,
-                assessment_score=score,
-                verified=verified,
-                verified_by=verified_by,
-                verification_date=datetime.now(timezone.utc) if verified else None
-            )
-            self.skill_assessments.append(assessment)
-            if verified and skill_name not in self.verified_skills:
-                self.verified_skills.append(skill_name)
-        
-        self.update_timestamp()
+
     
-    def update_learning_progress(self, module_id: str, completion_percentage: float, time_spent: int = 0):
+    def update_learning_progress(self, module_id: str, course_id: str, completion_percentage: float, time_spent: int = 0):
         """Update learning progress for a module"""
         # Find existing progress
         for progress in self.learning_progress:
@@ -159,6 +175,7 @@ class DigitalTwin(Document):
             # Create new progress record
             progress = LearningProgress(
                 module_id=module_id,
+                course_id=course_id,
                 completion_percentage=completion_percentage,
                 start_date=datetime.now(timezone.utc),
                 completion_date=datetime.now(timezone.utc) if completion_percentage >= 100 else None,
@@ -177,6 +194,121 @@ class DigitalTwin(Document):
         
         self.update_timestamp()
     
+    def update_lesson_progress(self, lesson_id: str, module_id: str, course_id: str, completion_percentage: float, time_spent: int = 0):
+        """Update progress for a specific lesson"""
+        # Find existing lesson progress
+        for progress in self.lesson_progress:
+            if progress.lesson_id == lesson_id:
+                progress.completion_percentage = completion_percentage
+                progress.time_spent_minutes += time_spent
+                progress.last_accessed = datetime.now(timezone.utc)
+                if completion_percentage >= 100 and progress.completion_date is None:
+                    progress.completion_date = datetime.now(timezone.utc)
+                break
+        else:
+            # Create new lesson progress record
+            progress = LessonProgress(
+                lesson_id=lesson_id,
+                module_id=module_id,
+                course_id=course_id,
+                completion_percentage=completion_percentage,
+                start_date=datetime.now(timezone.utc),
+                completion_date=datetime.now(timezone.utc) if completion_percentage >= 100 else None,
+                time_spent_minutes=time_spent,
+                last_accessed=datetime.now(timezone.utc)
+            )
+            self.lesson_progress.append(progress)
+        
+        # Update module progress if lesson is completed
+        if completion_percentage >= 100:
+            # Find module progress and add lesson to completed lessons
+            for module_progress in self.learning_progress:
+                if module_progress.module_id == module_id:
+                    if lesson_id not in module_progress.lessons_completed:
+                        module_progress.lessons_completed.append(lesson_id)
+                    break
+        
+        self.update_timestamp()
+    
+    def add_quiz_attempt(self, quiz_id: str, module_id: str, course_id: str, score_percentage: float, 
+                        lesson_id: str = None):
+        """Add a quiz attempt record"""
+        attempt_number = len([q for q in self.quiz_attempts if q.quiz_id == quiz_id]) + 1
+        
+        quiz_attempt = QuizAttemptRecord(
+            quiz_id=quiz_id,
+            lesson_id=lesson_id,
+            module_id=module_id,
+            course_id=course_id,
+            attempt_number=attempt_number,
+            start_time=datetime.now(timezone.utc),
+            completion_time=datetime.now(timezone.utc),
+            score_percentage=score_percentage,
+            passed=score_percentage >= 70  # Default passing threshold
+        )
+        
+        self.quiz_attempts.append(quiz_attempt)
+        
+        # Update module progress quiz attempts
+        for module_progress in self.learning_progress:
+            if module_progress.module_id == module_id:
+                quiz_data = {
+                    'quiz_id': quiz_id,
+                    'attempt_number': attempt_number,
+                    'score_percentage': score_percentage,
+                    'completed_at': datetime.now(timezone.utc).isoformat(),
+                    'passed': quiz_attempt.passed
+                }
+                module_progress.quiz_attempts.append(quiz_data)
+                break
+        
+        self.update_timestamp()
+    
+    def add_achievement(self, achievement_id: str, title: str, description: str, 
+                       achievement_type: str, tier: str, evidence: Dict[str, Any] = None):
+        """Add an earned achievement"""
+        achievement = AchievementRecord(
+            achievement_id=achievement_id,
+            title=title,
+            description=description,
+            achievement_type=achievement_type,
+            tier=tier,
+            earned_at=datetime.now(timezone.utc),
+            evidence=evidence or {}
+        )
+        
+        self.achievements.append(achievement)
+        
+        # Add checkpoint for achievement
+        self.add_checkpoint(
+            checkpoint_id=f"achievement_{achievement_id}",
+            cid="",  # Will be updated when pinned to IPFS
+            trigger_event="achievement_earned",
+            metadata={
+                'achievement_id': achievement_id,
+                'tier': tier,
+                'type': achievement_type
+            }
+        )
+        
+        self.update_timestamp()
+    
+    def enroll_in_course(self, course_id: str):
+        """Enroll student in a course"""
+        # Check if already enrolled
+        for enrollment in self.enrollments:
+            if enrollment.course_id == course_id:
+                return  # Already enrolled
+        
+        enrollment = EnrollmentRecord(
+            course_id=course_id,
+            enrolled_at=datetime.now(timezone.utc),
+            status="enrolled"
+        )
+        
+        self.enrollments.append(enrollment)
+        self.update_timestamp()
+    
     def get_canonical_payload(self) -> Dict[str, Any]:
         """Get the canonical payload for IPFS storage"""
         return {
@@ -188,19 +320,14 @@ class DigitalTwin(Document):
             "learning_state": {
                 "current_modules": self.current_modules,
                 "completed_modules": self.completed_modules,
-                "progress": [progress.dict() for progress in self.learning_progress]
+                "progress": [progress.dict() for progress in self.learning_progress],
+                "lesson_progress": [lesson.dict() for lesson in self.lesson_progress],
+                "quiz_attempts": [quiz.dict() for quiz in self.quiz_attempts]
             },
-            "skill_profile": {
-                "assessments": [assessment.dict() for assessment in self.skill_assessments],
-                "verified_skills": self.verified_skills
-            },
-            "interaction_patterns": {
-                "learning_style": self.learning_style,
-                "preferred_topics": self.preferred_topics,
-                "activity_pattern": self.activity_pattern
-            },
+            "achievements": [achievement.dict() for achievement in self.achievements],
+            "enrollments": [enrollment.dict() for enrollment in self.enrollments],
+            "learning_style": self.learning_style,
             "checkpoint_history": [checkpoint.dict() for checkpoint in self.checkpoint_history],
-            "ai_insights": self.ai_insights,
             "privacy_level": self.privacy_level
         }
 

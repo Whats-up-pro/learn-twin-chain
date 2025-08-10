@@ -543,11 +543,20 @@ class CourseService:
             
             enrollment_data = []
             for enrollment in enrollments:
-                course = await self.get_course(enrollment.course_id)
-                if course:
+                try:
+                    course = await self.get_course(enrollment.course_id)
+                    if course:
+                        enrollment_info = {
+                            "enrollment": enrollment.dict(),
+                            "course": course.dict()
+                        }
+                        enrollment_data.append(enrollment_info)
+                except Exception as course_error:
+                    logger.error(f"Error processing course {enrollment.course_id}: {course_error}")
+                    # Still include enrollment even if course fails
                     enrollment_info = {
                         "enrollment": enrollment.dict(),
-                        "course": course.dict()
+                        "course": None
                     }
                     enrollment_data.append(enrollment_info)
             

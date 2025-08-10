@@ -1,504 +1,442 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
+import { achievementService, ApiUserAchievement, ApiAchievement } from '../services/achievementService';
 import { 
   TrophyIcon, 
   StarIcon, 
-  FireIcon, 
-  AcademicCapIcon,
-  ClockIcon,
   CheckCircleIcon,
   LockClosedIcon,
-  SparklesIcon,
+  FireIcon, 
+  AcademicCapIcon,
   ChartBarIcon,
-  BoltIcon,
-  RocketLaunchIcon,
-  GiftIcon
+  ClockIcon
 } from '@heroicons/react/24/outline';
-import { 
-  TrophyIcon as TrophyIconSolid,
-  StarIcon as StarIconSolid,
-  FireIcon as FireIconSolid
-} from '@heroicons/react/24/solid';
+import toast from 'react-hot-toast';
 
-interface Achievement {
+interface AchievementDisplayData {
   id: string;
   title: string;
   description: string;
-  category: 'learning' | 'progress' | 'streak' | 'special' | 'nft';
-  difficulty: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
-  icon: string;
-  requirements: {
-    type: string;
-    value: number;
-    description: string;
-  };
-  progress: number;
-  maxProgress: number;
-  unlocked: boolean;
-  unlockedAt?: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary' | 'mythic';
+  type: string;
+  tier: string;
+  category: string;
   points: number;
-  nftEligible?: boolean;
+  icon: string;
+  badgeColor: string;
+  isUnlocked: boolean;
+  isCompleted: boolean;
+  progress: number;
+  unlockedAt?: string;
+  nftMinted?: boolean;
+  tags: string[];
 }
 
 const AchievementsPage: React.FC = () => {
-  const { digitalTwin } = useAppContext();
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const { learnerProfile } = useAppContext();
+  const [achievements, setAchievements] = useState<AchievementDisplayData[]>([]);
+  const [userAchievements, setUserAchievements] = useState<ApiUserAchievement[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [showUnlockedOnly, setShowUnlockedOnly] = useState(false);
-
-  // Achievement definitions with Steam-like icons from CDN
-  const achievementDefinitions: Achievement[] = [
-    {
-      id: 'first_steps',
-      title: 'First Steps',
-      description: 'Complete your first learning module',
-      category: 'learning',
-      difficulty: 'bronze',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3c6.png',
-      requirements: { type: 'modules_completed', value: 1, description: 'Complete 1 module' },
-      progress: 0,
-      maxProgress: 1,
-      unlocked: false,
-      rarity: 'common',
-      points: 10
-    },
-    {
-      id: 'learning_streak_3',
-      title: 'Learning Streak',
-      description: 'Learn for 3 consecutive days',
-      category: 'streak',
-      difficulty: 'bronze',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f525.png',
-      requirements: { type: 'daily_streak', value: 3, description: 'Study 3 days in a row' },
-      progress: 0,
-      maxProgress: 3,
-      unlocked: false,
-      rarity: 'common',
-      points: 25
-    },
-    {
-      id: 'python_master',
-      title: 'Python Master',
-      description: 'Complete all Python course modules',
-      category: 'learning',
-      difficulty: 'gold',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f40d.png',
-      requirements: { type: 'course_completed', value: 1, description: 'Complete Python course' },
-      progress: 0,
-      maxProgress: 1,
-      unlocked: false,
-      rarity: 'rare',
-      points: 100,
-      nftEligible: true
-    },
-    {
-      id: 'blockchain_pioneer',
-      title: 'Blockchain Pioneer',
-      description: 'Complete the blockchain fundamentals course',
-      category: 'learning',
-      difficulty: 'gold',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4b0.png',
-      requirements: { type: 'course_completed', value: 1, description: 'Complete Blockchain course' },
-      progress: 0,
-      maxProgress: 1,
-      unlocked: false,
-      rarity: 'rare',
-      points: 150,
-      nftEligible: true
-    },
-    {
-      id: 'speedrun_novice',
-      title: 'Speed Learner',
-      description: 'Complete a module in under 30 minutes',
-      category: 'special',
-      difficulty: 'silver',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3ce.png',
-      requirements: { type: 'module_time', value: 30, description: 'Complete module < 30 min' },
-      progress: 0,
-      maxProgress: 1,
-      unlocked: false,
-      rarity: 'rare',
-      points: 50
-    },
-    {
-      id: 'perfect_score',
-      title: 'Perfectionist',
-      description: 'Score 100% on 5 different quizzes',
-      category: 'progress',
-      difficulty: 'gold',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f947.png',
-      requirements: { type: 'perfect_scores', value: 5, description: 'Get 100% on 5 quizzes' },
-      progress: 0,
-      maxProgress: 5,
-      unlocked: false,
-      rarity: 'epic',
-      points: 200
-    },
-    {
-      id: 'nft_collector_bronze',
-      title: 'NFT Collector',
-      description: 'Mint your first learning NFT',
-      category: 'nft',
-      difficulty: 'bronze',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3a8.png',
-      requirements: { type: 'nfts_minted', value: 1, description: 'Mint 1 NFT' },
-      progress: 0,
-      maxProgress: 1,
-      unlocked: false,
-      rarity: 'common',
-      points: 75
-    },
-    {
-      id: 'nft_collector_silver',
-      title: 'NFT Enthusiast',
-      description: 'Mint 5 learning NFTs',
-      category: 'nft',
-      difficulty: 'silver',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f31f.png',
-      requirements: { type: 'nfts_minted', value: 5, description: 'Mint 5 NFTs' },
-      progress: 0,
-      maxProgress: 5,
-      unlocked: false,
-      rarity: 'rare',
-      points: 250
-    },
-    {
-      id: 'knowledge_seeker',
-      title: 'Knowledge Seeker',
-      description: 'Reach 80% knowledge level in any subject',
-      category: 'progress',
-      difficulty: 'silver',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9e0.png',
-      requirements: { type: 'knowledge_level', value: 80, description: 'Reach 80% knowledge' },
-      progress: 0,
-      maxProgress: 80,
-      unlocked: false,
-      rarity: 'rare',
-      points: 125
-    },
-    {
-      id: 'legendary_learner',
-      title: 'Legendary Learner',
-      description: 'Complete 10 modules with perfect scores',
-      category: 'learning',
-      difficulty: 'platinum',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f451.png',
-      requirements: { type: 'perfect_modules', value: 10, description: 'Complete 10 modules perfectly' },
-      progress: 0,
-      maxProgress: 10,
-      unlocked: false,
-      rarity: 'legendary',
-      points: 500,
-      nftEligible: true
-    },
-    {
-      id: 'study_time_warrior',
-      title: 'Study Time Warrior',
-      description: 'Accumulate 100 hours of study time',
-      category: 'progress',
-      difficulty: 'gold',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/23f0.png',
-      requirements: { type: 'study_time', value: 6000, description: 'Study for 100 hours total' },
-      progress: 0,
-      maxProgress: 6000,
-      unlocked: false,
-      rarity: 'epic',
-      points: 300
-    },
-    {
-      id: 'digital_twin_master',
-      title: 'Digital Twin Master',
-      description: 'Reach maximum optimization in your digital twin',
-      category: 'special',
-      difficulty: 'diamond',
-      icon: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9ff.png',
-      requirements: { type: 'twin_optimization', value: 100, description: 'Optimize digital twin 100%' },
-      progress: 0,
-      maxProgress: 100,
-      unlocked: false,
-      rarity: 'mythic',
-      points: 1000,
-      nftEligible: true
-    }
-  ];
-
-  useEffect(() => {
-    // Calculate achievement progress based on digital twin data
-    const updatedAchievements = achievementDefinitions.map(achievement => {
-      let progress = 0;
-      let unlocked = false;
-
-      switch (achievement.requirements.type) {
-        case 'modules_completed':
-          progress = Object.keys(digitalTwin.knowledge).length;
-          break;
-        case 'perfect_scores':
-          progress = digitalTwin.checkpoints?.filter(c => c.score === 100).length || 0;
-          break;
-        case 'study_time':
-          progress = digitalTwin.behavior.studyTime || 0;
-          break;
-        case 'knowledge_level':
-          const maxKnowledge = Math.max(...Object.values(digitalTwin.knowledge), 0);
-          progress = Math.round(maxKnowledge * 100);
-          break;
-        case 'nfts_minted':
-          progress = digitalTwin.nfts?.length || 0;
-          break;
-        default:
-          progress = 0;
-      }
-
-      unlocked = progress >= achievement.maxProgress;
-
-      return {
-        ...achievement,
-        progress: Math.min(progress, achievement.maxProgress),
-        unlocked,
-        unlockedAt: unlocked ? new Date().toISOString() : undefined
-      };
-    });
-
-    setAchievements(updatedAchievements);
-  }, [digitalTwin]);
-
-  const categories = [
-    { id: 'all', name: 'All Achievements', icon: TrophyIcon },
-    { id: 'learning', name: 'Learning', icon: AcademicCapIcon },
-    { id: 'progress', name: 'Progress', icon: ChartBarIcon },
-    { id: 'streak', name: 'Streaks', icon: FireIcon },
-    { id: 'nft', name: 'NFT Collection', icon: SparklesIcon },
-    { id: 'special', name: 'Special', icon: StarIcon }
-  ];
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'bronze': return 'from-amber-600 to-yellow-600';
-      case 'silver': return 'from-slate-400 to-gray-500';
-      case 'gold': return 'from-yellow-400 to-amber-500';
-      case 'platinum': return 'from-cyan-400 to-blue-500';
-      case 'diamond': return 'from-purple-400 to-indigo-600';
-      default: return 'from-gray-400 to-gray-500';
-    }
-  };
-
-  const getRarityBorder = (rarity: string) => {
-    switch (rarity) {
-      case 'common': return 'border-gray-300';
-      case 'rare': return 'border-blue-400';
-      case 'epic': return 'border-purple-500';
-      case 'legendary': return 'border-orange-500';
-      case 'mythic': return 'border-pink-500';
-      default: return 'border-gray-300';
-    }
-  };
-
-  const filteredAchievements = achievements.filter(achievement => {
-    const categoryMatch = selectedCategory === 'all' || achievement.category === selectedCategory;
-    const unlockedMatch = !showUnlockedOnly || achievement.unlocked;
-    return categoryMatch && unlockedMatch;
+  const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [stats, setStats] = useState({
+    totalAchievements: 0,
+    unlockedCount: 0,
+    totalPoints: 0,
+    completionRate: 0
   });
 
-  const totalAchievements = achievements.length;
-  const unlockedAchievements = achievements.filter(a => a.unlocked).length;
-  const totalPoints = achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.points, 0);
+  useEffect(() => {
+    loadAchievements();
+    loadUserAchievements();
+    loadStats();
+  }, []);
+
+  const loadAchievements = async () => {
+    try {
+      const response = await achievementService.getAllAchievements({
+        limit: 100
+      });
+      
+      if (response && response.achievements) {
+        // This will be combined with user achievements to show progress
+      }
+    } catch (error) {
+      console.error('Failed to load achievements:', error);
+    }
+  };
+
+  const loadUserAchievements = async () => {
+    try {
+      const response = await achievementService.getUserAchievements({
+        include_progress: true,
+        limit: 100
+      });
+      
+      if (response && response.user_achievements) {
+        setUserAchievements(response.user_achievements);
+        
+        // Convert to display format
+        const displayData: AchievementDisplayData[] = response.user_achievements.map((ua: ApiUserAchievement) => ({
+          id: ua.achievement_id,
+          title: ua.achievement?.title || 'Unknown Achievement',
+          description: ua.achievement?.description || '',
+          type: ua.achievement?.achievement_type || 'learning',
+          tier: ua.achievement?.tier || 'bronze',
+          category: ua.achievement?.category || 'general',
+          points: ua.achievement?.points_awarded || 0,
+          icon: ua.achievement?.icon_url || getTierIcon(ua.achievement?.tier || 'bronze'),
+          badgeColor: ua.achievement?.badge_color || getTierColor(ua.achievement?.tier || 'bronze'),
+          isUnlocked: ua.progress_percentage > 0,
+          isCompleted: ua.is_completed,
+          progress: ua.progress_percentage,
+          unlockedAt: ua.is_completed ? ua.unlocked_at : undefined,
+          nftMinted: ua.nft_minted,
+          tags: ua.achievement?.tags || []
+        }));
+        
+        setAchievements(displayData);
+      } else {
+        // Fallback to demo data
+        setAchievements(getDemoAchievements());
+      }
+    } catch (error) {
+      console.error('Failed to load user achievements:', error);
+      setAchievements(getDemoAchievements());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await achievementService.getUserAchievementStats();
+      if (response && response.stats) {
+        setStats(response.stats);
+      }
+    } catch (error) {
+      console.error('Failed to load achievement stats:', error);
+      // Calculate from local data
+      const totalAchievements = achievements.length;
+      const unlockedCount = achievements.filter(a => a.isUnlocked).length;
+      const totalPoints = achievements.filter(a => a.isCompleted).reduce((sum, a) => sum + a.points, 0);
+      setStats({
+        totalAchievements,
+        unlockedCount,
+        totalPoints,
+        completionRate: totalAchievements > 0 ? (unlockedCount / totalAchievements) * 100 : 0
+      });
+    }
+  };
+
+  const handleMintNFT = async (userAchievementId: string) => {
+    try {
+      await achievementService.mintAchievementNFT(userAchievementId);
+      toast.success('NFT minted successfully!');
+      loadUserAchievements(); // Refresh data
+    } catch (error) {
+      console.error('Failed to mint NFT:', error);
+      toast.error('Failed to mint NFT');
+    }
+  };
+
+  const getTierIcon = (tier: string) => {
+    switch (tier) {
+      case 'platinum': return '💎';
+      case 'gold': return '🥇';
+      case 'silver': return '🥈';
+      case 'bronze': return '🥉';
+      default: return '🏆';
+    }
+  };
+
+  const getTierColor = (tier: string) => {
+    switch (tier) {
+      case 'platinum': return 'from-purple-400 to-blue-500';
+      case 'gold': return 'from-yellow-400 to-orange-500';
+      case 'silver': return 'from-slate-300 to-slate-500';
+      case 'bronze': return 'from-orange-300 to-yellow-600';
+      default: return 'from-blue-400 to-blue-600';
+    }
+  };
+
+  const getDemoAchievements = (): AchievementDisplayData[] => [
+    {
+      id: 'first-lesson',
+      title: 'First Steps',
+      description: 'Complete your first lesson',
+      type: 'learning',
+      tier: 'bronze',
+      category: 'learning',
+      points: 10,
+      icon: '🎯',
+      badgeColor: 'from-orange-300 to-yellow-600',
+      isUnlocked: true,
+      isCompleted: true,
+      progress: 100,
+      unlockedAt: new Date().toISOString(),
+      nftMinted: false,
+      tags: ['beginner', 'milestone']
+    },
+    {
+      id: 'quiz-master',
+      title: 'Quiz Master',
+      description: 'Score 90% or higher on 5 quizzes',
+      type: 'assessment',
+      tier: 'silver',
+      category: 'assessment',
+      points: 50,
+      icon: '🧠',
+      badgeColor: 'from-slate-300 to-slate-500',
+      isUnlocked: true,
+      isCompleted: false,
+      progress: 60,
+      tags: ['quiz', 'excellence']
+    },
+    {
+      id: 'course-complete',
+      title: 'Course Champion',
+      description: 'Complete an entire course',
+      type: 'completion',
+      tier: 'gold',
+      category: 'completion',
+      points: 100,
+      icon: '👑',
+      badgeColor: 'from-yellow-400 to-orange-500',
+      isUnlocked: false,
+      isCompleted: false,
+      progress: 25,
+      tags: ['completion', 'dedication']
+    }
+  ];
+
+  const filteredAchievements = achievements.filter(achievement => {
+    const matchesCategory = selectedCategory === 'all' || achievement.category === selectedCategory;
+    const matchesTier = selectedTier === 'all' || achievement.tier === selectedTier;
+    return matchesCategory && matchesTier;
+  });
+
+  const categories = ['all', ...Array.from(new Set(achievements.map(a => a.category)))];
+  const tiers = ['all', 'bronze', 'silver', 'gold', 'platinum'];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="loading-spinner w-8 h-8"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 flex items-center">
-                <TrophyIconSolid className="h-10 w-10 text-yellow-500 mr-3" />
-                Achievements
-              </h1>
-              <p className="text-gray-600 mt-2">Track your learning progress and unlock special rewards</p>
-            </div>
-            <Link 
-              to="/dashboard"
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
-            >
-              Back to Dashboard
-            </Link>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Achievements</h1>
+        <p className="text-slate-600">Track your learning milestones and earn rewards</p>
           </div>
 
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl p-6 text-white">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-emerald-100 text-sm font-medium">Achievements Unlocked</p>
-                  <p className="text-3xl font-bold">{unlockedAchievements}/{totalAchievements}</p>
+              <p className="text-blue-100 text-sm font-medium">Total Unlocked</p>
+              <p className="text-3xl font-bold">{stats.unlockedCount}</p>
+              <p className="text-blue-100 text-sm">of {stats.totalAchievements}</p>
+            </div>
+            <TrophyIcon className="w-12 h-12 text-blue-200" />
+          </div>
                 </div>
-                <CheckCircleIcon className="h-12 w-12 text-emerald-200" />
+
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Completion Rate</p>
+              <p className="text-3xl font-bold">{Math.round(stats.completionRate)}%</p>
               </div>
-              <div className="mt-4 bg-emerald-600 rounded-full h-2">
-                <div 
-                  className="bg-white h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${(unlockedAchievements / totalAchievements) * 100}%` }}
-                />
+            <ChartBarIcon className="w-12 h-12 text-green-200" />
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl p-6 text-white">
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-yellow-100 text-sm font-medium">Achievement Points</p>
-                  <p className="text-3xl font-bold">{totalPoints.toLocaleString()}</p>
+              <p className="text-purple-100 text-sm font-medium">Total Points</p>
+              <p className="text-3xl font-bold">{stats.totalPoints}</p>
                 </div>
-                <StarIconSolid className="h-12 w-12 text-yellow-200" />
+            <StarIcon className="w-12 h-12 text-purple-200" />
               </div>
-              <p className="text-yellow-100 text-sm mt-2">Earn points by unlocking achievements</p>
             </div>
 
-            <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl p-6 text-white">
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-sm font-medium">NFT Eligible</p>
-                  <p className="text-3xl font-bold">
-                    {achievements.filter(a => a.nftEligible && a.unlocked).length}
-                  </p>
+              <p className="text-orange-100 text-sm font-medium">NFTs Minted</p>
+              <p className="text-3xl font-bold">{achievements.filter(a => a.nftMinted).length}</p>
                 </div>
-                <GiftIcon className="h-12 w-12 text-purple-200" />
-              </div>
-              <p className="text-purple-100 text-sm mt-2">Special achievements earn NFTs</p>
+            <FireIcon className="w-12 h-12 text-orange-200" />
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-2">
-              {categories.map(category => {
-                const IconComponent = category.icon;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all ${
-                      selectedCategory === category.id
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    <IconComponent className="h-4 w-4" />
-                    <span className="font-medium">{category.name}</span>
-                  </button>
-                );
-              })}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-8">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {categories.map(category => (
+                <option key={category} value={category}>
+                  {category === 'all' ? 'All Categories' : category.charAt(0).toUpperCase() + category.slice(1)}
+                </option>
+              ))}
+            </select>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="unlocked-only"
-                checked={showUnlockedOnly}
-                onChange={(e) => setShowUnlockedOnly(e.target.checked)}
-                className="rounded text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="unlocked-only" className="text-gray-700 font-medium">
-                Show unlocked only
-              </label>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Tier</label>
+            <select
+              value={selectedTier}
+              onChange={(e) => setSelectedTier(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {tiers.map(tier => (
+                <option key={tier} value={tier}>
+                  {tier === 'all' ? 'All Tiers' : tier.charAt(0).toUpperCase() + tier.slice(1)}
+                </option>
+              ))}
+            </select>
             </div>
           </div>
         </div>
 
         {/* Achievements Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAchievements.map(achievement => (
+        {filteredAchievements.map((achievement) => (
             <div
               key={achievement.id}
-              className={`achievement-badge-container relative bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 ${
-                achievement.unlocked ? `border-2 ${getRarityBorder(achievement.rarity)}` : 'border border-gray-200'
-              } ${!achievement.unlocked ? 'opacity-75' : ''}`}
-            >
-              {achievement.unlocked && (
-                <div className="absolute top-4 right-4 z-10">
-                  <CheckCircleIcon className="h-6 w-6 text-emerald-500" />
+            className={`relative bg-white rounded-xl shadow-lg border overflow-hidden transition-all duration-300 hover:shadow-xl ${
+              achievement.isCompleted 
+                ? 'border-green-200 hover:border-green-300' 
+                : achievement.isUnlocked
+                ? 'border-blue-200 hover:border-blue-300'
+                : 'border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            {/* Header Gradient */}
+            <div className={`h-24 bg-gradient-to-r ${achievement.badgeColor} relative`}>
+              <div className="absolute inset-0 bg-black bg-opacity-10"></div>
+              <div className="absolute top-4 right-4">
+                {achievement.isCompleted ? (
+                  <CheckCircleIcon className="w-6 h-6 text-white" />
+                ) : achievement.isUnlocked ? (
+                  <ClockIcon className="w-6 h-6 text-white" />
+                ) : (
+                  <LockClosedIcon className="w-6 h-6 text-white opacity-60" />
+                )}
                 </div>
-              )}
-
-              {!achievement.unlocked && (
-                <div className="absolute inset-0 bg-gray-500 bg-opacity-20 z-10 flex items-center justify-center">
-                  <LockClosedIcon className="h-8 w-8 text-gray-500" />
                 </div>
-              )}
 
-              <div className={`p-6 bg-gradient-to-r ${getDifficultyColor(achievement.difficulty)}`}>
-                <div className="flex items-center space-x-4">
-                  <div className="achievement-badge w-16 h-16 rounded-full bg-white p-2 shadow-lg">
-                    <img 
-                      src={achievement.icon} 
-                      alt={achievement.title}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=' + achievement.title.charAt(0) + '&background=6366f1&color=fff&size=64';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1 text-white">
-                    <h3 className="text-xl font-bold">{achievement.title}</h3>
-                    <p className="text-sm opacity-90 capitalize">{achievement.rarity} • {achievement.difficulty}</p>
+            {/* Achievement Icon */}
+            <div className="absolute top-12 left-6">
+              <div className={`w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center text-2xl ${
+                !achievement.isUnlocked ? 'grayscale opacity-50' : ''
+              }`}>
+                {achievement.icon}
                   </div>
                 </div>
+
+            {/* Content */}
+            <div className="pt-8 p-6">
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className={`text-lg font-bold ${
+                    achievement.isUnlocked ? 'text-slate-900' : 'text-slate-500'
+                  }`}>
+                    {achievement.title}
+                  </h3>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    achievement.tier === 'platinum' ? 'bg-purple-100 text-purple-800' :
+                    achievement.tier === 'gold' ? 'bg-yellow-100 text-yellow-800' :
+                    achievement.tier === 'silver' ? 'bg-slate-100 text-slate-800' :
+                    'bg-orange-100 text-orange-800'
+                  }`}>
+                    {achievement.tier}
+                  </span>
+                </div>
+                <p className={`text-sm ${
+                  achievement.isUnlocked ? 'text-slate-600' : 'text-slate-400'
+                }`}>
+                  {achievement.description}
+                </p>
               </div>
 
-              <div className="p-6">
-                <p className="text-gray-600 mb-4">{achievement.description}</p>
-                
+              {/* Progress */}
+              {achievement.isUnlocked && !achievement.isCompleted && (
                 <div className="mb-4">
-                  <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <div className="flex justify-between text-xs text-slate-600 mb-1">
                     <span>Progress</span>
-                    <span>{achievement.progress}/{achievement.maxProgress}</span>
+                    <span>{achievement.progress}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-slate-200 rounded-full h-2">
                     <div 
-                      className="progress-bar h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${(achievement.progress / achievement.maxProgress) * 100}%` }}
-                    />
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${achievement.progress}%` }}
+                    ></div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">{achievement.requirements.description}</p>
                 </div>
+              )}
 
+              {/* Points and Actions */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <StarIcon className="h-4 w-4 text-yellow-500" />
-                    <span className="text-sm font-semibold text-gray-700">{achievement.points} points</span>
+                <div className="flex items-center text-yellow-600">
+                  <StarIcon className="w-4 h-4 mr-1" />
+                  <span className="text-sm font-medium">{achievement.points} pts</span>
                   </div>
-                  {achievement.nftEligible && (
-                    <div className="flex items-center space-x-1 text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
-                      <SparklesIcon className="h-3 w-3" />
-                      <span>NFT Eligible</span>
-                    </div>
+                
+                {achievement.isCompleted && !achievement.nftMinted && (
+                  <button
+                    onClick={() => handleMintNFT(achievement.id)}
+                    className="btn-primary text-xs px-3 py-1"
+                  >
+                    Mint NFT
+                  </button>
+                )}
+                
+                {achievement.nftMinted && (
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    NFT Minted ✨
+                  </span>
                   )}
                 </div>
 
-                {achievement.unlocked && achievement.unlockedAt && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                      <ClockIcon className="h-3 w-3" />
-                      <span>Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
+              {/* Unlock Date */}
+              {achievement.unlockedAt && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
+                </p>
                 )}
               </div>
             </div>
           ))}
         </div>
 
+      {/* Empty State */}
         {filteredAchievements.length === 0 && (
           <div className="text-center py-12">
-            <TrophyIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">No achievements found</h3>
-            <p className="text-gray-500">Try adjusting your filters or start learning to unlock achievements!</p>
+          <TrophyIcon className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900 mb-2">No achievements found</h3>
+          <p className="text-slate-600">
+            {selectedCategory !== 'all' || selectedTier !== 'all' 
+              ? 'Try adjusting your filters'
+              : 'Start learning to unlock your first achievements!'
+            }
+          </p>
           </div>
         )}
-      </div>
     </div>
   );
 };

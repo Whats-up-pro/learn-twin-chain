@@ -23,7 +23,7 @@ import { blockchainService } from '../services/blockchainService';
 import toast from 'react-hot-toast';
 
 const DashboardPage: React.FC = () => {
-  const { learnerProfile, digitalTwin, nfts, learningModules } = useAppContext();
+  const { learnerProfile, digitalTwin, nfts, learningModules, achievements } = useAppContext();
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -396,20 +396,24 @@ const DashboardPage: React.FC = () => {
             </h2>
             <div className="text-sm text-gray-600">Manage your achievements</div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {[
-              'https://cdn-icons-png.flaticon.com/512/2583/2583341.png',
-              'https://cdn-icons-png.flaticon.com/512/190/190411.png',
-              'https://cdn-icons-png.flaticon.com/512/992/992700.png',
-              'https://cdn-icons-png.flaticon.com/512/1828/1828884.png',
-              'https://cdn-icons-png.flaticon.com/512/3135/3135715.png',
-              'https://cdn-icons-png.flaticon.com/512/3004/3004458.png'
-            ].map((icon, idx) => (
-              <div key={idx} className="aspect-square rounded-2xl border border-gray-200 bg-white flex items-center justify-center shadow-sm hover:shadow-md transition">
-                <img src={icon} alt={`Achievement ${idx+1}`} className="h-12 w-12" />
-              </div>
-            ))}
-          </div>
+          {achievements && achievements.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {achievements.map((achievement: any, idx: number) => (
+                <div key={idx} className="aspect-square rounded-2xl border border-gray-200 bg-white flex items-center justify-center shadow-sm hover:shadow-md transition">
+                  <img 
+                    src={achievement.icon_url || achievement.achievement?.icon_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(achievement.title || achievement.achievement?.title || 'Achievement')}&background=0ea5e9&color=fff&size=64`} 
+                    alt={achievement.title || achievement.achievement?.title || `Achievement ${idx+1}`} 
+                    className="h-12 w-12" 
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <TrophyIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No achievements yet. Complete courses to earn achievements!</p>
+            </div>
+          )}
         </div>
 
         {/* Recommended Courses */}

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Navbar from './components/Navbar';
+
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
 import ModulePage from './pages/ModulePage';
 import VideoLearningPage from './pages/VideoLearningPage';
+import CourseLearnPage from './pages/CourseLearnPage';
 import AchievementsPage from './pages/AchievementsPage';
 import NFTManagementPage from './pages/NFTManagementPage';
 import AiTutorPage from './pages/AiTutorPage';
@@ -11,8 +14,11 @@ import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import VerifyEmailSentPage from './pages/VerifyEmailSentPage';
 import TeacherDashboardPage from './pages/TeacherDashboardPage';
 import EmployerDashboardPage from './pages/EmployerDashboardPage';
+import SearchPage from './pages/SearchPage';
+import CoursesPage from './pages/CoursesPage';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
 import { UserRole } from './types';
@@ -51,13 +57,78 @@ const AppContent: React.FC = () => {
   }, [learnerProfile, updateLearnerProfile]);
 
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
-  const hideNavbar = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/verify-email';
+  const hideNavbarAndSidebar = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/verify-email' || location.pathname === '/verify-email-sent';
+  const showSidebar = isLoggedIn && role === UserRole.LEARNER && !hideNavbarAndSidebar;
+
+  // Auto-open sidebar on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && showSidebar) { // md breakpoint
+        setIsSidebarOpen(true);
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showSidebar]);
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {!hideNavbar && <Navbar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />}
-      <Toaster position="top-center" reverseOrder={false} />
-      <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
+    <div className="flex min-h-screen bg-slate-50">
+      {/* Sidebar for learners */}
+      {showSidebar && (
+        <Sidebar 
+          isOpen={isSidebarOpen} 
+          onToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
+        />
+      )}
+      
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        
+        {/* Header */}
+        <Header 
+          onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+          showSidebar={showSidebar}
+        />
+        
+        {/* Toast notifications */}
+        <Toaster 
+          position="top-center" 
+          reverseOrder={false}
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#1e40af',
+              color: '#ffffff',
+              borderRadius: '12px',
+              padding: '16px',
+              fontSize: '14px',
+              fontWeight: '500'
+            },
+            success: {
+              style: {
+                background: '#10b981',
+              }
+            },
+            error: {
+              style: {
+                background: '#ef4444',
+              }
+            }
+          }}
+        />
+        
+        {/* Main content */}
+        <main className={`
+          flex-1 transition-all duration-300
+          ${hideNavbarAndSidebar 
+            ? 'p-0' 
+            : showSidebar && isSidebarOpen 
+              ? 'md:ml-0 p-4 md:p-6 lg:p-8' 
+              : 'p-4 md:p-6 lg:p-8'
+          }
+        `}>
         <Routes>
           <Route path="/login" element={
             isLoggedIn ? <Navigate to={role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard"} replace /> : <LoginPage />
@@ -66,6 +137,7 @@ const AppContent: React.FC = () => {
             isLoggedIn ? <Navigate to={role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard"} replace /> : <RegisterPage />
           } />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/verify-email-sent" element={<VerifyEmailSentPage />} />
           <Route path="/" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/login"} />} />
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
@@ -89,6 +161,11 @@ const AppContent: React.FC = () => {
           } />
           <Route path="/course/:courseId/learn" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <CourseLearnPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/course/:courseId/video" element={
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
               <VideoLearningPage />
             </ProtectedRoute>
           } />
@@ -107,15 +184,28 @@ const AppContent: React.FC = () => {
               <AiTutorPage />
             </ProtectedRoute>
           } />
+          <Route path="/search" element={
+            isLoggedIn ? <SearchPage /> : <Navigate to="/login" replace />
+          } />
+          <Route path="/courses" element={
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <CoursesPage />
+            </ProtectedRoute>
+          } />
           <Route path="/profile" element={
             isLoggedIn ? <ProfilePage /> : <Navigate to="/login" replace />
           } />
           <Route path="*" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/login"} />} />
         </Routes>
-      </main>
-      <footer className="bg-slate-800 text-white text-center p-4 shadow-md">
-        © 2025 LearnTwinChain. Empowering Learners.
-      </footer>
+        </main>
+        
+        {/* Footer */}
+        {!hideNavbarAndSidebar && (
+          <footer className="bg-slate-800 text-white text-center p-4 shadow-md">
+            © 2025 LearnTwinChain. Empowering Learners.
+          </footer>
+        )}
+      </div>
     </div>
   );
 };

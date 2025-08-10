@@ -8,12 +8,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any, Tuple, List
 from passlib.context import CryptContext
 from passlib.hash import argon2
-try:
-    from jose import JWTError, jwt
-except ImportError:
-    # Fallback to PyJWT
-    import jwt
-    from jwt import InvalidTokenError as JWTError
+import jwt
+from jwt import InvalidTokenError as JWTError
 import redis.asyncio as redis
 from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -102,13 +98,13 @@ class AuthService:
             verification_token = secrets.token_urlsafe(32)
             verification_expires = datetime.now(timezone.utc) + timedelta(hours=24)
             
-            # Create user
+            # Create user with default role "student"
             user = User(
                 did=user_data["did"],
                 email=user_data["email"],
                 password_hash=password_hash,
                 name=user_data["name"],
-                role=user_data.get("role", "student"),
+                role="student",  # Always default to student
                 avatar_url=user_data.get("avatar_url", ""),
                 institution=user_data.get("institution", ""),
                 program=user_data.get("program", ""),
@@ -123,12 +119,13 @@ class AuthService:
             
             await user.insert()
             
-            # Create user profile
-            profile = UserProfile(user_id=user.did)
-            await profile.insert()
+            # Create user profile - TEMPORARILY DISABLED due to Beanie initialization issue
+            # TODO: Fix UserProfile initialization in database setup
+            # profile = UserProfile(user_id=user.did)
+            # await profile.insert()
             
-            # Assign default role
-            await self.assign_default_role(user.did, user.role)
+            # Assign default role "student"
+            await self.assign_default_role(user.did, "student")
             
             # Send verification email
             await self.send_verification_email(user.email, user.name, verification_token)
@@ -146,11 +143,8 @@ class AuthService:
     async def send_verification_email(self, email: str, name: str, token: str):
         """Send email verification"""
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-        # Ensure HashRouter compatibility by injecting '/#/' if missing
-        if "#/" in frontend_url:
-            verification_url = f"{frontend_url}/verify-email?token={token}"
-        else:
-            verification_url = f"{frontend_url}/#/verify-email?token={token}"
+        # Use normal routing (no hash router)
+        verification_url = f"{frontend_url}/verify-email?token={token}"
         
         await self.email_service.send_verification_email(email, name, verification_url)
     
@@ -201,11 +195,8 @@ class AuthService:
             
             # Send reset email
             frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-            # Ensure HashRouter compatibility
-            if "#/" in frontend_url:
-                reset_url = f"{frontend_url}/reset-password?token={reset_token}"
-            else:
-                reset_url = f"{frontend_url}/#/reset-password?token={reset_token}"
+            # Use normal routing (no hash router)
+            reset_url = f"{frontend_url}/reset-password?token={reset_token}"
             
             await self.email_service.send_password_reset_email(user.email, user.name, reset_url)
             
@@ -319,11 +310,19 @@ class AuthService:
                     "is_active": True
                 })
                 
-                if session and not session.is_expired():
-                    # Update last accessed
-                    session.last_accessed = datetime.now(timezone.utc)
-                    await session.save()
-                    return session
+                if session:
+                    # Ensure expires_at has timezone info
+                    expires_at = session.expires_at
+                    if expires_at.tzinfo is None:
+                        expires_at = expires_at.replace(tzinfo=timezone.utc)
+                        session.expires_at = expires_at
+                    
+                    # Check if expired
+                    if expires_at > datetime.now(timezone.utc):
+                        # Update last accessed
+                        session.last_accessed = datetime.now(timezone.utc)
+                        await session.save()
+                        return session
             
             return None
             
@@ -364,62 +363,7 @@ class AuthService:
             logger.error(f"Session invalidation error: {e}")
     
     # JWT token management (alternative to sessions)
-    def create_access_token(self, data: Dict[str, Any]) -> str:
-        """Create JWT access token"""
-        to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(minutes=self.access_token_expire_minutes)
-        to_encode.update({"exp": expire})
-        
-        try:
-            # Try jose first
-            return jwt.encode(to_encode, self.jwt_secret, algorithm=self.jwt_algorithm)
-        except AttributeError:
-            # Fallback to PyJWT (different signature)
-            import jwt as pyjwt
-            return pyjwt.encode(to_encode, self.jwt_secret, algorithm=self.jwt_algorithm)
-    
-    async def create_refresh_token(self, user_id: str, ip_address: str = None, user_agent: str = None) -> RefreshToken:
-        """Create refresh token"""
-        try:
-            token_id = str(uuid.uuid4())
-            family_id = str(uuid.uuid4())
-            token_value = secrets.token_urlsafe(32)
-            token_hash = self.hash_password(token_value)  # Hash the token
-            expires_at = datetime.now(timezone.utc) + timedelta(days=self.refresh_token_expire_days)
-            
-            refresh_token = RefreshToken(
-                token_id=token_id,
-                user_id=user_id,
-                token_hash=token_hash,
-                expires_at=expires_at,
-                family_id=family_id,
-                ip_address=ip_address,
-                user_agent=user_agent
-            )
-            
-            await refresh_token.insert()
-            
-            # Return the plain token value (only time it's available)
-            return {"token_id": token_id, "token": token_value, "expires_at": expires_at}
-            
-        except Exception as e:
-            logger.error(f"Refresh token creation error: {e}")
-            raise HTTPException(status_code=500, detail="Token creation failed")
-    
-    async def verify_access_token(self, token: str) -> Optional[Dict[str, Any]]:
-        """Verify JWT access token"""
-        try:
-            try:
-                # Try jose first
-                payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
-                return payload
-            except AttributeError:
-                # Fallback to PyJWT
-                import jwt as pyjwt
-                payload = pyjwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
-                return payload
-        except (JWTError, Exception):
-            return None
+
     
     # Role and permission management
     async def assign_default_role(self, user_id: str, role_name: str = "student"):
@@ -465,6 +409,15 @@ class AuthService:
             
             permissions = set()
             
+            # If no role assignments, assign default student role
+            if not assignments:
+                await self.assign_default_role(user_id, "student")
+                # Get the assignment we just created
+                assignments = await UserRoleAssignment.find({
+                    "user_id": user_id,
+                    "is_active": True
+                }).to_list()
+            
             for assignment in assignments:
                 role = await Role.find_one({"name": assignment.role_name, "is_active": True})
                 if role:
@@ -472,14 +425,15 @@ class AuthService:
             
             # Get user's direct permissions
             user = await User.find_one({"did": user_id})
-            if user:
+            if user and hasattr(user, 'permissions') and user.permissions:
                 permissions.update(user.permissions)
             
             return list(permissions)
             
         except Exception as e:
             logger.error(f"Permission retrieval error: {e}")
-            return []
+            # Return basic permissions as fallback
+            return ["read_own_profile", "read_courses", "read_modules"]
     
     async def check_permission(self, user_id: str, permission: str) -> bool:
         """Check if user has specific permission"""
@@ -526,7 +480,8 @@ class AuthService:
             authorization = request.headers.get("Authorization")
             if authorization and authorization.startswith("Bearer "):
                 token = authorization.split(" ")[1]
-                payload = await self.verify_access_token(token)
+                from .jwt_service import jwt_service
+                payload = jwt_service.verify_access_token(token)
                 if payload:
                     user_id = payload.get("sub")
                     user = await User.find_one({"did": user_id, "is_active": True})

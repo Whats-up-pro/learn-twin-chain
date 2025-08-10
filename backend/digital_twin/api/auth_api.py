@@ -11,6 +11,7 @@ import logging
 
 from ..services.auth_service import AuthService
 from ..services.siwe_service import SIWEService
+from ..services.jwt_service import jwt_service
 from ..models.user import User
 from ..models.permission import Role, Permission, UserRoleAssignment
 from ..dependencies import get_current_user, require_permission, get_optional_user
@@ -80,6 +81,15 @@ class UserUpdateRequest(BaseModel):
     program: Optional[str] = None
     department: Optional[str] = None
     specialization: Optional[list] = None
+
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str = Field(..., description="Refresh token")
+
+class TokenRefreshResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int
 
 # Authentication endpoints
 @router.post("/register")
@@ -162,18 +172,44 @@ async def login(request: UserLoginRequest, response: Response, http_request: Req
         # Get user permissions
         permissions = await auth_service.get_user_permissions(user.did)
         
+        # Create JWT tokens
+        token_data = {
+            "sub": user.did,
+            "user_id": user.did,
+            "role": user.role,
+            "permissions": permissions,
+            "name": user.name,
+            "email": user.email
+        }
+        access_token = jwt_service.create_access_token(token_data)
+        
+        # Create refresh token
+        refresh_token_data = await jwt_service.create_refresh_token(
+            user.did, 
+            ip_address, 
+            user_agent
+        )
+        
         return {
             "message": "Login successful",
             "user": user.to_dict(exclude_sensitive=True),
             "permissions": permissions,
-            "session_id": session.session_id
+            "session_id": session.session_id,
+            "access_token": access_token,
+            "refresh_token": refresh_token_data["token"],
+            "token_type": "bearer",
+            "expires_in": jwt_service.get_token_expiry()
         }
         
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Login error: {e}")
-        raise HTTPException(status_code=500, detail="Login failed")
+        logger.error(f"Error type: {type(e)}")
+        logger.error(f"Error details: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Login failed: {str(e)}")
 
 @router.post("/logout")
 async def logout(response: Response, http_request: Request):
@@ -186,11 +222,74 @@ async def logout(response: Response, http_request: Request):
         # Clear cookie
         response.delete_cookie(key="session_id")
         
+        # Invalidate all refresh tokens for the user if we can identify them
+        authorization = http_request.headers.get("Authorization")
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.split(" ")[1]
+            payload = jwt_service.verify_access_token(token)
+            if payload:
+                user_id = payload.get("sub")
+                if user_id:
+                    await jwt_service.invalidate_all_user_tokens(user_id)
+        
         return {"message": "Logout successful"}
         
     except Exception as e:
         logger.error(f"Logout error: {e}")
         return {"message": "Logout completed"}
+
+@router.post("/refresh", response_model=TokenRefreshResponse)
+async def refresh_token(request: TokenRefreshRequest):
+    """Refresh access token using refresh token"""
+    try:
+        # Verify refresh token
+        refresh_token = await jwt_service.verify_refresh_token(request.refresh_token)
+        if not refresh_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token"
+            )
+        
+        # Get user
+        user = await User.find_one({"did": refresh_token.user_id, "is_active": True})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+        
+        # Get user permissions
+        permissions = await auth_service.get_user_permissions(user.did)
+        
+        # Create new access token
+        token_data = {
+            "sub": user.did,
+            "user_id": user.did,
+            "role": user.role,
+            "permissions": permissions,
+            "name": user.name,
+            "email": user.email
+        }
+        new_access_token = jwt_service.create_access_token(token_data)
+        
+        # Create new refresh token
+        new_refresh_token_data = await jwt_service.create_refresh_token(user.did)
+        
+        # Invalidate old refresh token
+        await jwt_service.invalidate_refresh_token(request.refresh_token)
+        
+        return TokenRefreshResponse(
+            access_token=new_access_token,
+            refresh_token=new_refresh_token_data["token"],
+            token_type="bearer",
+            expires_in=jwt_service.get_token_expiry()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Token refresh error: {e}")
+        raise HTTPException(status_code=500, detail="Token refresh failed")
 
 @router.get("/me")
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
