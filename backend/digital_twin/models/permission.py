@@ -110,10 +110,26 @@ DEFAULT_PERMISSIONS = [
     {"name": "update_module", "description": "Update module content", "resource": "module", "action": "update"},
     {"name": "delete_module", "description": "Delete modules", "resource": "module", "action": "delete"},
     
+    # Lesson permissions
+    {"name": "read_lessons", "description": "Read lesson content", "resource": "lesson", "action": "read"},
+    {"name": "create_lesson", "description": "Create new lessons", "resource": "lesson", "action": "create"},
+    {"name": "update_lesson", "description": "Update lesson content", "resource": "lesson", "action": "update"},
+    {"name": "delete_lesson", "description": "Delete lessons", "resource": "lesson", "action": "delete"},
+    {"name": "publish_lesson", "description": "Publish/unpublish lessons", "resource": "lesson", "action": "publish"},
+    
     # Learning permissions
     {"name": "enroll_course", "description": "Enroll in courses", "resource": "learning", "action": "enroll"},
     {"name": "complete_module", "description": "Complete learning modules", "resource": "learning", "action": "complete"},
     {"name": "submit_assignment", "description": "Submit assignments", "resource": "learning", "action": "submit"},
+    {"name": "track_progress", "description": "Track learning progress", "resource": "learning", "action": "track"},
+    {"name": "view_progress", "description": "View learning progress", "resource": "learning", "action": "view"},
+    
+    # Achievement permissions
+    {"name": "read_achievements", "description": "Read achievement information", "resource": "achievement", "action": "read"},
+    {"name": "create_achievement", "description": "Create new achievements", "resource": "achievement", "action": "create"},
+    {"name": "update_achievement", "description": "Update achievement information", "resource": "achievement", "action": "update"},
+    {"name": "delete_achievement", "description": "Delete achievements", "resource": "achievement", "action": "delete"},
+    {"name": "view_leaderboard", "description": "View achievement leaderboard", "resource": "achievement", "action": "view_leaderboard"},
     
     # NFT permissions
     {"name": "mint_achievement_nft", "description": "Mint achievement NFTs", "resource": "nft", "action": "mint"},
@@ -139,8 +155,10 @@ DEFAULT_ROLES = [
         "permissions": [
             "read_own_profile", "update_own_profile", "delete_own_account",
             "read_own_twin", "update_own_twin",
-            "read_courses", "read_modules",
+            "read_courses", "read_modules", "read_lessons",
             "enroll_course", "complete_module", "submit_assignment",
+            "track_progress", "view_progress",
+            "read_achievements", "view_leaderboard",
             "mint_achievement_nft", "transfer_nft", "verify_nft",
             "link_wallet", "unlink_wallet"
         ],
@@ -155,9 +173,11 @@ DEFAULT_ROLES = [
             "read_own_twin", "update_own_twin", "read_all_twins",
             "read_courses", "create_course", "update_course", "publish_course",
             "read_modules", "create_module", "update_module", "delete_module",
+            "read_lessons", "create_lesson", "update_lesson", "delete_lesson", "publish_lesson",
+            "read_achievements", "create_achievement", "update_achievement", "delete_achievement", "view_leaderboard",
+            "track_progress", "view_progress", "view_analytics",
             "mint_achievement_nft", "verify_nft",
-            "link_wallet", "unlink_wallet",
-            "view_analytics"
+            "link_wallet", "unlink_wallet"
         ],
         "priority": 2
     },
@@ -169,6 +189,9 @@ DEFAULT_ROLES = [
             "read_own_twin", "update_own_twin", "read_all_twins",
             "read_courses", "create_course", "update_course", "delete_course", "publish_course",
             "read_modules", "create_module", "update_module", "delete_module",
+            "read_lessons", "create_lesson", "update_lesson", "delete_lesson", "publish_lesson",
+            "read_achievements", "create_achievement", "update_achievement", "delete_achievement", "view_leaderboard",
+            "track_progress", "view_progress",
             "mint_achievement_nft", "transfer_nft", "verify_nft",
             "link_wallet", "unlink_wallet",
             "manage_users", "manage_roles", "view_analytics", "system_config"
@@ -183,6 +206,9 @@ DEFAULT_ROLES = [
             "read_own_twin", "update_own_twin", "read_all_twins",
             "read_courses", "create_course", "update_course", "publish_course",
             "read_modules", "create_module", "update_module", "delete_module",
+            "read_lessons", "create_lesson", "update_lesson", "delete_lesson", "publish_lesson",
+            "read_achievements", "create_achievement", "update_achievement", "delete_achievement", "view_leaderboard",
+            "track_progress", "view_progress",
             "mint_achievement_nft", "verify_nft",
             "link_wallet", "unlink_wallet",
             "manage_users", "view_analytics"

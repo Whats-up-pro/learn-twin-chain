@@ -5,14 +5,14 @@ include "circomlib/circuits/comparators.circom";
 
 template LearningAchievement() {
     // Public inputs
-    signal input skillType;
+    signal input achievementType;  // Renamed: Maps to backend achievement types
+    signal input achievementTier;  // Added: bronze=1, silver=2, gold=3, platinum=4
     signal input studentHash;
     signal input minModulesRequired;
     signal input minAverageScore;
     signal input minPracticeHours;
     signal input commitmentHash;
     signal input achievementTimestamp;
-    signal input achievementLevel;
 
     // Private inputs
     signal input totalModulesCompleted;
@@ -61,4 +61,4 @@ template LearningAchievement() {
     isValid <== temp2 * hashCheck.out;
 }
 
-component main { public [skillType, studentHash, minModulesRequired, minAverageScore, minPracticeHours, commitmentHash, achievementTimestamp, achievementLevel] } = LearningAchievement(); 
+component main { public [achievementType, achievementTier, studentHash, minModulesRequired, minAverageScore, minPracticeHours, commitmentHash, achievementTimestamp] } = LearningAchievement(); 

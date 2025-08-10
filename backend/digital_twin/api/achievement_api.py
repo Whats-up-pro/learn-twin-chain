@@ -1,0 +1,580 @@
+"""
+Achievement management API endpoints
+"""
+from typing import Dict, Any, Optional, List
+from fastapi import APIRouter, HTTPException, Depends, Query, Body
+from pydantic import BaseModel, Field
+import logging
+from datetime import datetime, timezone
+
+from ..models.quiz_achievement import Achievement, UserAchievement, AchievementType, AchievementTier, AchievementCriteria
+from ..models.user import User
+from ..dependencies import get_current_user, require_permission
+from ..services.ipfs_service import IPFSService
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/achievements", tags=["achievements"])
+
+ipfs_service = IPFSService()
+
+# Pydantic models
+class AchievementCreateRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1)
+    achievement_type: AchievementType
+    tier: AchievementTier = Field(default=AchievementTier.BRONZE)
+    category: str = Field(..., min_length=1)
+    icon_url: Optional[str] = None
+    badge_color: str = Field(default="#FFD700")
+    criteria: Dict[str, Any] = Field(..., description="Achievement criteria")
+    is_repeatable: bool = Field(default=False)
+    is_hidden: bool = Field(default=False)
+    course_id: Optional[str] = None
+    module_id: Optional[str] = None
+    points_reward: int = Field(default=0, ge=0)
+    nft_enabled: bool = Field(default=False)
+    tags: List[str] = Field(default_factory=list)
+    rarity: str = Field(default="common")
+
+class AchievementUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tier: Optional[AchievementTier] = None
+    category: Optional[str] = None
+    icon_url: Optional[str] = None
+    badge_color: Optional[str] = None
+    criteria: Optional[Dict[str, Any]] = None
+    is_repeatable: Optional[bool] = None
+    is_hidden: Optional[bool] = None
+    points_reward: Optional[int] = None
+    nft_enabled: Optional[bool] = None
+    tags: Optional[List[str]] = None
+    rarity: Optional[str] = None
+    status: Optional[str] = None
+
+class UserAchievementRequest(BaseModel):
+    achievement_id: str
+    earned_through: str
+    course_id: Optional[str] = None
+    module_id: Optional[str] = None
+    quiz_id: Optional[str] = None
+    earned_value: Optional[float] = None
+    bonus_points: int = Field(default=0)
+
+# Achievement definition endpoints
+@router.post("/", dependencies=[Depends(require_permission("create_achievement"))])
+async def create_achievement(
+    request: AchievementCreateRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new achievement definition"""
+    try:
+        # Generate achievement ID
+        achievement_id = f"achievement_{int(datetime.now().timestamp())}_{request.achievement_type.value}"
+        
+        # Create criteria object
+        criteria = AchievementCriteria(**request.criteria)
+        
+        # Create achievement
+        achievement = Achievement(
+            achievement_id=achievement_id,
+            title=request.title,
+            description=request.description,
+            achievement_type=request.achievement_type,
+            tier=request.tier,
+            category=request.category,
+            icon_url=request.icon_url,
+            badge_color=request.badge_color,
+            criteria=criteria,
+            is_repeatable=request.is_repeatable,
+            is_hidden=request.is_hidden,
+            course_id=request.course_id,
+            module_id=request.module_id,
+            points_reward=request.points_reward,
+            nft_enabled=request.nft_enabled,
+            created_by=current_user.did,
+            tags=request.tags,
+            rarity=request.rarity
+        )
+        
+        await achievement.insert()
+        
+        # Pin achievement metadata to IPFS if NFT enabled
+        if request.nft_enabled:
+            metadata = {
+                "name": request.title,
+                "description": request.description,
+                "image": request.icon_url or "",
+                "attributes": [
+                    {"trait_type": "Type", "value": request.achievement_type.value},
+                    {"trait_type": "Tier", "value": request.tier.value},
+                    {"trait_type": "Category", "value": request.category},
+                    {"trait_type": "Rarity", "value": request.rarity},
+                    {"trait_type": "Points", "value": request.points_reward}
+                ]
+            }
+            
+            metadata_cid = await ipfs_service.pin_json(
+                metadata,
+                name=f"achievement_metadata_{achievement_id}",
+                metadata={
+                    "achievement_id": achievement_id,
+                    "type": "nft_metadata"
+                }
+            )
+            
+            achievement.nft_metadata_cid = metadata_cid
+            await achievement.save()
+        
+        logger.info(f"Achievement created: {achievement_id}")
+        return {
+            "message": "Achievement created successfully",
+            "achievement": achievement.dict()
+        }
+        
+    except Exception as e:
+        logger.error(f"Achievement creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement creation failed")
+
+@router.get("/")
+async def search_achievements(
+    achievement_type: Optional[AchievementType] = Query(None),
+    tier: Optional[AchievementTier] = Query(None),
+    category: Optional[str] = Query(None),
+    course_id: Optional[str] = Query(None),
+    module_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    include_hidden: bool = Query(False),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_current_user)
+):
+    """Search and filter achievements"""
+    try:
+        filters = {}
+        
+        if achievement_type:
+            filters["achievement_type"] = achievement_type
+        if tier:
+            filters["tier"] = tier
+        if category:
+            filters["category"] = category
+        if course_id:
+            filters["course_id"] = course_id
+        if module_id:
+            filters["module_id"] = module_id
+        if status:
+            filters["status"] = status
+        else:
+            filters["status"] = {"$ne": "deprecated"}
+        
+        # Hide hidden achievements unless specifically requested or user is admin
+        if not include_hidden and current_user.role not in ["admin", "institution_admin"]:
+            filters["is_hidden"] = False
+        
+        achievements = await Achievement.find(filters).skip(skip).limit(limit).to_list()
+        total = await Achievement.count_documents(filters)
+        
+        return {
+            "achievements": [achievement.dict() for achievement in achievements],
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"Achievement search failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement search failed")
+
+@router.get("/{achievement_id}")
+async def get_achievement(
+    achievement_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get achievement by ID"""
+    try:
+        achievement = await Achievement.find_one({"achievement_id": achievement_id})
+        if not achievement:
+            raise HTTPException(status_code=404, detail="Achievement not found")
+        
+        # Hide hidden achievements from non-admin users
+        if achievement.is_hidden and current_user.role not in ["admin", "institution_admin"]:
+            # Check if user has earned this achievement
+            user_achievement = await UserAchievement.find_one({
+                "user_id": current_user.did,
+                "achievement_id": achievement_id
+            })
+            if not user_achievement:
+                raise HTTPException(status_code=404, detail="Achievement not found")
+        
+        return {"achievement": achievement.dict()}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Achievement retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement retrieval failed")
+
+@router.put("/{achievement_id}", dependencies=[Depends(require_permission("update_achievement"))])
+async def update_achievement(
+    achievement_id: str,
+    request: AchievementUpdateRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Update achievement"""
+    try:
+        achievement = await Achievement.find_one({"achievement_id": achievement_id})
+        if not achievement:
+            raise HTTPException(status_code=404, detail="Achievement not found")
+        
+        # Check permissions
+        if current_user.did != achievement.created_by and current_user.role not in ["admin", "institution_admin"]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+        # Apply updates
+        update_data = request.dict(exclude_none=True)
+        
+        if "criteria" in update_data:
+            achievement.criteria = AchievementCriteria(**update_data["criteria"])
+            del update_data["criteria"]
+        
+        for key, value in update_data.items():
+            if hasattr(achievement, key):
+                setattr(achievement, key, value)
+        
+        achievement.update_timestamp()
+        await achievement.save()
+        
+        logger.info(f"Achievement updated: {achievement_id}")
+        return {
+            "message": "Achievement updated successfully",
+            "achievement": achievement.dict()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Achievement update failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement update failed")
+
+# User achievement endpoints
+@router.post("/earn")
+async def award_achievement(
+    request: UserAchievementRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Award an achievement to current user"""
+    try:
+        # Get achievement definition
+        achievement = await Achievement.find_one({
+            "achievement_id": request.achievement_id,
+            "status": "active"
+        })
+        if not achievement:
+            raise HTTPException(status_code=404, detail="Achievement not found or inactive")
+        
+        # Check if user already has this achievement (if not repeatable)
+        if not achievement.is_repeatable:
+            existing = await UserAchievement.find_one({
+                "user_id": current_user.did,
+                "achievement_id": request.achievement_id
+            })
+            if existing:
+                raise HTTPException(status_code=400, detail="Achievement already earned")
+        
+        # Validate achievement criteria (basic validation)
+        # TODO: Implement comprehensive criteria validation
+        
+        # Create user achievement
+        user_achievement = UserAchievement(
+            user_id=current_user.did,
+            achievement_id=request.achievement_id,
+            earned_through=request.earned_through,
+            course_id=request.course_id,
+            module_id=request.module_id,
+            quiz_id=request.quiz_id,
+            earned_value=request.earned_value,
+            bonus_points=request.bonus_points + achievement.points_reward
+        )
+        
+        await user_achievement.insert()
+        
+        # Update user's total points if applicable
+        # TODO: Implement user points system
+        
+        logger.info(f"Achievement awarded: {current_user.did} -> {request.achievement_id}")
+        return {
+            "message": "Achievement earned successfully",
+            "user_achievement": user_achievement.dict(),
+            "achievement": achievement.dict()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Achievement awarding failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement awarding failed")
+
+@router.get("/my/earned")
+async def get_my_achievements(
+    achievement_type: Optional[AchievementType] = Query(None),
+    course_id: Optional[str] = Query(None),
+    showcased_only: bool = Query(False),
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user's earned achievements"""
+    try:
+        # Build aggregation pipeline
+        pipeline = [
+            {"$match": {"user_id": current_user.did}},
+            {"$lookup": {
+                "from": "achievements",
+                "localField": "achievement_id",
+                "foreignField": "achievement_id",
+                "as": "achievement"
+            }},
+            {"$unwind": "$achievement"},
+            {"$match": {"achievement.status": "active"}}
+        ]
+        
+        # Add filters
+        if achievement_type:
+            pipeline.append({"$match": {"achievement.achievement_type": achievement_type}})
+        if course_id:
+            pipeline.append({"$match": {"course_id": course_id}})
+        if showcased_only:
+            pipeline.append({"$match": {"is_showcased": True}})
+        
+        # Sort by earned date (newest first)
+        pipeline.append({"$sort": {"earned_at": -1}})
+        
+        user_achievements = await UserAchievement.aggregate(pipeline).to_list()
+        
+        return {
+            "achievements": user_achievements,
+            "total": len(user_achievements)
+        }
+        
+    except Exception as e:
+        logger.error(f"User achievements retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="User achievements retrieval failed")
+
+@router.put("/my/earned/{user_achievement_id}/showcase")
+async def toggle_achievement_showcase(
+    user_achievement_id: str,
+    showcase: bool = Body(..., embed=True),
+    current_user: User = Depends(get_current_user)
+):
+    """Toggle achievement showcase status"""
+    try:
+        user_achievement = await UserAchievement.find_one({
+            "_id": user_achievement_id,
+            "user_id": current_user.did
+        })
+        
+        if not user_achievement:
+            raise HTTPException(status_code=404, detail="User achievement not found")
+        
+        user_achievement.is_showcased = showcase
+        await user_achievement.save()
+        
+        return {
+            "message": f"Achievement {'showcased' if showcase else 'hidden'} successfully",
+            "user_achievement": user_achievement.dict()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Achievement showcase toggle failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement showcase toggle failed")
+
+@router.get("/leaderboard")
+async def get_achievement_leaderboard(
+    achievement_type: Optional[AchievementType] = Query(None),
+    course_id: Optional[str] = Query(None),
+    timeframe: str = Query("all", regex="^(week|month|year|all)$"),
+    limit: int = Query(10, ge=1, le=100)
+):
+    """Get achievement leaderboard"""
+    try:
+        # Build time filter
+        time_filter = {}
+        if timeframe != "all":
+            from datetime import timedelta
+            
+            now = datetime.now(timezone.utc)
+            if timeframe == "week":
+                time_filter = {"earned_at": {"$gte": now - timedelta(weeks=1)}}
+            elif timeframe == "month":
+                time_filter = {"earned_at": {"$gte": now - timedelta(days=30)}}
+            elif timeframe == "year":
+                time_filter = {"earned_at": {"$gte": now - timedelta(days=365)}}
+        
+        # Build aggregation pipeline
+        match_stage = {**time_filter}
+        if course_id:
+            match_stage["course_id"] = course_id
+        
+        pipeline = [
+            {"$match": match_stage},
+            {"$lookup": {
+                "from": "achievements",
+                "localField": "achievement_id",
+                "foreignField": "achievement_id",
+                "as": "achievement"
+            }},
+            {"$unwind": "$achievement"},
+            {"$match": {"achievement.status": "active"}}
+        ]
+        
+        if achievement_type:
+            pipeline.append({"$match": {"achievement.achievement_type": achievement_type}})
+        
+        # Group by user and calculate stats
+        pipeline.extend([
+            {"$group": {
+                "_id": "$user_id",
+                "total_achievements": {"$sum": 1},
+                "total_points": {"$sum": "$bonus_points"},
+                "latest_achievement": {"$max": "$earned_at"},
+                "achievements": {"$push": "$achievement"}
+            }},
+            {"$sort": {"total_points": -1, "total_achievements": -1}},
+            {"$limit": limit}
+        ])
+        
+        leaderboard = await UserAchievement.aggregate(pipeline).to_list()
+        
+        # Enhance with user information
+        # TODO: Join with user collection to get names/avatars
+        
+        return {
+            "leaderboard": leaderboard,
+            "timeframe": timeframe
+        }
+        
+    except Exception as e:
+        logger.error(f"Achievement leaderboard retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement leaderboard retrieval failed")
+
+@router.post("/check-eligibility/{achievement_id}")
+async def check_achievement_eligibility(
+    achievement_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Check if user is eligible for an achievement"""
+    try:
+        achievement = await Achievement.find_one({
+            "achievement_id": achievement_id,
+            "status": "active"
+        })
+        
+        if not achievement:
+            raise HTTPException(status_code=404, detail="Achievement not found")
+        
+        # Check if already earned (if not repeatable)
+        if not achievement.is_repeatable:
+            existing = await UserAchievement.find_one({
+                "user_id": current_user.did,
+                "achievement_id": achievement_id
+            })
+            if existing:
+                return {
+                    "eligible": False,
+                    "reason": "Already earned",
+                    "achievement": achievement.dict()
+                }
+        
+        # TODO: Implement comprehensive eligibility checking based on criteria
+        # This would involve checking user's progress, quiz scores, etc.
+        
+        return {
+            "eligible": True,
+            "reason": "Criteria check not implemented",
+            "achievement": achievement.dict()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Achievement eligibility check failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement eligibility check failed")
+
+@router.get("/statistics")
+async def get_achievement_statistics(
+    course_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
+    """Get achievement statistics"""
+    try:
+        # Build filters
+        filters = {}
+        if course_id:
+            filters["course_id"] = course_id
+        
+        # Get total achievements available
+        total_achievements = await Achievement.count_documents({
+            "status": "active",
+            "is_hidden": False,
+            **filters
+        })
+        
+        # Get user's earned achievements
+        user_filters = {"user_id": current_user.did, **filters}
+        earned_achievements = await UserAchievement.count_documents(user_filters)
+        
+        # Get achievements by type
+        type_pipeline = [
+            {"$match": user_filters},
+            {"$lookup": {
+                "from": "achievements",
+                "localField": "achievement_id",
+                "foreignField": "achievement_id",
+                "as": "achievement"
+            }},
+            {"$unwind": "$achievement"},
+            {"$group": {
+                "_id": "$achievement.achievement_type",
+                "count": {"$sum": 1}
+            }}
+        ]
+        
+        achievements_by_type = await UserAchievement.aggregate(type_pipeline).to_list()
+        
+        # Get achievements by tier
+        tier_pipeline = [
+            {"$match": user_filters},
+            {"$lookup": {
+                "from": "achievements",
+                "localField": "achievement_id",
+                "foreignField": "achievement_id",
+                "as": "achievement"
+            }},
+            {"$unwind": "$achievement"},
+            {"$group": {
+                "_id": "$achievement.tier",
+                "count": {"$sum": 1}
+            }}
+        ]
+        
+        achievements_by_tier = await UserAchievement.aggregate(tier_pipeline).to_list()
+        
+        # Calculate total points
+        total_points = await UserAchievement.aggregate([
+            {"$match": user_filters},
+            {"$group": {"_id": None, "total": {"$sum": "$bonus_points"}}}
+        ]).to_list()
+        
+        return {
+            "total_available": total_achievements,
+            "total_earned": earned_achievements,
+            "completion_rate": (earned_achievements / total_achievements * 100) if total_achievements > 0 else 0,
+            "total_points": total_points[0]["total"] if total_points else 0,
+            "by_type": {item["_id"]: item["count"] for item in achievements_by_type},
+            "by_tier": {item["_id"]: item["count"] for item in achievements_by_tier}
+        }
+        
+    except Exception as e:
+        logger.error(f"Achievement statistics retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="Achievement statistics retrieval failed")

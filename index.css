@@ -2,6 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom utilities for line clamping */
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Blue theme color variables */
+:root {
+  --color-primary: #1e40af; /* blue-800 */
+  --color-primary-dark: #1e3a8a; /* blue-900 */
+  --color-primary-light: #3b82f6; /* blue-500 */
+  --color-primary-lighter: #60a5fa; /* blue-400 */
+  --color-primary-lightest: #dbeafe; /* blue-100 */
+  --color-white: #ffffff;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+}
+
+/* Global theme styles */
+body {
+  font-family: 'Inter', 'Segoe UI', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--color-slate-50);
+  color: var(--color-slate-700);
+}
+
+/* Button base styles */
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors duration-200 border border-blue-600 hover:border-blue-700;
+}
+
+.btn-secondary {
+  @apply bg-white hover:bg-slate-50 text-blue-600 font-medium px-4 py-2 rounded-lg transition-colors duration-200 border border-blue-600 hover:border-blue-700;
+}
+
+.btn-ghost {
+  @apply bg-transparent hover:bg-blue-50 text-blue-600 font-medium px-4 py-2 rounded-lg transition-colors duration-200 border border-transparent hover:border-blue-200;
+}
+
 /* Custom animations for enhanced UI */
 @keyframes fade-in {
   from {

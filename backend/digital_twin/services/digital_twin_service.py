@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 import logging
 
-from ..models.digital_twin import DigitalTwin, DigitalTwinVersion, LearningProgress, SkillAssessment
+from ..models.digital_twin import DigitalTwin, DigitalTwinVersion, LearningProgress
 from ..models.user import User
 from ..services.ipfs_service import IPFSService
 from ..services.blockchain_service import BlockchainService
@@ -57,15 +57,13 @@ class DigitalTwinService:
                 current_modules=[],
                 completed_modules=[],
                 learning_progress=[],
-                skill_assessments=[],
-                verified_skills=[],
+                lesson_progress=[],
+                quiz_attempts=[],
+                achievements=[],
+                enrollments=[],
                 learning_style="balanced",
-                preferred_topics=[],
-                activity_pattern={},
                 checkpoint_history=[],
-                ai_insights={},
-                privacy_level="private",
-                sharing_permissions={}
+                privacy_level="private"
             )
             
             await digital_twin.insert()
@@ -84,7 +82,6 @@ class DigitalTwinService:
             
             # Update with CID
             digital_twin.latest_cid = cid
-            digital_twin.previous_cids = []
             await digital_twin.save()
             
             # Create version record
@@ -119,9 +116,7 @@ class DigitalTwinService:
             if not digital_twin:
                 raise ValueError(f"Digital twin not found: {twin_id}")
             
-            # Store previous CID
-            if digital_twin.latest_cid:
-                digital_twin.previous_cids.append(digital_twin.latest_cid)
+            # Store previous CID in version history (handled by version records)
             
             # Apply updates
             for key, value in updates.items():
@@ -176,7 +171,7 @@ class DigitalTwinService:
             logger.error(f"Digital twin update failed: {e}")
             raise
     
-    async def update_learning_progress(self, twin_id: str, module_id: str, completion_percentage: float, time_spent: int = 0, quiz_scores: List[float] = None) -> DigitalTwin:
+    async def update_learning_progress(self, twin_id: str, module_id: str, course_id: str, completion_percentage: float, time_spent: int = 0, quiz_scores: List[float] = None) -> DigitalTwin:
         """Update learning progress for a specific module"""
         try:
             digital_twin = await DigitalTwin.find_one({"twin_id": twin_id})
@@ -184,14 +179,14 @@ class DigitalTwinService:
                 raise ValueError(f"Digital twin not found: {twin_id}")
             
             # Update progress
-            digital_twin.update_learning_progress(module_id, completion_percentage, time_spent)
+            digital_twin.update_learning_progress(module_id, course_id, completion_percentage, time_spent)
             
-            # Add quiz scores if provided
+            # Add quiz scores if provided (legacy support)
             if quiz_scores:
-                for progress in digital_twin.learning_progress:
-                    if progress.module_id == module_id:
-                        progress.quiz_scores.extend(quiz_scores)
-                        break
+                # Convert quiz scores to quiz attempts for backward compatibility
+                for i, score in enumerate(quiz_scores):
+                    quiz_id = f"legacy_quiz_{module_id}_{i}"
+                    digital_twin.add_quiz_attempt(quiz_id, module_id, course_id, score)
             
             # Create checkpoint if module completed
             if completion_percentage >= 100:
@@ -217,6 +212,7 @@ class DigitalTwinService:
                     "learning_progress": digital_twin.learning_progress,
                     "current_modules": digital_twin.current_modules,
                     "completed_modules": digital_twin.completed_modules,
+                    "quiz_attempts": digital_twin.quiz_attempts,
                     "checkpoint_history": digital_twin.checkpoint_history
                 },
                 digital_twin.owner_did,
@@ -227,60 +223,53 @@ class DigitalTwinService:
             logger.error(f"Learning progress update failed: {e}")
             raise
     
-    async def update_skill_assessment(self, twin_id: str, skill_name: str, proficiency_level: str, score: float, verified: bool = False, verified_by: str = None, evidence_cids: List[str] = None) -> DigitalTwin:
-        """Update skill assessment"""
+    async def add_achievement(self, twin_id: str, achievement_id: str, title: str, description: str, 
+                             achievement_type: str, tier: str, evidence: Dict[str, Any] = None, 
+                             verified_by: str = None) -> DigitalTwin:
+        """Add an achievement to the digital twin"""
         try:
             digital_twin = await DigitalTwin.find_one({"twin_id": twin_id})
             if not digital_twin:
                 raise ValueError(f"Digital twin not found: {twin_id}")
             
-            # Update skill assessment
-            digital_twin.update_skill_assessment(skill_name, proficiency_level, score, verified, verified_by)
+            # Add achievement
+            digital_twin.add_achievement(achievement_id, title, description, achievement_type, tier, evidence)
             
-            # Add evidence CIDs if provided
-            if evidence_cids:
-                for assessment in digital_twin.skill_assessments:
-                    if assessment.skill_name == skill_name:
-                        assessment.evidence_cids.extend(evidence_cids)
-                        break
+            # Create checkpoint for achievement
+            checkpoint_id = f"achievement_{achievement_id}_{int(datetime.now().timestamp())}"
+            canonical_payload = digital_twin.get_canonical_payload()
             
-            # Create checkpoint for verified skills
-            if verified:
-                checkpoint_id = f"skill_verification_{skill_name}_{int(datetime.now().timestamp())}"
-                canonical_payload = digital_twin.get_canonical_payload()
-                
-                # Pin checkpoint state
-                cid = await self.ipfs_service.pin_json(
-                    canonical_payload,
-                    name=f"checkpoint_{checkpoint_id}",
-                    metadata={
-                        "twin_id": twin_id,
-                        "checkpoint_type": "skill_verification",
-                        "skill_name": skill_name,
-                        "verified_by": verified_by
-                    }
-                )
-                
-                digital_twin.add_checkpoint(checkpoint_id, cid, "skill_verification", {
-                    "skill_name": skill_name,
-                    "verified_by": verified_by,
-                    "proficiency_level": proficiency_level,
-                    "score": score
-                })
+            # Pin checkpoint state
+            cid = await self.ipfs_service.pin_json(
+                canonical_payload,
+                name=f"checkpoint_{checkpoint_id}",
+                metadata={
+                    "twin_id": twin_id,
+                    "checkpoint_type": "achievement_earned",
+                    "achievement_id": achievement_id,
+                    "tier": tier,
+                    "verified_by": verified_by
+                }
+            )
+            
+            # Update the checkpoint with actual CID
+            for checkpoint in digital_twin.checkpoint_history:
+                if checkpoint.checkpoint_id == f"achievement_{achievement_id}":
+                    checkpoint.twin_state_cid = cid
+                    break
             
             return await self.update_digital_twin(
                 twin_id,
                 {
-                    "skill_assessments": digital_twin.skill_assessments,
-                    "verified_skills": digital_twin.verified_skills,
+                    "achievements": digital_twin.achievements,
                     "checkpoint_history": digital_twin.checkpoint_history
                 },
                 verified_by or digital_twin.owner_did,
-                f"Skill assessment updated for {skill_name}"
+                f"Achievement added: {title}"
             )
             
         except Exception as e:
-            logger.error(f"Skill assessment update failed: {e}")
+            logger.error(f"Achievement addition failed: {e}")
             raise
     
     async def get_digital_twin(self, twin_id: str, version: int = None) -> Optional[DigitalTwin]:
@@ -388,14 +377,11 @@ class DigitalTwinService:
             # Analyze learning style
             if digital_twin.learning_progress:
                 completion_times = []
-                quiz_scores = []
                 
                 for progress in digital_twin.learning_progress:
                     if progress.completion_date and progress.start_date:
                         duration = (progress.completion_date - progress.start_date).days
                         completion_times.append(duration)
-                    
-                    quiz_scores.extend(progress.quiz_scores)
                 
                 if completion_times:
                     avg_completion_time = sum(completion_times) / len(completion_times)
@@ -407,25 +393,30 @@ class DigitalTwinService:
                         insights["learning_style_analysis"]["pace"] = "moderate"
                     else:
                         insights["learning_style_analysis"]["pace"] = "deliberate"
-                
+            
+            # Analyze quiz performance
+            if digital_twin.quiz_attempts:
+                quiz_scores = [attempt.score_percentage for attempt in digital_twin.quiz_attempts]
                 if quiz_scores:
                     avg_quiz_score = sum(quiz_scores) / len(quiz_scores)
                     insights["performance_trends"]["avg_quiz_score"] = avg_quiz_score
                     insights["performance_trends"]["quiz_attempts"] = len(quiz_scores)
+                    passed_quizzes = len([attempt for attempt in digital_twin.quiz_attempts if attempt.passed])
+                    insights["performance_trends"]["pass_rate"] = (passed_quizzes / len(quiz_scores)) * 100
             
-            # Analyze skill development
-            if digital_twin.skill_assessments:
-                skill_levels = {}
-                for assessment in digital_twin.skill_assessments:
-                    skill_levels[assessment.skill_name] = {
-                        "proficiency": assessment.proficiency_level,
-                        "score": assessment.assessment_score,
-                        "verified": assessment.verified
-                    }
+            # Analyze achievements and skill development
+            if digital_twin.achievements:
+                achievement_summary = {}
+                for achievement in digital_twin.achievements:
+                    achievement_type = achievement.achievement_type
+                    if achievement_type not in achievement_summary:
+                        achievement_summary[achievement_type] = {"count": 0, "tiers": []}
+                    achievement_summary[achievement_type]["count"] += 1
+                    achievement_summary[achievement_type]["tiers"].append(achievement.tier)
                 
-                insights["skill_development"]["skills"] = skill_levels
-                insights["skill_development"]["verified_count"] = len(digital_twin.verified_skills)
-                insights["skill_development"]["total_skills"] = len(digital_twin.skill_assessments)
+                insights["skill_development"]["achievements"] = achievement_summary
+                insights["skill_development"]["total_achievements"] = len(digital_twin.achievements)
+                insights["skill_development"]["skill_achievements"] = len([a for a in digital_twin.achievements if a.achievement_type == "SKILL"])
             
             # Generate recommendations
             recommendations = []
@@ -437,17 +428,16 @@ class DigitalTwinService:
                     "priority": "high"
                 })
             
-            if len(digital_twin.verified_skills) < 3:
+            if len(digital_twin.achievements) < 3:
                 recommendations.append({
-                    "type": "skill_verification",
-                    "message": "Consider getting your skills verified to earn NFT certificates",
+                    "type": "earn_achievements",
+                    "message": "Complete more modules and quizzes to earn achievements and NFT certificates",
                     "priority": "medium"
                 })
             
             insights["recommendations"] = recommendations
             
-            # Update AI insights in twin
-            digital_twin.ai_insights = insights
+            # Save insights to twin (could be stored in profile or as a checkpoint)
             await digital_twin.save()
             
             return insights

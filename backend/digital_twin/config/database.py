@@ -11,7 +11,7 @@ from ..models.user import User
 from ..models.digital_twin import DigitalTwin
 from ..models.course import Course, Module
 from ..models.nft import NFTRecord
-from ..models.session import UserSession
+from ..models.session import UserSession, RefreshToken
 from ..models.wallet import WalletLink
 from ..models.permission import Role, Permission
 
@@ -49,6 +49,7 @@ async def connect_to_mongo():
                 Module,
                 NFTRecord,
                 UserSession,
+                RefreshToken,
                 WalletLink,
                 Role,
                 Permission
@@ -96,6 +97,13 @@ async def create_indexes():
         await UserSession.create_index("session_id", unique=True)
         await UserSession.create_index("user_id")
         await UserSession.create_index("expires_at")
+        
+        # Refresh token indexes
+        await RefreshToken.create_index("token_id", unique=True)
+        await RefreshToken.create_index("user_id")
+        await RefreshToken.create_index("token_hash")
+        await RefreshToken.create_index("expires_at")
+        await RefreshToken.create_index("family_id")
         
         # Wallet indexes
         await WalletLink.create_index("wallet_address", unique=True)

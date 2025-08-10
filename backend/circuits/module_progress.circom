@@ -6,6 +6,7 @@ include "circomlib/circuits/comparators.circom";
 template ModuleProgress() {
     // Public inputs
     signal input moduleId;
+    signal input courseId;  // Added: Link to course structure
     signal input studentHash;
     signal input minScoreRequired;
     signal input maxTimeAllowed;
@@ -57,4 +58,4 @@ template ModuleProgress() {
     isValid <== temp2 * hashCheck.out;
 }
 
-component main { public [moduleId, studentHash, minScoreRequired, maxTimeAllowed, maxAttemptsAllowed, commitmentHash, learningSessionHash] } = ModuleProgress(); 
+component main { public [moduleId, courseId, studentHash, minScoreRequired, maxTimeAllowed, maxAttemptsAllowed, commitmentHash, learningSessionHash] } = ModuleProgress(); 

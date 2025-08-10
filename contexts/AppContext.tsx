@@ -1,6 +1,8 @@
 import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
 import { LearnerProfile, DigitalTwin, Nft, LearningModule, UpdateTwinPayload, LearningCheckpoint, KnowledgeArea, UserRole } from '../types';
-import { INITIAL_DIGITAL_TWIN, LEARNING_MODULES } from '../constants';
+import { INITIAL_DIGITAL_TWIN } from '../constants';
+import { apiService } from '../services/apiService';
+import { jwtService } from '../services/jwtService';
 import toast from 'react-hot-toast';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 
@@ -8,13 +10,24 @@ interface AppContextType {
   learnerProfile: LearnerProfile | null;
   digitalTwin: DigitalTwin;
   nfts: Nft[];
+  nftsLoading: boolean;
   learningModules: LearningModule[];
+  courses: any[];
+  coursesLoading: boolean;
+  achievements: any[];
+  achievementsLoading: boolean;
+  enrollments: any[];
+  progress: any[];
   role: UserRole | null;
   setRole: (role: UserRole | null) => void;
   updateLearnerProfile: (profile: LearnerProfile, userRole?: UserRole) => void;
   logout: () => void;
   updateDigitalTwin: (payload: Partial<UpdateTwinPayload>, description: string) => Promise<void>;
   mintNftForModule: (moduleId: string, moduleName: string, score?: number) => Promise<void>;
+  loadUserNFTs: () => Promise<void>;
+  loadCourses: () => Promise<void>;
+  loadAchievements: () => Promise<void>;
+  loadUserData: () => Promise<void>;
   getModuleById: (moduleId: string) => LearningModule | undefined;
   completeCheckpoint: (checkpoint: Omit<LearningCheckpoint, 'tokenized' | 'nftCid' | 'nftId'>) => void;
   updateKnowledge: (updates: KnowledgeArea) => void;
@@ -33,11 +46,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const savedTwin = localStorage.getItem('digitalTwin');
     return savedTwin ? JSON.parse(savedTwin) : INITIAL_DIGITAL_TWIN;
   });
-  const [nfts, setNfts] = useState<Nft[]>(() => {
-    const savedNfts = localStorage.getItem('nfts');
-    return savedNfts ? JSON.parse(savedNfts) : [];
-  });
-  const [learningModules] = useState<LearningModule[]>(LEARNING_MODULES);
+  const [nfts, setNfts] = useState<Nft[]>([]);
+  const [nftsLoading, setNftsLoading] = useState(false);
+  const [learningModules, setLearningModules] = useState<LearningModule[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [achievementsLoading, setAchievementsLoading] = useState(false);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [progress, setProgress] = useState<any[]>([]);
   const [role, setRole] = useState<UserRole | null>(() => {
     const savedRole = localStorage.getItem('userRole');
     return savedRole ? (savedRole as UserRole) : null;
@@ -55,9 +72,91 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('digitalTwin', JSON.stringify(digitalTwin));
   }, [digitalTwin]);
 
-  useEffect(() => {
-    localStorage.setItem('nfts', JSON.stringify(nfts));
-  }, [nfts]);
+  // Load real NFT data from blockchain/achievement system
+  const loadUserNFTs = useCallback(async () => {
+    if (!learnerProfile?.did || nftsLoading) return;
+    
+    try {
+      setNftsLoading(true);
+      
+      // Try to load NFT data from blockchain service first
+      try {
+        const { blockchainService } = await import('../services/blockchainService');
+        
+        const isWalletConnected = await blockchainService.checkWalletConnection();
+        if (isWalletConnected) {
+          const studentAddress = await blockchainService.getStudentAddress();
+          if (studentAddress) {
+            const blockchainData = await blockchainService.getStudentBlockchainData(
+              studentAddress, 
+              learnerProfile.did
+            );
+            
+            if (blockchainData && blockchainData.nfts) {
+              const formattedNFTs: Nft[] = blockchainData.nfts.map((nft: any) => ({
+                id: nft.token_id || nft.id,
+                name: nft.metadata?.name || nft.name || 'Learning NFT',
+                description: nft.metadata?.description || nft.description || 'Achievement NFT',
+                imageUrl: nft.metadata?.image || nft.image_url || '',
+                issuedDate: nft.mint_date || nft.created_at || new Date().toISOString(),
+                moduleId: nft.module_id || '',
+                cid: nft.cid_nft || nft.metadata_cid || '',
+                tokenId: nft.token_id,
+                contractAddress: nft.contract_address,
+                txHash: nft.tx_hash,
+                verified: nft.verified || false
+              }));
+              
+              setNfts(formattedNFTs);
+              console.log('Loaded blockchain NFT data:', formattedNFTs);
+              return;
+            }
+          }
+        }
+      } catch (blockchainError) {
+        console.warn('Blockchain NFT loading failed, trying achievements API:', blockchainError);
+      }
+      
+      // Fallback to achievements API
+      try {
+        const achievementsData = await apiService.getMyAchievements() as any;
+        if (achievementsData && achievementsData.achievements) {
+          const nftAchievements = achievementsData.achievements.filter((a: any) => 
+            a.achievement && a.achievement.nft_enabled
+          );
+          
+          const formattedNFTs: Nft[] = nftAchievements.map((achievement: any) => ({
+            id: achievement.user_achievement_id || achievement._id,
+            name: achievement.achievement.title,
+            description: achievement.achievement.description,
+            imageUrl: achievement.achievement.icon_url || '',
+            issuedDate: achievement.earned_at,
+            moduleId: achievement.module_id || '',
+            cid: achievement.achievement.nft_metadata_cid || '',
+            tokenId: achievement.nft_token_id,
+            contractAddress: achievement.contract_address,
+            txHash: achievement.tx_hash,
+            verified: true
+          }));
+          
+          setNfts(formattedNFTs);
+          console.log('Loaded achievement-based NFT data:', formattedNFTs);
+        } else {
+          setNfts([]);
+        }
+      } catch (apiError) {
+        console.error('Failed to load achievements:', apiError);
+        setNfts([]);
+      }
+    } catch (error) {
+      console.error('Failed to load NFT data:', error);
+      setNfts([]);
+    } finally {
+      setNftsLoading(false);
+    }
+  }, [learnerProfile?.did, nftsLoading]);
+
+  // Moved useEffect to later in the code to fix hoisting issue
 
   useEffect(() => {
     if (role) {
@@ -226,9 +325,97 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [nfts, updateDigitalTwinState, digitalTwin.learnerDid]);
 
+  // Load courses from API
+  const loadCourses = useCallback(async () => {
+    if (coursesLoading) return;
+    
+    try {
+      setCoursesLoading(true);
+      const coursesData = await apiService.searchCourses('', {}, 0, 50) as any;
+      setCourses(coursesData.courses || []);
+      
+      // Convert courses to learning modules format for backward compatibility
+      const modulesFromCourses: LearningModule[] = [];
+      for (const course of coursesData.courses || []) {
+        try {
+          const moduleData = await apiService.getCourseModules(course.course_id) as any;
+          if (moduleData.modules) {
+            moduleData.modules.forEach((module: any) => {
+              modulesFromCourses.push({
+                id: module.module_id,
+                title: module.title,
+                description: module.description,
+                estimatedTime: `${module.estimated_duration || 60} minutes`,
+                content: module.content || [],
+                quiz: module.assessments || []
+              });
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to load modules for course ${course.course_id}:`, error);
+        }
+      }
+      setLearningModules(modulesFromCourses);
+    } catch (error) {
+      console.error('Failed to load courses:', error);
+      setCourses([]);
+    } finally {
+      setCoursesLoading(false);
+    }
+  }, [coursesLoading]);
+
+  // Load achievements from API
+  const loadAchievements = useCallback(async () => {
+    if (achievementsLoading) return;
+    
+    try {
+      setAchievementsLoading(true);
+      const achievementsData = await apiService.getMyAchievements() as any;
+      setAchievements(achievementsData.achievements || []);
+    } catch (error) {
+      console.error('Failed to load achievements:', error);
+      setAchievements([]);
+    } finally {
+      setAchievementsLoading(false);
+    }
+  }, [achievementsLoading]);
+
+  // Load user enrollment and progress data
+  const loadUserData = useCallback(async () => {
+    try {
+      const [enrollmentsData, progressData] = await Promise.all([
+        apiService.getMyEnrollments(),
+        apiService.getMyProgress()
+      ]);
+      
+      setEnrollments((enrollmentsData as any).enrollments || []);
+      setProgress((progressData as any).progress || []);
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+      setEnrollments([]);
+      setProgress([]);
+    }
+  }, []);
+
   const getModuleById = useCallback((moduleId: string): LearningModule | undefined => {
     return learningModules.find(module => module.id === moduleId);
   }, [learningModules]);
+
+  // Load data when learner profile changes (moved here to fix hoisting issue)
+  useEffect(() => {
+    if (learnerProfile?.did) {
+      loadUserNFTs();
+      loadUserData();
+      loadCourses();
+      loadAchievements();
+    } else {
+      setNfts([]);
+      setEnrollments([]);
+      setProgress([]);
+      setCourses([]);
+      setAchievements([]);
+    }
+  }, [learnerProfile?.did, loadUserNFTs, loadUserData, loadCourses, loadAchievements]);
 
   const completeCheckpoint = useCallback((checkpointData: Omit<LearningCheckpoint, 'tokenized'|'nftCid'|'nftId'>) => {
     updateDigitalTwinState(prevTwin => {
@@ -300,21 +487,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.removeItem('digitalTwin');
     localStorage.removeItem('nfts');
     localStorage.removeItem('userRole');
-    console.log('Logout successful - all data cleared');
+    // Clear JWT tokens
+    jwtService.clearTokens();
+    console.log('Logout successful - all data cleared including JWT tokens');
   }, []);
 
   return (
     <AppContext.Provider value={{ 
       learnerProfile,
       digitalTwin, 
-      nfts, 
+      nfts,
+      nftsLoading,
       learningModules,
+      courses,
+      coursesLoading,
+      achievements,
+      achievementsLoading,
+      enrollments,
+      progress,
       role,
       setRole,
       updateLearnerProfile,
       logout,
       updateDigitalTwin,
       mintNftForModule,
+      loadUserNFTs,
+      loadCourses,
+      loadAchievements,
+      loadUserData,
       getModuleById,
       completeCheckpoint,
       updateKnowledge,

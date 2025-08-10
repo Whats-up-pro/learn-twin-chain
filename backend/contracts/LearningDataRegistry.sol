@@ -12,10 +12,17 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
  */
 contract LearningDataRegistry is Ownable, ReentrancyGuard, Pausable {
     
+    // ============ ENUMS ============
+    enum SessionType { MODULE, LESSON, QUIZ, ACHIEVEMENT }
+    
     // ============ STRUCTS ============
     struct LearningSession {
         address student;
+        string courseId;        // Added: Course identifier
         string moduleId;
+        string lessonId;        // Added: Lesson identifier (optional)
+        string quizId;          // Added: Quiz identifier (optional) 
+        SessionType sessionType; // Added: Type of learning session
         bytes32 learningDataHash; // IPFS hash of learning data
         uint256 timestamp;
         uint256 score;
@@ -48,7 +55,11 @@ contract LearningDataRegistry is Ownable, ReentrancyGuard, Pausable {
     event LearningSessionCreated(
         bytes32 indexed sessionHash,
         address indexed student,
+        string courseId,
         string moduleId,
+        string lessonId,
+        string quizId,
+        SessionType sessionType,
         bytes32 learningDataHash,
         uint256 timestamp
     );
@@ -98,28 +109,49 @@ contract LearningDataRegistry is Ownable, ReentrancyGuard, Pausable {
     
     /**
      * @dev Create a new learning session
+     * @param courseId The course identifier
      * @param moduleId The module identifier
+     * @param lessonId The lesson identifier (optional, can be empty)
+     * @param quizId The quiz identifier (optional, can be empty)
+     * @param sessionType Type of learning session
      * @param learningDataHash IPFS hash of learning data
      * @param score Student's score
      * @param timeSpent Time spent learning
      * @param attempts Number of attempts
      */
     function createLearningSession(
+        string memory courseId,
         string memory moduleId,
+        string memory lessonId,
+        string memory quizId,
+        SessionType sessionType,
         bytes32 learningDataHash,
         uint256 score,
         uint256 timeSpent,
         uint256 attempts
     ) external whenNotPaused nonReentrant returns (bytes32) {
+        require(bytes(courseId).length > 0, "LearningDataRegistry: Empty course ID");
         require(bytes(moduleId).length > 0, "LearningDataRegistry: Empty module ID");
         require(score <= 100, "LearningDataRegistry: Invalid score");
         require(timeSpent > 0, "LearningDataRegistry: Invalid time spent");
         require(attempts > 0, "LearningDataRegistry: Invalid attempts");
         
+        // Validate session type requirements
+        if (sessionType == SessionType.LESSON) {
+            require(bytes(lessonId).length > 0, "LearningDataRegistry: Lesson ID required for lesson session");
+        }
+        if (sessionType == SessionType.QUIZ) {
+            require(bytes(quizId).length > 0, "LearningDataRegistry: Quiz ID required for quiz session");
+        }
+        
         // Create session hash
         bytes32 sessionHash = keccak256(abi.encodePacked(
             msg.sender,
+            courseId,
             moduleId,
+            lessonId,
+            quizId,
+            sessionType,
             learningDataHash,
             block.timestamp,
             block.chainid
@@ -130,7 +162,11 @@ contract LearningDataRegistry is Ownable, ReentrancyGuard, Pausable {
         // Create learning session
         LearningSession storage session = learningSessions[sessionHash];
         session.student = msg.sender;
+        session.courseId = courseId;
         session.moduleId = moduleId;
+        session.lessonId = lessonId;
+        session.quizId = quizId;
+        session.sessionType = sessionType;
         session.learningDataHash = learningDataHash;
         session.timestamp = block.timestamp;
         session.score = score;
@@ -143,7 +179,90 @@ contract LearningDataRegistry is Ownable, ReentrancyGuard, Pausable {
         studentSessions[msg.sender].push(sessionHash);
         totalSessions++;
         
-        emit LearningSessionCreated(sessionHash, msg.sender, moduleId, learningDataHash, block.timestamp);
+        emit LearningSessionCreated(
+            sessionHash, 
+            msg.sender, 
+            courseId, 
+            moduleId, 
+            lessonId, 
+            quizId, 
+            sessionType, 
+            learningDataHash, 
+            block.timestamp
+        );
+        
+        return sessionHash;
+    }
+
+    /**
+     * @dev Create a legacy learning session (for backward compatibility)
+     * @param moduleId The module identifier
+     * @param learningDataHash IPFS hash of learning data
+     * @param score Student's score
+     * @param timeSpent Time spent learning
+     * @param attempts Number of attempts
+     */
+    function createLearningSessionLegacy(
+        string memory moduleId,
+        bytes32 learningDataHash,
+        uint256 score,
+        uint256 timeSpent,
+        uint256 attempts
+    ) external whenNotPaused nonReentrant returns (bytes32) {
+        require(bytes(moduleId).length > 0, "LearningDataRegistry: Empty module ID");
+        require(score <= 100, "LearningDataRegistry: Invalid score");
+        require(timeSpent > 0, "LearningDataRegistry: Invalid time spent");
+        require(attempts > 0, "LearningDataRegistry: Invalid attempts");
+        
+        // Extract course ID from module ID (assuming format: course_[courseId]_module_[moduleId])
+        string memory courseId = "unknown_course";
+        
+        // Create session hash
+        bytes32 sessionHash = keccak256(abi.encodePacked(
+            msg.sender,
+            courseId,
+            moduleId,
+            "",  // empty lessonId
+            "",  // empty quizId
+            SessionType.MODULE,
+            learningDataHash,
+            block.timestamp,
+            block.chainid
+        ));
+        
+        require(learningSessions[sessionHash].timestamp == 0, "LearningDataRegistry: Session already exists");
+        
+        // Create learning session
+        LearningSession storage session = learningSessions[sessionHash];
+        session.student = msg.sender;
+        session.courseId = courseId;
+        session.moduleId = moduleId;
+        session.lessonId = "";
+        session.quizId = "";
+        session.sessionType = SessionType.MODULE;
+        session.learningDataHash = learningDataHash;
+        session.timestamp = block.timestamp;
+        session.score = score;
+        session.timeSpent = timeSpent;
+        session.attempts = attempts;
+        session.isVerified = false;
+        session.approvalCount = 0;
+        
+        // Add to student's sessions
+        studentSessions[msg.sender].push(sessionHash);
+        totalSessions++;
+        
+        emit LearningSessionCreated(
+            sessionHash, 
+            msg.sender, 
+            courseId, 
+            moduleId, 
+            "", 
+            "", 
+            SessionType.MODULE, 
+            learningDataHash, 
+            block.timestamp
+        );
         
         return sessionHash;
     }
@@ -206,7 +325,57 @@ contract LearningDataRegistry is Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Get learning session data
+     * @dev Get learning session data (enhanced version)
+     * @param sessionHash The learning session hash
+     * @return student The student address
+     * @return courseId The course identifier
+     * @return moduleId The module identifier
+     * @return lessonId The lesson identifier
+     * @return quizId The quiz identifier
+     * @return sessionType The session type
+     * @return learningDataHash The IPFS hash of learning data
+     * @return timestamp The session timestamp
+     * @return score The student's score
+     * @return timeSpent The time spent learning
+     * @return attempts The number of attempts
+     * @return isVerified Whether the session is verified
+     * @return approvalCount The number of validator approvals
+     */
+    function getLearningSession(bytes32 sessionHash) external view returns (
+        address student,
+        string memory courseId,
+        string memory moduleId,
+        string memory lessonId,
+        string memory quizId,
+        SessionType sessionType,
+        bytes32 learningDataHash,
+        uint256 timestamp,
+        uint256 score,
+        uint256 timeSpent,
+        uint256 attempts,
+        bool isVerified,
+        uint256 approvalCount
+    ) {
+        LearningSession storage session = learningSessions[sessionHash];
+        return (
+            session.student,
+            session.courseId,
+            session.moduleId,
+            session.lessonId,
+            session.quizId,
+            session.sessionType,
+            session.learningDataHash,
+            session.timestamp,
+            session.score,
+            session.timeSpent,
+            session.attempts,
+            session.isVerified,
+            session.approvalCount
+        );
+    }
+
+    /**
+     * @dev Get learning session data (legacy version for backward compatibility)
      * @param sessionHash The learning session hash
      * @return student The student address
      * @return moduleId The module identifier
@@ -218,7 +387,7 @@ contract LearningDataRegistry is Ownable, ReentrancyGuard, Pausable {
      * @return isVerified Whether the session is verified
      * @return approvalCount The number of validator approvals
      */
-    function getLearningSession(bytes32 sessionHash) external view returns (
+    function getLearningSessionLegacy(bytes32 sessionHash) external view returns (
         address student,
         string memory moduleId,
         bytes32 learningDataHash,

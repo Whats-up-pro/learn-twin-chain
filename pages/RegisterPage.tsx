@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 const RegisterPage: React.FC = () => {
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
@@ -109,6 +110,18 @@ const RegisterPage: React.FC = () => {
           setSuccessMsg(prev => prev + ` Your DID: ${data.did}`);
         }, 2000);
       }
+      
+      // Redirect to email verification page after 3 seconds
+      setTimeout(() => {
+        // Create a verification success page with return to login
+        navigate('/verify-email-sent', { 
+          state: { 
+            email: email,
+            message: data.message,
+            did: data.did
+          }
+        });
+      }, 3000);
       
     } catch (err) {
       setError('Network error! Please make sure the backend server is running.');
