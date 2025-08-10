@@ -35,7 +35,28 @@ const DashboardPage: React.FC = () => {
   const totalModules = learningModules.length;
   const completedModulesCount = digitalTwin.checkpoints.length;
   
-  const overallProgress = totalModules > 0 ? (completedModulesCount / totalModules) * 100 : 0;
+  // Calculate knowledge progress from digitalTwin.knowledge
+  const knowledgeProgress = Object.values(digitalTwin.knowledge).reduce((sum, progress) => sum + progress, 0);
+  const totalKnowledgeAreas = Object.keys(digitalTwin.knowledge).length;
+  const averageKnowledgeProgress = totalKnowledgeAreas > 0 ? knowledgeProgress / totalKnowledgeAreas : 0;
+  
+  // Calculate overall progress as weighted average (50% module completion, 50% knowledge progress)
+  const moduleProgress = totalModules > 0 ? (completedModulesCount / totalModules) * 100 : 0;
+  const overallProgress = (moduleProgress * 0.5) + (averageKnowledgeProgress * 100 * 0.5);
+  
+  // Calculate progress by category
+  const pythonModules = learningModules.filter(m => m.id.startsWith('python_'));
+  const blockchainModules = learningModules.filter(m => m.id.startsWith('blockchain_'));
+  
+  const completedPythonModules = digitalTwin.checkpoints.filter(cp => 
+    pythonModules.some(m => m.id === cp.moduleId)
+  ).length;
+  const completedBlockchainModules = digitalTwin.checkpoints.filter(cp => 
+    blockchainModules.some(m => m.id === cp.moduleId)
+  ).length;
+  
+  const pythonProgress = pythonModules.length > 0 ? (completedPythonModules / pythonModules.length) * 100 : 0;
+  const blockchainProgress = blockchainModules.length > 0 ? (completedBlockchainModules / blockchainModules.length) * 100 : 0;
 
   const avatarUrl = learnerProfile && learnerProfile.avatarUrl && learnerProfile.avatarUrl.trim() !== ''
     ? learnerProfile.avatarUrl
@@ -64,13 +85,34 @@ const DashboardPage: React.FC = () => {
       toast.error('Please connect your MetaMask wallet before continuing.');
       return;
     }
-    const incompleteModule = learningModules.find(module => 
-      !digitalTwin.checkpoints.some(cp => cp.moduleId === module.id)
-    );
+    
+    // Find the next incomplete module whose prerequisites are met
+    const incompleteModule = learningModules.find(module => {
+      const isCompleted = digitalTwin.checkpoints.some(cp => cp.moduleId === module.id);
+      if (isCompleted) return false;
+      
+      // Check if prerequisites are met
+      const canStart = !module.prerequisites || module.prerequisites.length === 0 || 
+        module.prerequisites.every(pre => digitalTwin.checkpoints.some(cp => cp.moduleId === pre));
+      
+      return canStart;
+    });
+    
     if (incompleteModule) {
       navigate(`/module/${incompleteModule.id}`);
     } else {
+      // If no incomplete module with met prerequisites, find any module that's in progress
+      const inProgressModule = learningModules.find(module => {
+        const moduleKnowledge = digitalTwin.knowledge[module.title] ?? 0;
+        const isCompleted = digitalTwin.checkpoints.some(cp => cp.moduleId === module.id);
+        return moduleKnowledge > 0 && !isCompleted;
+      });
+      
+      if (inProgressModule) {
+        navigate(`/module/${inProgressModule.id}`);
+    } else {
       toast.success('All modules completed! 🎉');
+      }
     }
   };
 
@@ -197,10 +239,16 @@ const DashboardPage: React.FC = () => {
             gradient="from-blue-500 to-blue-600"
           />
           <StatCard 
-            title="Modules Completed" 
-            value={`${completedModulesCount}/${totalModules}`} 
+            title="Python Progress" 
+            value={`${Math.round(pythonProgress)}%`} 
             icon={<AcademicCapIcon className="h-8 w-8 text-green-500"/>}
             gradient="from-green-500 to-green-600"
+          />
+          <StatCard 
+            title="Blockchain Progress" 
+            value={`${Math.round(blockchainProgress)}%`} 
+            icon={<ShieldCheckIcon className="h-8 w-8 text-blue-500"/>}
+            gradient="from-blue-500 to-blue-600"
           />
           <StatCard 
             title="NFTs Earned" 
@@ -227,19 +275,38 @@ const DashboardPage: React.FC = () => {
               Python for Beginners · Blockchain Basics
             </div>
           </div>
+        {/* Python Programming Section */}
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <BookOpenIcon className="h-6 w-6 text-green-500 mr-3" />
+            Python Programming
+          </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {learningModules.map(module => {
+            {pythonModules.map(module => {
             const moduleKnowledge = digitalTwin.knowledge[module.title] ?? 0;
             const isCompleted = digitalTwin.checkpoints.some(cp => cp.moduleId === module.id);
             const isStarted = moduleKnowledge > 0;
+              
+              // Check prerequisites
+              const prerequisitesMet = !module.prerequisites || module.prerequisites.length === 0 || 
+                module.prerequisites.every(pre => digitalTwin.checkpoints.some(cp => cp.moduleId === pre));
+              
+              const isLocked = !prerequisitesMet && !isStarted;
+              
             return (
-                <div key={module.id} className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-gray-100">
+                <div key={module.id} className={`group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-gray-100 ${isLocked ? 'opacity-50' : ''}`}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-800">{module.title}</h3>
                     {isCompleted && (
                       <div className="flex items-center space-x-1 text-green-600">
                         <CheckCircleIcon className="h-5 w-5" />
                         <span className="text-sm font-medium">Complete</span>
+                      </div>
+                    )}
+                    {isLocked && (
+                      <div className="flex items-center space-x-1 text-gray-500">
+                        <ShieldCheckIcon className="h-5 w-5" />
+                        <span className="text-sm font-medium">Locked</span>
                       </div>
                     )}
                   </div>
@@ -278,20 +345,114 @@ const DashboardPage: React.FC = () => {
                     
                     <button
                       onClick={() => handleStartLearning(module.id)}
+                      disabled={isLocked}
                       className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
                         isCompleted 
                           ? 'bg-green-100 text-green-700 hover:bg-green-200' 
                           : isStarted
                           ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl'
+                          : isLocked
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700 shadow-lg hover:shadow-xl'
                       }`}
                     >
-                      {isCompleted ? '✓ Completed' : isStarted ? 'Continue Learning' : 'Start Learning'}
+                      {isCompleted ? '✓ Completed' : isStarted ? 'Continue Learning' : isLocked ? 'Prerequisites Required' : 'Start Learning'}
                     </button>
                   </div>
                 </div>
             );
           })}
+          </div>
+        </div>
+
+        {/* Blockchain Development Section */}
+        <div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <ShieldCheckIcon className="h-6 w-6 text-blue-500 mr-3" />
+            Blockchain Development
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {blockchainModules.map(module => {
+              const moduleKnowledge = digitalTwin.knowledge[module.title] ?? 0;
+              const isCompleted = digitalTwin.checkpoints.some(cp => cp.moduleId === module.id);
+              const isStarted = moduleKnowledge > 0;
+              
+              // Check prerequisites
+              const prerequisitesMet = !module.prerequisites || module.prerequisites.length === 0 || 
+                module.prerequisites.every(pre => digitalTwin.checkpoints.some(cp => cp.moduleId === pre));
+              
+              const isLocked = !prerequisitesMet && !isStarted;
+              
+              return (
+                <div key={module.id} className={`group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 border border-gray-100 ${isLocked ? 'opacity-50' : ''}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-800">{module.title}</h3>
+                    {isCompleted && (
+                      <div className="flex items-center space-x-1 text-green-600">
+                        <CheckCircleIcon className="h-5 w-5" />
+                        <span className="text-sm font-medium">Complete</span>
+                      </div>
+                    )}
+                    {isLocked && (
+                      <div className="flex items-center space-x-1 text-gray-500">
+                        <ShieldCheckIcon className="h-5 w-5" />
+                        <span className="text-sm font-medium">Locked</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-gray-600 mb-6 line-clamp-2">{module.description}</p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-700">Progress</span>
+                        <span className="text-sm font-bold text-gray-800">{isCompleted ? 100 : Math.round(moduleKnowledge * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className={`h-3 rounded-full transition-all duration-500 ${
+                            isCompleted ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                            isStarted ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
+                            'bg-gradient-to-r from-gray-400 to-gray-600'
+                          }`}
+                          style={{ width: `${isCompleted ? 100 : moduleKnowledge * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span className="flex items-center">
+                        <ClockIcon className="h-4 w-4 mr-1" />
+                        {module.estimatedTime}
+                      </span>
+                      {isStarted && (
+                        <span className="flex items-center text-blue-600">
+                          <StarIcon className="h-4 w-4 mr-1" />
+                          {isCompleted ? '100% done' : `${Math.round(moduleKnowledge * 100)}% done`}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => handleStartLearning(module.id)}
+                      disabled={isLocked}
+                      className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                        isCompleted 
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                          : isStarted
+                          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl'
+                          : isLocked
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700 shadow-lg hover:shadow-xl'
+                      }`}
+                    >
+                      {isCompleted ? '✓ Completed' : isStarted ? 'Continue Learning' : isLocked ? 'Prerequisites Required' : 'Start Learning'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           </div>
         </div>
 
