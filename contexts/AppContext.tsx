@@ -331,22 +331,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     try {
       setCoursesLoading(true);
-      const coursesData = await apiService.searchCourses('', {}, 0, 50) as any;
-      setCourses(coursesData.courses || []);
+      const response = await apiService.searchCourses('', {}, 0, 50);
+      console.log('AppContext course response:', response);
       
-      // Convert courses to learning modules format for backward compatibility
+      if (response && response.items) {
+        setCourses(response.items);
+        console.log(`AppContext loaded ${response.items.length} courses`);
+      } else if (response && Array.isArray(response)) {
+        setCourses(response);
+        console.log(`AppContext loaded ${response.length} courses`);
+      } else {
+        console.warn('AppContext: No courses found in response:', response);
+        setCourses([]);
+      }
+      
+      // Extract modules from courses for learning modules
       const modulesFromCourses: LearningModule[] = [];
-      for (const course of coursesData.courses || []) {
+      for (const course of response?.items || []) {
         try {
-          const moduleData = await apiService.getCourseModules(course.course_id) as any;
-          if (moduleData.modules) {
-            moduleData.modules.forEach((module: any) => {
+          // Get course modules if available
+          if (course.modules && Array.isArray(course.modules)) {
+            course.modules.forEach((module: any) => {
               modulesFromCourses.push({
-                id: module.module_id,
+                id: module.module_id || module.id,
                 title: module.title,
                 description: module.description,
-                estimatedTime: `${module.estimated_duration || 60} minutes`,
-                content: module.content || [],
+                courseId: course.id || course.course_id,
+                courseTitle: course.title,
+                duration: module.estimated_duration || module.duration || 60,
+                difficulty: course.difficulty_level || 'beginner',
+                progress: 0,
+                completed: false,
                 quiz: module.assessments || []
               });
             });

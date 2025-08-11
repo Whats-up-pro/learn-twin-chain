@@ -1,7 +1,7 @@
 """
 FastAPI dependencies for authentication and authorization
 """
-from typing import Optional
+from typing import Optional, Dict, Any
 from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer
 import logging
@@ -41,6 +41,28 @@ async def get_optional_user(request: Request) -> Optional[User]:
         return await auth_service.get_current_user(request)
     except Exception as e:
         logger.debug(f"Optional user retrieval error: {e}")
+        return None
+
+async def get_current_user_optional(request: Request) -> Optional[Dict[str, Any]]:
+    """Get current user dict if authenticated, None otherwise"""
+    try:
+        user = await auth_service.get_current_user(request)
+        if user:
+            try:
+                permissions = await auth_service.get_user_permissions(user.did)
+            except Exception as perm_error:
+                logger.warning(f"Failed to get user permissions: {perm_error}")
+                permissions = ["read_own_profile", "read_courses", "read_modules"]  # Default permissions
+            
+            return {
+                "user_id": user.did,
+                "email": user.email,
+                "role": user.role,
+                "permissions": permissions
+            }
+        return None
+    except Exception as e:
+        logger.debug(f"Optional user dict retrieval error: {e}")
         return None
 
 def require_permission(permission: str):

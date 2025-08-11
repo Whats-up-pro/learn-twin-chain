@@ -8,7 +8,8 @@ import logging
 
 from ..services.course_service import CourseService
 from ..models.user import User
-from ..dependencies import get_current_user, require_permission, require_teacher
+from ..dependencies import get_current_user, require_permission, require_teacher, get_current_user_optional
+from ..models.course import Course, Module, Enrollment, ModuleProgress
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/courses", tags=["courses"])
@@ -69,6 +70,151 @@ async def create_course(
         logger.error(f"Course creation error: {e}")
         raise HTTPException(status_code=500, detail="Course creation failed")
 
+@router.get("/debug/all")
+async def get_all_courses_debug():
+    """Debug endpoint to get all courses in database"""
+    try:
+        # Get all courses without any filters
+        all_courses = await Course.find({}).to_list()
+        logger.info(f"Debug: Found {len(all_courses)} total courses in database")
+        
+        # Get basic info about each course
+        course_info = []
+        for course in all_courses:
+            course_info.append({
+                "course_id": course.course_id,
+                "title": course.title,
+                "status": course.status,
+                "institution": course.institution,
+                "is_public": course.is_public,
+                "created_at": course.created_at
+            })
+        
+        return {
+            "total_courses": len(all_courses),
+            "courses": course_info
+        }
+    except Exception as e:
+        logger.error(f"Debug endpoint failed: {e}")
+        raise HTTPException(status_code=500, detail="Debug endpoint failed")
+
+@router.get("/debug/search-test")
+async def debug_search_test():
+    """Debug endpoint to test search criteria"""
+    try:
+        # Test different search criteria
+        results = {}
+        
+        # Test 1: All courses
+        all_courses = await Course.find({}).to_list()
+        results["all_courses"] = len(all_courses)
+        
+        # Test 2: Published courses
+        published_courses = await Course.find({"status": "published"}).to_list()
+        results["published_courses"] = len(published_courses)
+        
+        # Test 3: Public courses
+        public_courses = await Course.find({"is_public": True}).to_list()
+        results["public_courses"] = len(public_courses)
+        
+        # Test 4: Published AND public courses
+        published_public_courses = await Course.find({"status": "published", "is_public": True}).to_list()
+        results["published_public_courses"] = len(published_public_courses)
+        
+        # Test 5: Python search
+        python_courses = await Course.find({
+            "$or": [
+                {"title": {"$regex": "Python", "$options": "i"}},
+                {"description": {"$regex": "Python", "$options": "i"}}
+            ]
+        }).to_list()
+        results["python_courses"] = len(python_courses)
+        
+        # Test 6: Python + published + public
+        python_published_public = await Course.find({
+            "status": "published",
+            "is_public": True,
+            "$or": [
+                {"title": {"$regex": "Python", "$options": "i"}},
+                {"description": {"$regex": "Python", "$options": "i"}}
+            ]
+        }).to_list()
+        results["python_published_public"] = len(python_published_public)
+        
+        # Get details of first few courses
+        course_details = []
+        for course in all_courses[:3]:
+            course_details.append({
+                "course_id": course.course_id,
+                "title": course.title,
+                "status": course.status,
+                "is_public": course.is_public,
+                "institution": course.institution,
+                "metadata": course.metadata.dict() if course.metadata else {}
+            })
+        
+        return {
+            "search_tests": results,
+            "sample_courses": course_details
+        }
+    except Exception as e:
+        logger.error(f"Debug search test failed: {e}")
+        raise HTTPException(status_code=500, detail="Debug search test failed")
+
+@router.get("/all")
+async def get_all_courses(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """Get all published and public courses without search filters"""
+    try:
+        # Get all published and public courses
+        search_criteria = {
+            "status": "published",
+            "is_public": True
+        }
+        
+        courses = await Course.find(search_criteria).skip(skip).limit(limit).to_list()
+        total = await Course.find(search_criteria).count()
+        
+        # Transform courses to match frontend expectations
+        transformed_courses = []
+        for course in courses:
+            try:
+                course_dict = course.dict()
+                
+                transformed_course = {
+                    "id": course_dict.get("course_id"),
+                    "title": course_dict.get("title"),
+                    "description": course_dict.get("description"),
+                    "instructor_name": course_dict.get("instructors", [""])[0] if course_dict.get("instructors") else "Unknown",
+                    "duration_minutes": course_dict.get("metadata", {}).get("estimated_hours", 0) * 60,
+                    "difficulty_level": course_dict.get("metadata", {}).get("difficulty_level", "beginner"),
+                    "enrollment_count": 0,  # Will be calculated separately
+                    "rating": 4.5,  # Default rating
+                    "thumbnail_url": "https://via.placeholder.com/300x200?text=Course",
+                    "institution": course_dict.get("institution", "Unknown"),
+                    "tags": course_dict.get("metadata", {}).get("tags", []),
+                    "status": course_dict.get("status", "published"),
+                    "created_at": course_dict.get("created_at"),
+                    "updated_at": course_dict.get("updated_at")
+                }
+                transformed_courses.append(transformed_course)
+            except Exception as e:
+                logger.error(f"Error transforming course {course.course_id}: {e}")
+                continue
+        
+        return {
+            "items": transformed_courses,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"Get all courses failed: {e}")
+        raise HTTPException(status_code=500, detail="Get all courses failed")
+
 @router.get("/")
 async def search_courses(
     q: Optional[str] = Query(None, description="Search query"),
@@ -89,29 +235,67 @@ async def search_courses(
             filters["tags"] = tags
         
         result = await course_service.search_courses(q, filters, skip, limit)
+        
+        # The service now returns the correct format with "items" key
         return result
+        
     except Exception as e:
-        logger.error(f"Course search error: {e}")
+        logger.error(f"Course search failed: {e}")
         raise HTTPException(status_code=500, detail="Course search failed")
 
 @router.get("/{course_id}")
 async def get_course(
     course_id: str,
-    include_modules: bool = Query(False, description="Include course modules"),
-    current_user: User = Depends(get_current_user)
+    include_modules: bool = Query(False),
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
 ):
-    """Get course by ID"""
+    """Get course details by ID"""
     try:
+        course_service = CourseService()
         course = await course_service.get_course(course_id, include_modules)
+        
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
         
-        return {"course": course.dict()}
+        # Check if course is public or user has access
+        if not course.is_public:
+            if not current_user:
+                raise HTTPException(status_code=401, detail="Authentication required")
+            
+            # Check if user is instructor or enrolled
+            if (current_user.get("user_id") not in course.instructors and 
+                current_user.get("user_id") != course.created_by):
+                # Check if user is enrolled
+                enrollment = await Enrollment.find_one({
+                    "user_id": current_user.get("user_id"),
+                    "course_id": course_id,
+                    "status": "active"
+                })
+                if not enrollment:
+                    raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Transform course data
+        course_dict = course.dict()
+        
+        # Add enrollment info if user is authenticated
+        if current_user:
+            enrollment = await Enrollment.find_one({
+                "user_id": current_user.get("user_id"),
+                "course_id": course_id
+            })
+            if enrollment:
+                course_dict["user_enrollment"] = enrollment.dict()
+        
+        return {
+            "success": True,
+            "course": course_dict
+        }
+        
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Course retrieval error: {e}")
-        raise HTTPException(status_code=500, detail="Course retrieval failed")
+        logger.error(f"Get course failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get course")
 
 @router.put("/{course_id}", dependencies=[Depends(require_permission("update_course"))])
 async def update_course(
@@ -161,18 +345,40 @@ async def enroll_in_course(
 ):
     """Enroll current user in a course"""
     try:
+        logger.info(f"Enrolling user {current_user.did} in course {course_id}")
+        
+        # Check if course exists
+        course = await Course.find_one({"course_id": course_id})
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        # Check if course is published
+        if course.status != "published":
+            raise HTTPException(status_code=400, detail="Course is not published")
+        
+        # Check if course is public or user has access
+        if not course.is_public:
+            if (current_user.did not in course.instructors and 
+                current_user.did != course.created_by):
+                raise HTTPException(status_code=403, detail="Access denied")
+        
         enrollment = await course_service.enroll_student(course_id, current_user.did)
+        
         return {
-            "message": "Enrolled successfully",
+            "message": "Successfully enrolled in course",
             "enrollment": enrollment.dict()
         }
+        
+    except HTTPException:
+        raise
     except ValueError as e:
+        logger.error(f"Enrollment validation error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Course enrollment error: {e}")
+        logger.error(f"Course enrollment failed: {e}")
         raise HTTPException(status_code=500, detail="Course enrollment failed")
 
-@router.get("/{course_id}/enrollments", dependencies=[Depends(require_permission("view_analytics"))])
+@router.get("/{course_id}/enrollments")
 async def get_course_enrollments(
     course_id: str,
     skip: int = Query(0, ge=0),
@@ -181,6 +387,17 @@ async def get_course_enrollments(
 ):
     """Get course enrollments (teacher/admin only)"""
     try:
+        # Check if user is instructor or admin
+        course = await course_service.get_course(course_id)
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        # Only allow instructors, admins, or institution admins to view enrollments
+        if (current_user.did not in course.instructors and 
+            current_user.did != course.created_by and 
+            current_user.role not in ["admin", "institution_admin"]):
+            raise HTTPException(status_code=403, detail="Insufficient permissions to view course enrollments")
+        
         # Implementation would go here
         # This would require additional service method
         return {"message": "Endpoint to be implemented"}
@@ -217,18 +434,61 @@ async def create_module(
 @router.get("/{course_id}/modules")
 async def get_course_modules(
     course_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
 ):
-    """Get all modules for a course"""
+    """Get modules for a course"""
     try:
-        from ..models.course import Module
+        # Check if course exists and is public
+        course = await Course.find_one({"course_id": course_id})
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        # Check if course is public or user has access
+        if not course.is_public:
+            if not current_user:
+                raise HTTPException(status_code=401, detail="Authentication required")
+            
+            # Check if user is instructor or enrolled
+            if (current_user.get("user_id") not in course.instructors and 
+                current_user.get("user_id") != course.created_by):
+                # Check if user is enrolled
+                enrollment = await Enrollment.find_one({
+                    "user_id": current_user.get("user_id"),
+                    "course_id": course_id,
+                    "status": "active"
+                })
+                if not enrollment:
+                    raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Get modules from modules collection using course_id
         modules = await Module.find({"course_id": course_id}).sort("order").to_list()
+        
+        # Transform modules
+        module_list = []
+        for module in modules:
+            module_dict = module.dict()
+            # Add progress info if user is authenticated
+            if current_user:
+                progress = await ModuleProgress.find_one({
+                    "user_id": current_user.get("user_id"),
+                    "module_id": module.module_id
+                })
+                if progress:
+                    module_dict["user_progress"] = progress.dict()
+            
+            module_list.append(module_dict)
+        
         return {
-            "modules": [module.dict() for module in modules]
+            "success": True,
+            "modules": module_list,
+            "total": len(module_list)
         }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Course modules retrieval error: {e}")
-        raise HTTPException(status_code=500, detail="Modules retrieval failed")
+        logger.error(f"Get course modules failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get course modules")
 
 @router.put("/modules/{module_id}/progress")
 async def update_module_progress(
@@ -260,7 +520,6 @@ async def get_module_progress(
 ):
     """Get current user's progress in a module"""
     try:
-        from ..models.course import ModuleProgress
         progress = await ModuleProgress.find_one({
             "user_id": current_user.did,
             "module_id": module_id
@@ -281,11 +540,35 @@ async def get_module_progress(
 async def get_my_enrollments(current_user: User = Depends(get_current_user)):
     """Get current user's course enrollments"""
     try:
+        logger.info(f"Getting enrollments for user {current_user.did}")
+        
         enrollments = await course_service.get_student_enrollments(current_user.did)
-        return {"enrollments": enrollments}
+        
+        return {
+            "success": True,
+            "enrollments": enrollments,
+            "total": len(enrollments)
+        }
+        
     except Exception as e:
-        logger.error(f"User enrollments retrieval error: {e}")
+        logger.error(f"Enrollments retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Enrollments retrieval failed")
+
+@router.post("/sync-enrollments")
+async def sync_enrollments(current_user: User = Depends(get_current_user)):
+    """Sync user enrollments between User model and Enrollment collection"""
+    try:
+        success = await course_service.sync_user_enrollments(current_user.did)
+        if success:
+            return {
+                "success": True,
+                "message": "Enrollments synced successfully"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to sync enrollments")
+    except Exception as e:
+        logger.error(f"Enrollment sync failed: {e}")
+        raise HTTPException(status_code=500, detail="Enrollment sync failed")
 
 @router.get("/my/progress")
 async def get_my_progress(
@@ -294,16 +577,22 @@ async def get_my_progress(
 ):
     """Get current user's learning progress"""
     try:
-        from ..models.course import ModuleProgress
-        
         query = {"user_id": current_user.did}
         if course_id:
             query["course_id"] = course_id
         
-        progress_records = await ModuleProgress.find(query).to_list()
+        try:
+            progress_records = await ModuleProgress.find(query).to_list()
+        except Exception as db_error:
+            logger.warning(f"Progress retrieval failed, returning empty list: {db_error}")
+            progress_records = []
+        
         return {
             "progress": [progress.dict() for progress in progress_records]
         }
     except Exception as e:
         logger.error(f"User progress retrieval error: {e}")
-        raise HTTPException(status_code=500, detail="Progress retrieval failed")
+        # Return empty result instead of throwing error
+        return {
+            "progress": []
+        }

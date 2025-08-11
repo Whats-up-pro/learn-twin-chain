@@ -4,11 +4,14 @@ Course and Module models with IPFS integration
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from beanie import Document, Indexed
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 from pymongo import IndexModel
+from bson import ObjectId
 
 class CourseMetadata(BaseModel):
     """Course metadata structure"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     difficulty_level: str = "intermediate"  # beginner, intermediate, advanced
     estimated_hours: int = 0
     prerequisites: List[str] = []
@@ -38,6 +41,8 @@ class Assessment(BaseModel):
 
 class Course(Document):
     """Course document with IPFS content storage"""
+    
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     
     # Core identification
     course_id: Indexed(str, unique=True) = Field(..., description="Unique course identifier")
@@ -98,6 +103,26 @@ class Course(Document):
     def update_timestamp(self):
         """Update the updated_at timestamp"""
         self.updated_at = datetime.now(timezone.utc)
+    
+    def dict(self, *args, **kwargs):
+        """Override dict method to handle ObjectId serialization"""
+        doc_dict = super().dict(*args, **kwargs)
+        # Convert ObjectId to string if present
+        if '_id' in doc_dict and isinstance(doc_dict['_id'], ObjectId):
+            doc_dict['_id'] = str(doc_dict['_id'])
+        return doc_dict
+    
+    @classmethod
+    def from_mongo(cls, data):
+        """Convert MongoDB document to Course instance"""
+        if data is None:
+            return None
+        
+        # Convert ObjectId to string
+        if '_id' in data and isinstance(data['_id'], ObjectId):
+            data['_id'] = str(data['_id'])
+        
+        return cls(**data)
 
 class Module(Document):
     """Module document with IPFS content storage"""

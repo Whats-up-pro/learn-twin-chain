@@ -521,3 +521,117 @@ async def get_module_lessons(
     except Exception as e:
         logger.error(f"Module lessons retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Module lessons retrieval failed")
+
+@router.get("/course/{course_id}")
+async def get_course_lessons(
+    course_id: str,
+    include_progress: bool = Query(False, description="Include user progress"),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all lessons for a course"""
+    try:
+        # Verify course exists
+        course = await Course.find_one({"course_id": course_id})
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        # Get lessons
+        filters = {"course_id": course_id}
+        if current_user.role == "student":
+            filters["status"] = "published"
+        
+        lessons = await Lesson.find(filters).sort("order").to_list()
+        
+        lessons_data = []
+        for lesson in lessons:
+            lesson_data = lesson.dict()
+            
+            # Include progress if requested
+            if include_progress:
+                from ..models.course import ModuleProgress
+                module_progress = await ModuleProgress.find_one({
+                    "user_id": current_user.did,
+                    "module_id": lesson.module_id
+                })
+                
+                if module_progress:
+                    lesson_key = f"lesson_{lesson.lesson_id}"
+                    completion_percentage = module_progress.content_progress.get(lesson_key, 0)
+                    lesson_data["progress"] = {
+                        "completion_percentage": completion_percentage,
+                        "completed": completion_percentage >= 100
+                    }
+                else:
+                    lesson_data["progress"] = {
+                        "completion_percentage": 0,
+                        "completed": False
+                    }
+            
+            lessons_data.append(lesson_data)
+        
+        return {
+            "lessons": lessons_data,
+            "course": course.dict(),
+            "total_lessons": len(lessons_data)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Course lessons retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="Course lessons retrieval failed")
+
+@router.get("/all/courses")
+async def get_all_courses_lessons(
+    include_progress: bool = Query(False, description="Include user progress"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all lessons across all courses"""
+    try:
+        # Get lessons
+        filters = {}
+        if current_user.role == "student":
+            filters["status"] = "published"
+        
+        lessons = await Lesson.find(filters).sort("order").skip(skip).limit(limit).to_list()
+        total = await Lesson.count_documents(filters)
+        
+        lessons_data = []
+        for lesson in lessons:
+            lesson_data = lesson.dict()
+            
+            # Include progress if requested
+            if include_progress:
+                from ..models.course import ModuleProgress
+                module_progress = await ModuleProgress.find_one({
+                    "user_id": current_user.did,
+                    "module_id": lesson.module_id
+                })
+                
+                if module_progress:
+                    lesson_key = f"lesson_{lesson.lesson_id}"
+                    completion_percentage = module_progress.content_progress.get(lesson_key, 0)
+                    lesson_data["progress"] = {
+                        "completion_percentage": completion_percentage,
+                        "completed": completion_percentage >= 100
+                    }
+                else:
+                    lesson_data["progress"] = {
+                        "completion_percentage": 0,
+                        "completed": False
+                    }
+            
+            lessons_data.append(lesson_data)
+        
+        return {
+            "lessons": lessons_data,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"All courses lessons retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="All courses lessons retrieval failed")
