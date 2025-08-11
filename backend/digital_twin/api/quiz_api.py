@@ -485,3 +485,86 @@ async def get_my_quiz_attempts(
     except Exception as e:
         logger.error(f"User quiz attempts retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Quiz attempts retrieval failed")
+
+@router.get("/course/{course_id}")
+async def get_course_quizzes(
+    course_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all quizzes for a specific course"""
+    try:
+        # Verify course exists
+        from ..models.course import Course
+        course = await Course.find_one({"course_id": course_id})
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        # Get quizzes
+        filters = {"course_id": course_id}
+        if current_user.role == "student":
+            filters["status"] = "published"
+        
+        quizzes = await Quiz.find(filters).to_list()
+        
+        quizzes_data = []
+        for quiz in quizzes:
+            quiz_data = quiz.dict()
+            
+            # For students, don't show correct answers
+            if current_user.role == "student":
+                for question in quiz_data["questions"]:
+                    question.pop("correct_answer", None)
+                    question.pop("explanation", None)
+            
+            quizzes_data.append(quiz_data)
+        
+        return {
+            "quizzes": quizzes_data,
+            "course": course.dict(),
+            "total_quizzes": len(quizzes_data)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Course quizzes retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="Course quizzes retrieval failed")
+
+@router.get("/all/courses")
+async def get_all_courses_quizzes(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all quizzes across all courses"""
+    try:
+        # Get quizzes
+        filters = {}
+        if current_user.role == "student":
+            filters["status"] = "published"
+        
+        quizzes = await Quiz.find(filters).skip(skip).limit(limit).to_list()
+        total = await Quiz.count_documents(filters)
+        
+        quizzes_data = []
+        for quiz in quizzes:
+            quiz_data = quiz.dict()
+            
+            # For students, don't show correct answers
+            if current_user.role == "student":
+                for question in quiz_data["questions"]:
+                    question.pop("correct_answer", None)
+                    question.pop("explanation", None)
+            
+            quizzes_data.append(quiz_data)
+        
+        return {
+            "quizzes": quizzes_data,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"All courses quizzes retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="All courses quizzes retrieval failed")

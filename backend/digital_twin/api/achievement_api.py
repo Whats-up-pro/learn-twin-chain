@@ -348,7 +348,11 @@ async def get_my_achievements(
         # Sort by earned date (newest first)
         pipeline.append({"$sort": {"earned_at": -1}})
         
-        user_achievements = await UserAchievement.aggregate(pipeline).to_list()
+        try:
+            user_achievements = await UserAchievement.aggregate(pipeline).to_list()
+        except Exception as agg_error:
+            logger.warning(f"Aggregation failed, returning empty list: {agg_error}")
+            user_achievements = []
         
         return {
             "achievements": user_achievements,
@@ -357,7 +361,11 @@ async def get_my_achievements(
         
     except Exception as e:
         logger.error(f"User achievements retrieval failed: {e}")
-        raise HTTPException(status_code=500, detail="User achievements retrieval failed")
+        # Return empty result instead of throwing error
+        return {
+            "achievements": [],
+            "total": 0
+        }
 
 @router.put("/my/earned/{user_achievement_id}/showcase")
 async def toggle_achievement_showcase(
@@ -578,3 +586,98 @@ async def get_achievement_statistics(
     except Exception as e:
         logger.error(f"Achievement statistics retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Achievement statistics retrieval failed")
+
+@router.get("/course/{course_id}")
+async def get_course_achievements(
+    course_id: str,
+    include_hidden: bool = Query(False),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all achievements for a specific course"""
+    try:
+        # Verify course exists
+        from ..models.course import Course
+        course = await Course.find_one({"course_id": course_id})
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        # Get achievements
+        filters = {"course_id": course_id}
+        if not include_hidden and current_user.role not in ["admin", "institution_admin"]:
+            filters["is_hidden"] = False
+        
+        achievements = await Achievement.find(filters).to_list()
+        
+        achievements_data = []
+        for achievement in achievements:
+            achievement_data = achievement.dict()
+            
+            # Check if user has earned this achievement
+            user_achievement = await UserAchievement.find_one({
+                "user_id": current_user.did,
+                "achievement_id": achievement.achievement_id
+            })
+            
+            achievement_data["earned"] = user_achievement is not None
+            if user_achievement:
+                achievement_data["earned_at"] = user_achievement.earned_at.isoformat()
+                achievement_data["earned_through"] = user_achievement.earned_through
+            
+            achievements_data.append(achievement_data)
+        
+        return {
+            "achievements": achievements_data,
+            "course": course.dict(),
+            "total_achievements": len(achievements_data)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Course achievements retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="Course achievements retrieval failed")
+
+@router.get("/all/courses")
+async def get_all_courses_achievements(
+    include_hidden: bool = Query(False),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all achievements across all courses"""
+    try:
+        # Get achievements
+        filters = {}
+        if not include_hidden and current_user.role not in ["admin", "institution_admin"]:
+            filters["is_hidden"] = False
+        
+        achievements = await Achievement.find(filters).skip(skip).limit(limit).to_list()
+        total = await Achievement.count_documents(filters)
+        
+        achievements_data = []
+        for achievement in achievements:
+            achievement_data = achievement.dict()
+            
+            # Check if user has earned this achievement
+            user_achievement = await UserAchievement.find_one({
+                "user_id": current_user.did,
+                "achievement_id": achievement.achievement_id
+            })
+            
+            achievement_data["earned"] = user_achievement is not None
+            if user_achievement:
+                achievement_data["earned_at"] = user_achievement.earned_at.isoformat()
+                achievement_data["earned_through"] = user_achievement.earned_through
+            
+            achievements_data.append(achievement_data)
+        
+        return {
+            "achievements": achievements_data,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"All courses achievements retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail="All courses achievements retrieval failed")

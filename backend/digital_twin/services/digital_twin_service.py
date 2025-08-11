@@ -171,6 +171,35 @@ class DigitalTwinService:
             logger.error(f"Digital twin update failed: {e}")
             raise
     
+    async def update_enrollment(self, twin_id: str, course_id: str, action: str = "enroll") -> DigitalTwin:
+        """Update enrollment in digital twin"""
+        try:
+            digital_twin = await DigitalTwin.find_one({"twin_id": twin_id})
+            if not digital_twin:
+                raise ValueError(f"Digital twin not found: {twin_id}")
+            
+            if action == "enroll":
+                digital_twin.enroll_in_course(course_id)
+            elif action == "drop":
+                # Remove enrollment
+                digital_twin.enrollments = [e for e in digital_twin.enrollments if e.course_id != course_id]
+            
+            await digital_twin.save()
+            
+            # Create checkpoint for enrollment change
+            await self.create_learning_checkpoint(
+                twin_id,
+                f"course_{action}",
+                {"course_id": course_id, "action": action}
+            )
+            
+            logger.info(f"Updated enrollment for {twin_id}: {action} {course_id}")
+            return digital_twin
+            
+        except Exception as e:
+            logger.error(f"Failed to update enrollment for {twin_id}: {e}")
+            raise
+    
     async def update_learning_progress(self, twin_id: str, module_id: str, course_id: str, completion_percentage: float, time_spent: int = 0, quiz_scores: List[float] = None) -> DigitalTwin:
         """Update learning progress for a specific module"""
         try:

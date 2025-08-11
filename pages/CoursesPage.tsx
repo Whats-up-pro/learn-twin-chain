@@ -46,11 +46,22 @@ const CoursesPage: React.FC = () => {
     try {
       setIsLoading(true);
       const response = await apiService.searchCourses('', {}, 0, 50);
+      console.log('Course response:', response);
+      
       if (response && response.items) {
         setCourses(response.items);
+        console.log(`Loaded ${response.items.length} courses`);
+      } else if (response && Array.isArray(response)) {
+        // Handle case where response is directly an array
+        setCourses(response);
+        console.log(`Loaded ${response.length} courses`);
+      } else {
+        console.warn('No courses found in response:', response);
+        setCourses([]);
       }
     } catch (error) {
       console.error('Error loading courses:', error);
+      setCourses([]);
     } finally {
       setIsLoading(false);
     }

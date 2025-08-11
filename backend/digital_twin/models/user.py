@@ -37,6 +37,7 @@ class User(Document):
     program: Optional[str] = Field(default="", description="Study program")
     birth_year: Optional[int] = Field(default=None, description="Birth year")
     enrollment_date: Optional[datetime] = Field(default=None, description="Enrollment date")
+    enrollments: List[str] = Field(default_factory=list, description="List of enrolled course IDs")
     
     # Teacher-specific fields
     department: Optional[str] = Field(default="", description="Department (for teachers)")
@@ -79,6 +80,7 @@ class User(Document):
             "program": self.program,
             "birth_year": self.birth_year,
             "enrollment_date": self.enrollment_date.isoformat() if self.enrollment_date else None,
+            "enrollments": self.enrollments,
             "department": self.department,
             "specialization": self.specialization,
             "created_at": self.created_at.isoformat(),

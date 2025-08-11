@@ -21,7 +21,11 @@ class CourseService:
     def __init__(self):
         self.ipfs_service = IPFSService()
         self.redis_service = RedisService()
-        self.digital_twin_service = DigitalTwinService()
+        try:
+            self.digital_twin_service = DigitalTwinService()
+        except Exception as e:
+            logger.warning(f"Digital twin service initialization failed: {e}")
+            self.digital_twin_service = None
     
     # Course management
     async def create_course(self, course_data: Dict[str, Any], creator_did: str) -> Course:
@@ -342,17 +346,28 @@ class CourseService:
             
             # Check enrollment period
             now = datetime.now(timezone.utc)
-            if course.enrollment_start and now < course.enrollment_start:
+
+            # Normalize potential naive datetimes from DB to UTC-aware
+            def _ensure_aware(dt_value: Optional[datetime]) -> Optional[datetime]:
+                if not dt_value:
+                    return None
+                # If naive, assume UTC
+                return dt_value.replace(tzinfo=timezone.utc) if dt_value.tzinfo is None else dt_value
+
+            start_dt = _ensure_aware(course.enrollment_start)
+            end_dt = _ensure_aware(course.enrollment_end)
+
+            if start_dt and now < start_dt:
                 raise ValueError("Enrollment has not started yet")
-            if course.enrollment_end and now > course.enrollment_end:
+            if end_dt and now > end_dt:
                 raise ValueError("Enrollment period has ended")
             
             # Check capacity
             if course.max_enrollments:
-                current_enrollments = await Enrollment.count_documents({
+                current_enrollments = await Enrollment.find({
                     "course_id": course_id,
                     "status": "active"
-                })
+                }).count()
                 if current_enrollments >= course.max_enrollments:
                     raise ValueError("Course is full")
             
@@ -369,6 +384,32 @@ class CourseService:
                     existing_enrollment.status = "active"
                     existing_enrollment.enrolled_at = now
                     await existing_enrollment.save()
+                    
+                    # Update user enrollments list if not already there
+                    try:
+                        from ..models.user import User
+                        user = await User.find_one({"did": student_did})
+                        if user and course_id not in user.enrollments:
+                            user.enrollments.append(course_id)
+                            await user.save()
+                            logger.info(f"Updated user enrollments list for reactivated enrollment: {student_did}")
+                    except Exception as user_error:
+                        logger.warning(f"User enrollments update failed for reactivation (non-critical): {user_error}")
+                    
+                    # Update digital twin enrollment if not already there
+                    try:
+                        from ..models.digital_twin import DigitalTwin
+                        digital_twin = await DigitalTwin.find_one({"owner_did": student_did})
+                        if digital_twin:
+                            # Check if already enrolled in digital twin
+                            already_enrolled = any(e.course_id == course_id for e in digital_twin.enrollments)
+                            if not already_enrolled:
+                                digital_twin.enroll_in_course(course_id)
+                                await digital_twin.save()
+                                logger.info(f"Updated digital twin enrollment for reactivated enrollment: {student_did}")
+                    except Exception as twin_error:
+                        logger.warning(f"Digital twin enrollment update failed for reactivation (non-critical): {twin_error}")
+                    
                     return existing_enrollment
             
             # Create enrollment
@@ -381,13 +422,44 @@ class CourseService:
             
             await enrollment.insert()
             
-            # Update digital twin
-            await self.digital_twin_service.update_digital_twin(
-                f"did:learntwin:{student_did.replace('did:learntwin:', '')}",
-                {},  # No direct updates needed
-                student_did,
-                f"Enrolled in course {course_id}"
-            )
+            # Update user enrollments list
+            try:
+                from ..models.user import User
+                user = await User.find_one({"did": student_did})
+                if user and course_id not in user.enrollments:
+                    user.enrollments.append(course_id)
+                    await user.save()
+                    logger.info(f"Updated user enrollments list for {student_did}")
+            except Exception as user_error:
+                logger.warning(f"User enrollments update failed (non-critical): {user_error}")
+            
+            # Update digital twin enrollment
+            try:
+                from ..models.digital_twin import DigitalTwin
+                digital_twin = await DigitalTwin.find_one({"owner_did": student_did})
+                if digital_twin:
+                    # Add enrollment to digital twin
+                    digital_twin.enroll_in_course(course_id)
+                    await digital_twin.save()
+                    logger.info(f"Updated digital twin enrollment for {student_did}")
+                else:
+                    logger.warning(f"Digital twin not found for user {student_did}")
+            except Exception as twin_error:
+                logger.warning(f"Digital twin enrollment update failed (non-critical): {twin_error}")
+            
+            # Update digital twin service (optional, don't fail if service is not available)
+            if self.digital_twin_service:
+                try:
+                    await self.digital_twin_service.update_digital_twin(
+                        f"did:learntwin:{student_did.replace('did:learntwin:', '')}",
+                        {},  # No direct updates needed
+                        student_did,
+                        f"Enrolled in course {course_id}"
+                    )
+                except Exception as twin_error:
+                    logger.warning(f"Digital twin service update failed (non-critical): {twin_error}")
+            else:
+                logger.info("Digital twin service not available, skipping update")
             
             logger.info(f"Student enrolled: {student_did} -> {course_id}")
             return enrollment
@@ -448,14 +520,20 @@ class CourseService:
                 await self._update_enrollment_progress(user_id, module.course_id, module_id)
                 
                 # Update digital twin
-                twin_id = f"did:learntwin:{user_id.replace('did:learntwin:', '')}"
-                await self.digital_twin_service.update_learning_progress(
-                    twin_id,
-                    module_id,
-                    100,
-                    progress_data.get("time_spent", 0),
-                    [progress_data.get("assessment_score")] if "assessment_score" in progress_data else None
-                )
+                if self.digital_twin_service:
+                    try:
+                        twin_id = f"did:learntwin:{user_id.replace('did:learntwin:', '')}"
+                        await self.digital_twin_service.update_learning_progress(
+                            twin_id,
+                            module_id,
+                            100,
+                            progress_data.get("time_spent", 0),
+                            [progress_data.get("assessment_score")] if "assessment_score" in progress_data else None
+                        )
+                    except Exception as twin_error:
+                        logger.warning(f"Digital twin update failed (non-critical): {twin_error}")
+                else:
+                    logger.info("Digital twin service not available, skipping update")
             
             module_progress.last_accessed = datetime.now(timezone.utc)
             await module_progress.save()
@@ -484,10 +562,10 @@ class CourseService:
                 enrollment.completed_modules.append(completed_module_id)
             
             # Get total modules for course
-            total_modules = await Module.count_documents({
+            total_modules = await Module.find({
                 "course_id": course_id,
                 "is_mandatory": True
-            })
+            }).count()
             
             if total_modules > 0:
                 enrollment.completion_percentage = (len(enrollment.completed_modules) / total_modules) * 100
@@ -526,9 +604,8 @@ class CourseService:
             if not course:
                 return None
             
-            if include_modules:
-                modules = await Module.find({"course_id": course_id}).sort("order").to_list()
-                course.modules = modules
+            # Note: modules are stored separately in the modules collection
+            # They are retrieved separately when needed
             
             return course
             
@@ -539,7 +616,32 @@ class CourseService:
     async def get_student_enrollments(self, student_did: str) -> List[Dict[str, Any]]:
         """Get all enrollments for a student"""
         try:
+            # First try to get enrollments from Enrollment collection
             enrollments = await Enrollment.find({"user_id": student_did}).to_list()
+            
+            # If no enrollments found, check user's enrollments list as fallback
+            if not enrollments:
+                try:
+                    from ..models.user import User
+                    user = await User.find_one({"did": student_did})
+                    if user and user.enrollments:
+                        logger.info(f"Found {len(user.enrollments)} enrollments in user model for {student_did}")
+                        # Create enrollment records from user's enrollments list
+                        for course_id in user.enrollments:
+                            course = await self.get_course(course_id)
+                            if course:
+                                # Create a basic enrollment record
+                                enrollment_data = {
+                                    "user_id": student_did,
+                                    "course_id": course_id,
+                                    "enrolled_at": user.created_at,
+                                    "status": "active",
+                                    "completed_modules": [],
+                                    "completion_percentage": 0.0
+                                }
+                                enrollments.append(type('Enrollment', (), enrollment_data)())
+                except Exception as user_error:
+                    logger.warning(f"Failed to get enrollments from user model: {user_error}")
             
             enrollment_data = []
             for enrollment in enrollments:
@@ -547,15 +649,22 @@ class CourseService:
                     course = await self.get_course(enrollment.course_id)
                     if course:
                         enrollment_info = {
-                            "enrollment": enrollment.dict(),
+                            "enrollment": enrollment.dict() if hasattr(enrollment, 'dict') else enrollment.__dict__,
                             "course": course.dict()
+                        }
+                        enrollment_data.append(enrollment_info)
+                    else:
+                        # Course not found, still include enrollment
+                        enrollment_info = {
+                            "enrollment": enrollment.dict() if hasattr(enrollment, 'dict') else enrollment.__dict__,
+                            "course": None
                         }
                         enrollment_data.append(enrollment_info)
                 except Exception as course_error:
                     logger.error(f"Error processing course {enrollment.course_id}: {course_error}")
                     # Still include enrollment even if course fails
                     enrollment_info = {
-                        "enrollment": enrollment.dict(),
+                        "enrollment": enrollment.dict() if hasattr(enrollment, 'dict') else enrollment.__dict__,
                         "course": None
                     }
                     enrollment_data.append(enrollment_info)
@@ -564,12 +673,49 @@ class CourseService:
             
         except Exception as e:
             logger.error(f"Student enrollments retrieval failed: {e}")
+            # Return empty list instead of raising exception
             return []
+    
+    async def sync_user_enrollments(self, student_did: str) -> bool:
+        """Sync enrollments between User model and Enrollment collection"""
+        try:
+            from ..models.user import User
+            user = await User.find_one({"did": student_did})
+            if not user:
+                logger.warning(f"User not found for enrollment sync: {student_did}")
+                return False
+            
+            # Get existing enrollments from Enrollment collection
+            existing_enrollments = await Enrollment.find({"user_id": student_did}).to_list()
+            existing_course_ids = {e.course_id for e in existing_enrollments}
+            
+            # Update user's enrollments list with existing enrollments
+            user.enrollments = list(existing_course_ids)
+            await user.save()
+            
+            logger.info(f"Synced {len(user.enrollments)} enrollments for user {student_did}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to sync user enrollments for {student_did}: {e}")
+            return False
     
     async def search_courses(self, query: str = None, filters: Dict[str, Any] = None, skip: int = 0, limit: int = 20) -> Dict[str, Any]:
         """Search courses with filters"""
         try:
-            search_criteria = {"status": "published", "is_public": True}
+            logger.info(f"=== SEARCH COURSES DEBUG ===")
+            logger.info(f"Query: {query}")
+            logger.info(f"Filters: {filters}")
+            logger.info(f"Skip: {skip}, Limit: {limit}")
+            
+            # Start with a more permissive search criteria
+            search_criteria = {}
+            
+            # Add basic filters for published and public courses
+            search_criteria["status"] = "published"
+            search_criteria["is_public"] = True
+            
+            logger.info(f"Initial search criteria: {search_criteria}")
             
             if query:
                 search_criteria["$or"] = [
@@ -577,20 +723,91 @@ class CourseService:
                     {"description": {"$regex": query, "$options": "i"}},
                     {"metadata.tags": {"$in": [query]}}
                 ]
+                logger.info(f"Added query filter: {search_criteria['$or']}")
             
             if filters:
                 if "difficulty_level" in filters:
                     search_criteria["metadata.difficulty_level"] = filters["difficulty_level"]
+                    logger.info(f"Added difficulty filter: {filters['difficulty_level']}")
                 if "institution" in filters:
                     search_criteria["institution"] = filters["institution"]
+                    logger.info(f"Added institution filter: {filters['institution']}")
                 if "tags" in filters:
                     search_criteria["metadata.tags"] = {"$in": filters["tags"]}
+                    logger.info(f"Added tags filter: {filters['tags']}")
             
+            logger.info(f"Final search criteria: {search_criteria}")
+            
+            # Get courses from MongoDB
             courses = await Course.find(search_criteria).skip(skip).limit(limit).to_list()
-            total = await Course.count_documents(search_criteria)
+            total = await Course.find(search_criteria).count()
+            
+            logger.info(f"Found {len(courses)} courses with criteria: {search_criteria}")
+            logger.info(f"Total courses in database: {await Course.find({}).count()}")
+            
+            # If no courses found and this is the first page, try to create sample courses
+            if not courses and skip == 0:
+                logger.info("No courses found, creating sample courses for testing")
+                await self._create_sample_courses()
+                # Try search again
+                courses = await Course.find(search_criteria).skip(skip).limit(limit).to_list()
+                total = await Course.find(search_criteria).count()
+                logger.info(f"After creating sample courses: Found {len(courses)} courses")
+            
+            # If still no courses found, try without status filter to see what's in database
+            if not courses and skip == 0:
+                logger.info("Still no courses found, checking all courses in database")
+                all_courses = await Course.find({}).to_list()
+                logger.info(f"Total courses in database (any status): {len(all_courses)}")
+                for course in all_courses:
+                    logger.info(f"Course: {course.course_id} - {course.title} - Status: {course.status} - Public: {course.is_public}")
+                
+                # Try search without status filter
+                search_criteria_no_status = search_criteria.copy()
+                if "status" in search_criteria_no_status:
+                    del search_criteria_no_status["status"]
+                if "is_public" in search_criteria_no_status:
+                    del search_criteria_no_status["is_public"]
+                
+                logger.info(f"Trying without status filter: {search_criteria_no_status}")
+                courses = await Course.find(search_criteria_no_status).skip(skip).limit(limit).to_list()
+                total = await Course.find(search_criteria_no_status).count()
+                logger.info(f"Found {len(courses)} courses without status filter")
+            
+            # Transform courses to match frontend expectations
+            transformed_courses = []
+            for course in courses:
+                try:
+                    # Convert course to dict and handle ObjectId serialization
+                    course_dict = course.dict()
+                    
+                    # Transform to match frontend interface
+                    transformed_course = {
+                        "id": course_dict.get("course_id"),
+                        "title": course_dict.get("title"),
+                        "description": course_dict.get("description"),
+                        "instructor_name": course_dict.get("instructors", [""])[0] if course_dict.get("instructors") else "Unknown",
+                        "duration_minutes": course_dict.get("metadata", {}).get("estimated_hours", 0) * 60,
+                        "difficulty_level": course_dict.get("metadata", {}).get("difficulty_level", "beginner"),
+                        "enrollment_count": 0,  # Will be calculated separately
+                        "rating": 4.5,  # Default rating
+                        "thumbnail_url": "https://via.placeholder.com/300x200?text=Course",
+                        "institution": course_dict.get("institution", "Unknown"),
+                        "tags": course_dict.get("metadata", {}).get("tags", []),
+                        "status": course_dict.get("status", "published"),
+                        "created_at": course_dict.get("created_at"),
+                        "updated_at": course_dict.get("updated_at")
+                    }
+                    transformed_courses.append(transformed_course)
+                except Exception as e:
+                    logger.error(f"Error transforming course {course.course_id}: {e}")
+                    continue
+            
+            logger.info(f"Returning {len(transformed_courses)} transformed courses")
+            logger.info(f"=== END SEARCH COURSES DEBUG ===")
             
             return {
-                "courses": [course.dict() for course in courses],
+                "items": transformed_courses,
                 "total": total,
                 "skip": skip,
                 "limit": limit
@@ -598,4 +815,120 @@ class CourseService:
             
         except Exception as e:
             logger.error(f"Course search failed: {e}")
-            return {"courses": [], "total": 0, "skip": skip, "limit": limit}
+            return {"items": [], "total": 0, "skip": skip, "limit": limit}
+    
+    async def _create_sample_courses(self):
+        """Create sample courses for testing"""
+        try:
+            from ..models.user import User
+            
+            # Get or create a sample instructor
+            instructor = await User.find_one({"role": "teacher"})
+            if not instructor:
+                # Create a sample instructor
+                instructor = User(
+                    did="did:learntwin:sample_teacher",
+                    email="teacher@uit.edu.vn",
+                    username="sample_teacher",
+                    role="teacher",
+                    is_email_verified=True
+                )
+                await instructor.insert()
+            
+            sample_courses = [
+                {
+                    "course_id": "course_python_basics",
+                    "title": "Python Programming Basics",
+                    "description": "Learn the fundamentals of Python programming language. Perfect for beginners who want to start their coding journey.",
+                    "created_by": instructor.did,
+                    "institution": "UIT - University of Information Technology",
+                    "instructors": [instructor.did],
+                    "metadata": {
+                        "difficulty_level": "beginner",
+                        "tags": ["python", "programming", "basics"],
+                        "prerequisites": ["No prior programming experience required"],
+                        "estimated_duration_minutes": 480,
+                        "category": "Programming"
+                    },
+                    "enrollment_start": "2024-01-01T00:00:00Z",
+                    "enrollment_end": "2024-12-31T23:59:59Z",
+                    "course_start": "2024-02-01T00:00:00Z",
+                    "course_end": "2024-03-31T23:59:59Z",
+                    "max_enrollments": 100,
+                    "is_public": True,
+                    "requires_approval": False,
+                    "completion_nft_enabled": True,
+                    "status": "published",
+                    "enrollment_count": 25,
+                    "rating": 4.5,
+                    "thumbnail_url": "https://example.com/python-basics.jpg"
+                },
+                {
+                    "course_id": "course_web_development",
+                    "title": "Web Development with React",
+                    "description": "Build modern web applications using React.js. Learn component-based architecture and state management.",
+                    "created_by": instructor.did,
+                    "institution": "UIT - University of Information Technology",
+                    "instructors": [instructor.did],
+                    "metadata": {
+                        "difficulty_level": "intermediate",
+                        "tags": ["react", "javascript", "web-development"],
+                        "prerequisites": ["Basic JavaScript knowledge"],
+                        "estimated_duration_minutes": 600,
+                        "category": "Web Development"
+                    },
+                    "enrollment_start": "2024-01-01T00:00:00Z",
+                    "enrollment_end": "2024-12-31T23:59:59Z",
+                    "course_start": "2024-02-01T00:00:00Z",
+                    "course_end": "2024-03-31T23:59:59Z",
+                    "max_enrollments": 50,
+                    "is_public": True,
+                    "requires_approval": False,
+                    "completion_nft_enabled": True,
+                    "status": "published",
+                    "enrollment_count": 15,
+                    "rating": 4.8,
+                    "thumbnail_url": "https://example.com/react-web.jpg"
+                },
+                {
+                    "course_id": "course_data_science",
+                    "title": "Data Science Fundamentals",
+                    "description": "Introduction to data science concepts, tools, and methodologies. Learn to analyze and visualize data.",
+                    "created_by": instructor.did,
+                    "institution": "UIT - University of Information Technology",
+                    "instructors": [instructor.did],
+                    "metadata": {
+                        "difficulty_level": "intermediate",
+                        "tags": ["data-science", "python", "analytics"],
+                        "prerequisites": ["Python basics", "Basic statistics"],
+                        "estimated_duration_minutes": 720,
+                        "category": "Data Science"
+                    },
+                    "enrollment_start": "2024-01-01T00:00:00Z",
+                    "enrollment_end": "2024-12-31T23:59:59Z",
+                    "course_start": "2024-02-01T00:00:00Z",
+                    "course_end": "2024-03-31T23:59:59Z",
+                    "max_enrollments": 30,
+                    "is_public": True,
+                    "requires_approval": False,
+                    "completion_nft_enabled": True,
+                    "status": "published",
+                    "enrollment_count": 8,
+                    "rating": 4.6,
+                    "thumbnail_url": "https://example.com/data-science.jpg"
+                }
+            ]
+            
+            for course_data in sample_courses:
+                # Check if course already exists
+                existing_course = await Course.find_one({"course_id": course_data["course_id"]})
+                if not existing_course:
+                    # Remove fields that are not in the Course model
+                    course_model_data = {k: v for k, v in course_data.items() 
+                                       if k not in ["enrollment_count", "rating", "thumbnail_url"]}
+                    course = Course(**course_model_data)
+                    await course.insert()
+                    logger.info(f"Created sample course: {course_data['course_id']}")
+            
+        except Exception as e:
+            logger.error(f"Failed to create sample courses: {e}")

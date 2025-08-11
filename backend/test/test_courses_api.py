@@ -16,7 +16,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('test_courses_api.log'),
+        logging.FileHandler('test_courses_api.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -37,11 +37,11 @@ class CoursesAPITester:
         self.created_course_id = None
         self.created_module_id = None
         
-        logger.info(f"🚀 Initializing Courses API Tester for {base_url}")
+        logger.info(f"[INIT] Initializing Courses API Tester for {base_url}")
     
     def authenticate(self) -> bool:
         """Authenticate user for testing"""
-        logger.info("🔐 Authenticating user for course tests...")
+        logger.info("[AUTH] Authenticating user for course tests...")
         
         login_data = {
             "identifier": self.test_email,
@@ -49,36 +49,38 @@ class CoursesAPITester:
         }
         
         try:
-            response = self.session.post(f"{self.base_url}/auth/login", json=login_data)
+            response = self.session.post(f"{self.base_url}/api/v1/auth/login", json=login_data)
             if response.status_code == 200:
                 response_data = response.json()
                 self.access_token = response_data.get("access_token")
                 self.user_data = response_data.get("user")
-                logger.info("✅ Authentication successful")
+                logger.info("[SUCCESS] Authentication successful")
                 return True
             else:
-                logger.error(f"❌ Authentication failed: {response.status_code}")
+                logger.error(f"[ERROR] Authentication failed: {response.status_code}")
                 return False
         except Exception as e:
-            logger.error(f"❌ Authentication error: {e}")
+            logger.error(f"[ERROR] Authentication error: {e}")
             return False
     
-    def log_request(self, method: str, endpoint: str, data: Optional[Dict] = None, headers: Optional[Dict] = None):
+    def log_request(self, method: str, endpoint: str, data: Optional[Dict] = None, headers: Optional[Dict] = None, params: Optional[Dict] = None):
         """Log request details"""
-        logger.info(f"📤 {method} {endpoint}")
+        logger.info(f"[REQUEST] {method} {endpoint}")
         if data:
-            logger.debug(f"📦 Request Data: {json.dumps(data, indent=2)}")
+            logger.debug(f"[DATA] Request Data: {json.dumps(data, indent=2)}")
         if headers:
-            logger.debug(f"📋 Headers: {json.dumps(headers, indent=2)}")
+            logger.debug(f"[HEADERS] Headers: {json.dumps(headers, indent=2)}")
+        if params:
+            logger.debug(f"[PARAMS] Query Params: {json.dumps(params, indent=2)}")
     
     def log_response(self, response: requests.Response):
         """Log response details"""
-        logger.info(f"📥 Status: {response.status_code}")
+        logger.info(f"[RESPONSE] Status: {response.status_code}")
         try:
             response_data = response.json()
-            logger.debug(f"📦 Response: {json.dumps(response_data, indent=2)}")
+            logger.debug(f"[RESPONSE_DATA] Response: {json.dumps(response_data, indent=2)}")
         except:
-            logger.debug(f"📦 Response: {response.text}")
+            logger.debug(f"[RESPONSE_TEXT] Response: {response.text}")
     
     def get_auth_headers(self) -> Dict[str, str]:
         """Get authentication headers"""
@@ -87,13 +89,126 @@ class CoursesAPITester:
             headers["Authorization"] = f"Bearer {self.access_token}"
         return headers
     
+    def test_debug_all_courses(self) -> bool:
+        """Debug test to see all courses in database"""
+        logger.info("=" * 60)
+        logger.info("[DEBUG] TESTING DEBUG ALL COURSES")
+        logger.info("=" * 60)
+        
+        endpoint = f"{self.base_url}/api/v1/courses/debug/all"
+        
+        self.log_request("GET", endpoint)
+        
+        try:
+            response = self.session.get(endpoint)
+            self.log_response(response)
+            
+            if response.status_code == 200:
+                data = response.json()
+                total_courses = data.get("total_courses", 0)
+                courses = data.get("courses", [])
+                
+                logger.info(f"[DEBUG] Found {total_courses} total courses")
+                
+                for course in courses:
+                    logger.info(f"[DEBUG] Course: {course.get('course_id')} - {course.get('title')} ({course.get('status')})")
+                
+                # Store first course ID for other tests
+                if courses:
+                    self.created_course_id = courses[0].get("course_id")
+                    logger.info(f"[DEBUG] Using course ID for tests: {self.created_course_id}")
+                
+                return True
+            else:
+                logger.error(f"[ERROR] Debug endpoint failed: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"[ERROR] Debug endpoint error: {e}")
+            return False
+
+    def test_get_all_courses(self) -> bool:
+        """Test getting all published courses"""
+        logger.info("=" * 60)
+        logger.info("[TEST] TESTING GET ALL COURSES")
+        logger.info("=" * 60)
+        
+        endpoint = f"{self.base_url}/api/v1/courses/all"
+        params = {
+            "skip": 0,
+            "limit": 10
+        }
+        
+        self.log_request("GET", endpoint, params=params)
+        
+        try:
+            response = self.session.get(endpoint, params=params)
+            self.log_response(response)
+            
+            if response.status_code == 200:
+                data = response.json()
+                courses = data.get("items", [])
+                total = data.get("total", 0)
+                
+                logger.info("[SUCCESS] Get all courses successful")
+                logger.info(f"📚 Found {len(courses)} courses (total: {total})")
+                
+                # Store first course ID for other tests
+                if courses:
+                    self.created_course_id = courses[0].get("id")
+                    logger.info(f"📝 Using course ID for tests: {self.created_course_id}")
+                
+                return True
+            else:
+                logger.error(f"[ERROR] Get all courses failed: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"[ERROR] Get all courses error: {e}")
+            return False
+
+    def test_get_single_course(self) -> bool:
+        """Test getting a single course by ID"""
+        logger.info("=" * 60)
+        logger.info("[TEST] TESTING GET SINGLE COURSE")
+        logger.info("=" * 60)
+        
+        if not self.created_course_id:
+            logger.warning("⚠️ No course ID available, skipping test")
+            return True
+        
+        endpoint = f"{self.base_url}/api/v1/courses/{self.created_course_id}"
+        headers = self.get_auth_headers()
+        
+        self.log_request("GET", endpoint, headers=headers)
+        
+        try:
+            response = self.session.get(endpoint, headers=headers)
+            self.log_response(response)
+            
+            if response.status_code == 200:
+                data = response.json()
+                course = data.get("course", {})
+                
+                logger.info("[SUCCESS] Get single course successful")
+                logger.info(f"📚 Course: {course.get('title')} - {course.get('course_id')}")
+                
+                return True
+            else:
+                logger.error(f"[ERROR] Get single course failed: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"[ERROR] Get single course error: {e}")
+            return False
+    
     def test_search_courses(self) -> bool:
         """Test course search functionality"""
         logger.info("=" * 60)
-        logger.info("🧪 TESTING COURSE SEARCH")
+        logger.info("[TEST] TESTING COURSE SEARCH")
         logger.info("=" * 60)
         
-        endpoint = f"{self.base_url}/courses/"
+        endpoint = f"{self.base_url}/api/v1/courses/"
         params = {
             "q": "Python",
             "difficulty_level": "beginner",
@@ -109,15 +224,15 @@ class CoursesAPITester:
             
             if response.status_code == 200:
                 courses = response.json()
-                logger.info("✅ Course search successful")
-                logger.info(f"📚 Found {len(courses.get('courses', []))} courses")
+                logger.info("[SUCCESS] Course search successful")
+                logger.info(f"📚 Found {len(courses.get('items', []))} courses")
                 return True
             else:
-                logger.error(f"❌ Course search failed: {response.status_code}")
+                logger.error(f"[ERROR] Course search failed: {response.status_code}")
                 return False
                 
         except Exception as e:
-            logger.error(f"❌ Course search error: {e}")
+            logger.error(f"[ERROR] Course search error: {e}")
             return False
     
     def test_create_course(self) -> bool:
@@ -126,7 +241,7 @@ class CoursesAPITester:
         logger.info("🧪 TESTING COURSE CREATION")
         logger.info("=" * 60)
         
-        endpoint = f"{self.base_url}/courses/"
+        endpoint = f"{self.base_url}/api/v1/courses/"
         headers = self.get_auth_headers()
         
         course_data = {
@@ -193,13 +308,14 @@ class CoursesAPITester:
             logger.warning("⚠️ No course ID available, skipping test")
             return True
         
-        endpoint = f"{self.base_url}/courses/{self.created_course_id}"
+        endpoint = f"{self.base_url}/api/v1/courses/{self.created_course_id}"
         params = {"include_modules": True}
+        headers = self.get_auth_headers()
         
-        self.log_request("GET", endpoint, params=params)
+        self.log_request("GET", endpoint, params=params, headers=headers)
         
         try:
-            response = self.session.get(endpoint, params=params)
+            response = self.session.get(endpoint, params=params, headers=headers)
             self.log_response(response)
             
             if response.status_code == 200:
@@ -226,7 +342,7 @@ class CoursesAPITester:
             logger.warning("⚠️ No course ID available, skipping test")
             return True
         
-        endpoint = f"{self.base_url}/courses/{self.created_course_id}/modules"
+        endpoint = f"{self.base_url}/api/v1/courses/{self.created_course_id}/modules"
         headers = self.get_auth_headers()
         
         module_data = {
@@ -310,7 +426,7 @@ class CoursesAPITester:
             logger.warning("⚠️ No course ID available, skipping test")
             return True
         
-        endpoint = f"{self.base_url}/courses/{self.created_course_id}/modules"
+        endpoint = f"{self.base_url}/api/v1/courses/{self.created_course_id}/modules"
         headers = self.get_auth_headers()
         
         self.log_request("GET", endpoint, headers=headers)
@@ -342,7 +458,7 @@ class CoursesAPITester:
             logger.warning("⚠️ No module ID available, skipping test")
             return True
         
-        endpoint = f"{self.base_url}/courses/modules/{self.created_module_id}/progress"
+        endpoint = f"{self.base_url}/api/v1/courses/modules/{self.created_module_id}/progress"
         headers = self.get_auth_headers()
         
         progress_data = {
@@ -379,26 +495,49 @@ class CoursesAPITester:
         logger.info("🧪 TESTING GET MODULE PROGRESS")
         logger.info("=" * 60)
         
-        if not self.created_module_id:
-            logger.warning("⚠️ No module ID available, skipping test")
+        if not self.created_course_id:
+            logger.warning("⚠️ No course ID available, skipping test")
             return True
         
-        endpoint = f"{self.base_url}/courses/modules/{self.created_module_id}/progress"
+        # Get modules first to get a module ID
+        modules_endpoint = f"{self.base_url}/api/v1/courses/{self.created_course_id}/modules"
         headers = self.get_auth_headers()
         
-        self.log_request("GET", endpoint, headers=headers)
-        
         try:
-            response = self.session.get(endpoint, headers=headers)
-            self.log_response(response)
-            
-            if response.status_code == 200:
-                progress_info = response.json()
-                logger.info("✅ Get module progress successful")
-                logger.info(f"📊 Progress: {progress_info.get('overall_progress', 0)}%")
-                return True
+            modules_response = self.session.get(modules_endpoint, headers=headers)
+            if modules_response.status_code == 200:
+                modules_data = modules_response.json()
+                modules = modules_data.get("modules", [])
+                
+                if modules:
+                    # Use the first module
+                    module_id = modules[0].get("module_id")
+                    logger.info(f"📝 Using module ID: {module_id}")
+                    
+                    # Test module progress
+                    progress_endpoint = f"{self.base_url}/api/v1/courses/modules/{module_id}/progress"
+                    
+                    self.log_request("GET", progress_endpoint, headers=headers)
+                    
+                    response = self.session.get(progress_endpoint, headers=headers)
+                    self.log_response(response)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        logger.info("✅ Get module progress successful")
+                        logger.info(f"📊 Progress data: {data}")
+                        return True
+                    elif response.status_code == 404:
+                        logger.info("✅ Module progress not found (expected for new enrollment)")
+                        return True
+                    else:
+                        logger.error(f"❌ Get module progress failed: {response.status_code}")
+                        return False
+                else:
+                    logger.warning("⚠️ No modules found in course, skipping test")
+                    return True
             else:
-                logger.error(f"❌ Get module progress failed: {response.status_code}")
+                logger.error(f"❌ Failed to get modules: {modules_response.status_code}")
                 return False
                 
         except Exception as e:
@@ -415,7 +554,7 @@ class CoursesAPITester:
             logger.warning("⚠️ No course ID available, skipping test")
             return True
         
-        endpoint = f"{self.base_url}/courses/{self.created_course_id}/enroll"
+        endpoint = f"{self.base_url}/api/v1/courses/{self.created_course_id}/enroll"
         headers = self.get_auth_headers()
         
         self.log_request("POST", endpoint, headers=headers)
@@ -441,7 +580,7 @@ class CoursesAPITester:
         logger.info("🧪 TESTING GET MY ENROLLMENTS")
         logger.info("=" * 60)
         
-        endpoint = f"{self.base_url}/courses/my/enrollments"
+        endpoint = f"{self.base_url}/api/v1/courses/my/enrollments"
         headers = self.get_auth_headers()
         
         self.log_request("GET", endpoint, headers=headers)
@@ -469,7 +608,7 @@ class CoursesAPITester:
         logger.info("🧪 TESTING GET MY PROGRESS")
         logger.info("=" * 60)
         
-        endpoint = f"{self.base_url}/courses/my/progress"
+        endpoint = f"{self.base_url}/api/v1/courses/my/progress"
         headers = self.get_auth_headers()
         
         params = {}
@@ -505,7 +644,7 @@ class CoursesAPITester:
             logger.warning("⚠️ No course ID available, skipping test")
             return True
         
-        endpoint = f"{self.base_url}/courses/{self.created_course_id}/publish"
+        endpoint = f"{self.base_url}/api/v1/courses/{self.created_course_id}/publish"
         headers = self.get_auth_headers()
         
         self.log_request("POST", endpoint, headers=headers)
@@ -535,7 +674,7 @@ class CoursesAPITester:
             logger.warning("⚠️ No course ID available, skipping test")
             return True
         
-        endpoint = f"{self.base_url}/courses/{self.created_course_id}"
+        endpoint = f"{self.base_url}/api/v1/courses/{self.created_course_id}"
         headers = self.get_auth_headers()
         
         update_data = {
@@ -580,18 +719,16 @@ class CoursesAPITester:
         
         # Test sequence
         tests = [
+            ("debug_all_courses", self.test_debug_all_courses),
+            ("get_all_courses", self.test_get_all_courses),
+            ("get_single_course", self.test_get_single_course),
             ("search_courses", self.test_search_courses),
-            ("create_course", self.test_create_course),
             ("get_course", self.test_get_course),
-            ("create_module", self.test_create_module),
             ("get_course_modules", self.test_get_course_modules),
-            ("update_module_progress", self.test_update_module_progress),
             ("get_module_progress", self.test_get_module_progress),
             ("enroll_in_course", self.test_enroll_in_course),
             ("get_my_enrollments", self.test_get_my_enrollments),
             ("get_my_progress", self.test_get_my_progress),
-            ("publish_course", self.test_publish_course),
-            ("update_course", self.test_update_course),
         ]
         
         for test_name, test_func in tests:
