@@ -4,11 +4,6 @@
 
 const API_BASE = 'http://localhost:8000/api/v1';
 
-interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-  message?: string;
-}
 
 interface CourseFilters {
   difficulty_level?: string;
@@ -92,6 +87,15 @@ export class ApiService {
   }
 
   // Courses API
+  async getAllCourses(skip = 0, limit = 50) {
+    const params = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString(),
+    });
+
+    return this.makeRequest(`/courses/all?${params}`);
+  }
+
   async searchCourses(query = '', filters: CourseFilters = {}, skip = 0, limit = 20) {
     const params = new URLSearchParams({
       skip: skip.toString(),

@@ -27,48 +27,50 @@ interface Course {
 
 const CoursesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [courses, setCourses] = useState<Course[]>([]);
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Load courses directly from /all endpoint
   useEffect(() => {
-    loadCourses();
+    loadAllCourses();
   }, []);
 
-  useEffect(() => {
-    filterCourses();
-  }, [courses, searchQuery, selectedDifficulty]);
-
-  const loadCourses = async () => {
+  const loadAllCourses = async () => {
     try {
       setIsLoading(true);
-      const response = await apiService.searchCourses('', {}, 0, 50);
-      console.log('Course response:', response);
+      const response = await apiService.getAllCourses(0, 50) as any;
+      console.log('✅ Single API call - All courses with enrollment loaded');
       
       if (response && response.items) {
-        setCourses(response.items);
-        console.log(`Loaded ${response.items.length} courses`);
+        // Courses now include enrollment status from backend
+        setAllCourses(response.items);
+        console.log(`✅ Loaded ${response.items.length} courses with enrollment status in ONE API call`);
       } else if (response && Array.isArray(response)) {
         // Handle case where response is directly an array
-        setCourses(response);
-        console.log(`Loaded ${response.length} courses`);
+        setAllCourses(response);
+        console.log(`✅ Loaded ${response.length} courses in ONE API call`);
       } else {
         console.warn('No courses found in response:', response);
-        setCourses([]);
+        setAllCourses([]);
       }
     } catch (error) {
       console.error('Error loading courses:', error);
-      setCourses([]);
+      setAllCourses([]);
     } finally {
       setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    filterCourses();
+  }, [allCourses, searchQuery, selectedDifficulty]);
+
   const filterCourses = () => {
-    let filtered = courses;
+    let filtered = allCourses;
 
     // Filter by search query
     if (searchQuery) {
@@ -95,11 +97,18 @@ const CoursesPage: React.FC = () => {
   const handleEnroll = async (courseId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     try {
-      await apiService.enrollInCourse(courseId);
+      const response = await apiService.enrollInCourse(courseId) as any;
+      console.log('Enrollment response:', response);
+      
+      // Show success message
+      const message = response?.message || 'Successfully enrolled in course';
+      alert(message); // You can replace this with a toast notification
+      
       // Refresh courses to update enrollment status
-      loadCourses();
+      await loadAllCourses();
     } catch (error) {
       console.error('Error enrolling in course:', error);
+      alert('Failed to enroll in course. Please try again.'); // You can replace this with a toast notification
     }
   };
 
@@ -191,7 +200,7 @@ const CoursesPage: React.FC = () => {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-sm text-gray-600">
-            Showing {filteredCourses.length} of {courses.length} courses
+            Showing {filteredCourses.length} of {allCourses.length} courses
           </p>
         </div>
 

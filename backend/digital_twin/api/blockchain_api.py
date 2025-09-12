@@ -149,12 +149,38 @@ async def get_student_blockchain_data(student_address: str, student_did: str):
     if not blockchain_service.is_available():
         raise HTTPException(status_code=503, detail="Blockchain service not available")
     
-    result = blockchain_service.get_student_blockchain_data(student_address, student_did)
-    
-    if "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
-    
-    return result
+    try:
+        result = blockchain_service.get_student_blockchain_data(student_address, student_did)
+        
+        if "error" in result:
+            # Return empty data instead of error for missing student data
+            if "not found" in result.get("error", "").lower():
+                return {
+                    "success": True,
+                    "student_address": student_address,
+                    "student_did": student_did,
+                    "module_completions": [],
+                    "total_achievements": 0,
+                    "skills_verified": [],
+                    "certificates": [],
+                    "message": "No blockchain data found for this student"
+                }
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return result
+    except Exception as e:
+        # Log the error but return empty data instead of failing
+        print(f"Blockchain data retrieval error: {e}")
+        return {
+            "success": True,
+            "student_address": student_address,
+            "student_did": student_did,
+            "module_completions": [],
+            "total_achievements": 0,
+            "skills_verified": [],
+            "certificates": [],
+            "message": "Blockchain service temporarily unavailable"
+        }
 
 @router.post("/checkpoint/register")
 async def register_learning_checkpoint(request: CheckpointRequest):

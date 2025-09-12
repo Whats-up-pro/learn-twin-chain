@@ -396,20 +396,6 @@ class CourseService:
                     except Exception as user_error:
                         logger.warning(f"User enrollments update failed for reactivation (non-critical): {user_error}")
                     
-                    # Update digital twin enrollment if not already there
-                    try:
-                        from ..models.digital_twin import DigitalTwin
-                        digital_twin = await DigitalTwin.find_one({"owner_did": student_did})
-                        if digital_twin:
-                            # Check if already enrolled in digital twin
-                            already_enrolled = any(e.course_id == course_id for e in digital_twin.enrollments)
-                            if not already_enrolled:
-                                digital_twin.enroll_in_course(course_id)
-                                await digital_twin.save()
-                                logger.info(f"Updated digital twin enrollment for reactivated enrollment: {student_did}")
-                    except Exception as twin_error:
-                        logger.warning(f"Digital twin enrollment update failed for reactivation (non-critical): {twin_error}")
-                    
                     return existing_enrollment
             
             # Create enrollment
@@ -432,34 +418,6 @@ class CourseService:
                     logger.info(f"Updated user enrollments list for {student_did}")
             except Exception as user_error:
                 logger.warning(f"User enrollments update failed (non-critical): {user_error}")
-            
-            # Update digital twin enrollment
-            try:
-                from ..models.digital_twin import DigitalTwin
-                digital_twin = await DigitalTwin.find_one({"owner_did": student_did})
-                if digital_twin:
-                    # Add enrollment to digital twin
-                    digital_twin.enroll_in_course(course_id)
-                    await digital_twin.save()
-                    logger.info(f"Updated digital twin enrollment for {student_did}")
-                else:
-                    logger.warning(f"Digital twin not found for user {student_did}")
-            except Exception as twin_error:
-                logger.warning(f"Digital twin enrollment update failed (non-critical): {twin_error}")
-            
-            # Update digital twin service (optional, don't fail if service is not available)
-            if self.digital_twin_service:
-                try:
-                    await self.digital_twin_service.update_digital_twin(
-                        f"did:learntwin:{student_did.replace('did:learntwin:', '')}",
-                        {},  # No direct updates needed
-                        student_did,
-                        f"Enrolled in course {course_id}"
-                    )
-                except Exception as twin_error:
-                    logger.warning(f"Digital twin service update failed (non-critical): {twin_error}")
-            else:
-                logger.info("Digital twin service not available, skipping update")
             
             logger.info(f"Student enrolled: {student_did} -> {course_id}")
             return enrollment
@@ -655,13 +613,14 @@ class CourseService:
                         enrollment_data.append(enrollment_info)
                     else:
                         # Course not found, still include enrollment
+                        logger.warning(f"Course {enrollment.course_id} not found for enrollment")
                         enrollment_info = {
                             "enrollment": enrollment.dict() if hasattr(enrollment, 'dict') else enrollment.__dict__,
                             "course": None
                         }
                         enrollment_data.append(enrollment_info)
                 except Exception as course_error:
-                    logger.error(f"Error processing course {enrollment.course_id}: {course_error}")
+                    logger.warning(f"Non-critical error processing course {enrollment.course_id}: {course_error}")
                     # Still include enrollment even if course fails
                     enrollment_info = {
                         "enrollment": enrollment.dict() if hasattr(enrollment, 'dict') else enrollment.__dict__,
@@ -703,10 +662,7 @@ class CourseService:
     async def search_courses(self, query: str = None, filters: Dict[str, Any] = None, skip: int = 0, limit: int = 20) -> Dict[str, Any]:
         """Search courses with filters"""
         try:
-            logger.info(f"=== SEARCH COURSES DEBUG ===")
-            logger.info(f"Query: {query}")
-            logger.info(f"Filters: {filters}")
-            logger.info(f"Skip: {skip}, Limit: {limit}")
+            logger.debug(f"Search courses: query='{query}', filters={filters}, skip={skip}, limit={limit}")
             
             # Start with a more permissive search criteria
             search_criteria = {}
@@ -715,7 +671,7 @@ class CourseService:
             search_criteria["status"] = "published"
             search_criteria["is_public"] = True
             
-            logger.info(f"Initial search criteria: {search_criteria}")
+            logger.debug(f"Initial search criteria: {search_criteria}")
             
             if query:
                 search_criteria["$or"] = [
@@ -723,44 +679,41 @@ class CourseService:
                     {"description": {"$regex": query, "$options": "i"}},
                     {"metadata.tags": {"$in": [query]}}
                 ]
-                logger.info(f"Added query filter: {search_criteria['$or']}")
+                logger.debug(f"Added query filter")
             
             if filters:
                 if "difficulty_level" in filters:
                     search_criteria["metadata.difficulty_level"] = filters["difficulty_level"]
-                    logger.info(f"Added difficulty filter: {filters['difficulty_level']}")
+                    logger.debug(f"Added difficulty filter: {filters['difficulty_level']}")
                 if "institution" in filters:
                     search_criteria["institution"] = filters["institution"]
-                    logger.info(f"Added institution filter: {filters['institution']}")
+                    logger.debug(f"Added institution filter: {filters['institution']}")
                 if "tags" in filters:
                     search_criteria["metadata.tags"] = {"$in": filters["tags"]}
-                    logger.info(f"Added tags filter: {filters['tags']}")
+                    logger.debug(f"Added tags filter: {filters['tags']}")
             
-            logger.info(f"Final search criteria: {search_criteria}")
+            logger.debug(f"Final search criteria: {search_criteria}")
             
             # Get courses from MongoDB
             courses = await Course.find(search_criteria).skip(skip).limit(limit).to_list()
             total = await Course.find(search_criteria).count()
             
-            logger.info(f"Found {len(courses)} courses with criteria: {search_criteria}")
-            logger.info(f"Total courses in database: {await Course.find({}).count()}")
+            logger.debug(f"Found {len(courses)} courses matching criteria")
             
             # If no courses found and this is the first page, try to create sample courses
             if not courses and skip == 0:
-                logger.info("No courses found, creating sample courses for testing")
+                logger.debug("No courses found, creating sample courses for testing")
                 await self._create_sample_courses()
                 # Try search again
                 courses = await Course.find(search_criteria).skip(skip).limit(limit).to_list()
                 total = await Course.find(search_criteria).count()
-                logger.info(f"After creating sample courses: Found {len(courses)} courses")
+                logger.debug(f"After creating sample courses: Found {len(courses)} courses")
             
             # If still no courses found, try without status filter to see what's in database
             if not courses and skip == 0:
-                logger.info("Still no courses found, checking all courses in database")
+                logger.debug("Still no courses found, checking all courses in database")
                 all_courses = await Course.find({}).to_list()
-                logger.info(f"Total courses in database (any status): {len(all_courses)}")
-                for course in all_courses:
-                    logger.info(f"Course: {course.course_id} - {course.title} - Status: {course.status} - Public: {course.is_public}")
+                logger.debug(f"Total courses in database (any status): {len(all_courses)}")
                 
                 # Try search without status filter
                 search_criteria_no_status = search_criteria.copy()
@@ -769,10 +722,10 @@ class CourseService:
                 if "is_public" in search_criteria_no_status:
                     del search_criteria_no_status["is_public"]
                 
-                logger.info(f"Trying without status filter: {search_criteria_no_status}")
+                logger.debug(f"Trying without status filter: {search_criteria_no_status}")
                 courses = await Course.find(search_criteria_no_status).skip(skip).limit(limit).to_list()
                 total = await Course.find(search_criteria_no_status).count()
-                logger.info(f"Found {len(courses)} courses without status filter")
+                logger.debug(f"Found {len(courses)} courses without status filter")
             
             # Transform courses to match frontend expectations
             transformed_courses = []
@@ -803,8 +756,7 @@ class CourseService:
                     logger.error(f"Error transforming course {course.course_id}: {e}")
                     continue
             
-            logger.info(f"Returning {len(transformed_courses)} transformed courses")
-            logger.info(f"=== END SEARCH COURSES DEBUG ===")
+            logger.debug(f"Returning {len(transformed_courses)} transformed courses")
             
             return {
                 "items": transformed_courses,

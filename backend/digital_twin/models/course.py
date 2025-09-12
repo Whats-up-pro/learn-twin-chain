@@ -48,6 +48,7 @@ class Course(Document):
     course_id: Indexed(str, unique=True) = Field(..., description="Unique course identifier")
     title: str = Field(..., description="Course title")
     description: str = Field(..., description="Course description")
+    thumbnail_url: Optional[str] = Field(default=None, description="Course thumbnail image URL")
     
     # Content management
     syllabus_cid: Optional[str] = Field(default=None, description="IPFS CID for syllabus")
