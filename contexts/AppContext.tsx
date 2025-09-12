@@ -331,17 +331,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     
     try {
       setCoursesLoading(true);
-      const response = await apiService.searchCourses('', {}, 0, 50);
-      console.log('AppContext course response:', response);
+      const response = await apiService.getAllCourses(0, 50) as any;
+      console.log('AppContext: Loading courses from /all endpoint');
       
       if (response && response.items) {
         setCourses(response.items);
-        console.log(`AppContext loaded ${response.items.length} courses`);
+        console.log(`AppContext: ✅ Loaded ${response.items.length} courses`);
       } else if (response && Array.isArray(response)) {
         setCourses(response);
-        console.log(`AppContext loaded ${response.length} courses`);
+        console.log(`AppContext: ✅ Loaded ${response.length} courses`);
       } else {
-        console.warn('AppContext: No courses found in response:', response);
+        console.log('AppContext: No courses available');
         setCourses([]);
       }
       
@@ -356,13 +356,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 id: module.module_id || module.id,
                 title: module.title,
                 description: module.description,
-                courseId: course.id || course.course_id,
-                courseTitle: course.title,
-                duration: module.estimated_duration || module.duration || 60,
-                difficulty: course.difficulty_level || 'beginner',
-                progress: 0,
-                completed: false,
-                quiz: module.assessments || []
+                course_id: course.id || course.course_id,
+                estimatedTime: `${module.estimated_duration || module.duration || 60} minutes`,
+                content: [],
+                quiz: module.assessments || [],
+                module_id: module.module_id || module.id,
+                order: module.order || 0,
+                estimated_duration: module.estimated_duration || module.duration || 60,
+                assessments: module.assessments || []
               });
             });
           }
@@ -387,8 +388,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setAchievementsLoading(true);
       const achievementsData = await apiService.getMyAchievements() as any;
       setAchievements(achievementsData.achievements || []);
+      console.log('AppContext: ✅ Loaded achievements successfully');
     } catch (error) {
-      console.error('Failed to load achievements:', error);
+      console.warn('AppContext: Failed to load achievements:', error);
       setAchievements([]);
     } finally {
       setAchievementsLoading(false);
@@ -398,6 +400,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Load user enrollment and progress data
   const loadUserData = useCallback(async () => {
     try {
+      console.log('AppContext: Loading user enrollment and progress data...');
       const [enrollmentsData, progressData] = await Promise.all([
         apiService.getMyEnrollments(),
         apiService.getMyProgress()
@@ -405,8 +408,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       setEnrollments((enrollmentsData as any).enrollments || []);
       setProgress((progressData as any).progress || []);
+      console.log('AppContext: ✅ Loaded user data successfully');
     } catch (error) {
-      console.error('Failed to load user data:', error);
+      console.warn('AppContext: Failed to load user data:', error);
       setEnrollments([]);
       setProgress([]);
     }
@@ -416,21 +420,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return learningModules.find(module => module.id === moduleId);
   }, [learningModules]);
 
-  // Load data when learner profile changes (moved here to fix hoisting issue)
+  // Load data when learner profile changes - ONLY depend on learnerProfile?.did
   useEffect(() => {
     if (learnerProfile?.did) {
+      console.log('AppContext: Loading user data for', learnerProfile.did);
       loadUserNFTs();
       loadUserData();
       loadCourses();
       loadAchievements();
     } else {
+      console.log('AppContext: Clearing data (no user profile)');
       setNfts([]);
       setEnrollments([]);
       setProgress([]);
       setCourses([]);
       setAchievements([]);
     }
-  }, [learnerProfile?.did, loadUserNFTs, loadUserData, loadCourses, loadAchievements]);
+  }, [learnerProfile?.did]); // FIXED: Remove function dependencies to prevent infinite loop
 
   const completeCheckpoint = useCallback((checkpointData: Omit<LearningCheckpoint, 'tokenized'|'nftCid'|'nftId'>) => {
     updateDigitalTwinState(prevTwin => {

@@ -431,7 +431,7 @@ class AuthService:
             return list(permissions)
             
         except Exception as e:
-            logger.error(f"Permission retrieval error: {e}")
+            logger.debug(f"Permission retrieval error: {e}")
             # Return basic permissions as fallback
             return ["read_own_profile", "read_courses", "read_modules"]
     
@@ -474,18 +474,27 @@ class AuthService:
                 session = await self.get_session(session_id)
                 if session:
                     user = await User.find_one({"did": session.user_id, "is_active": True})
-                    return user
+                    if user:
+                        return user
             
             # Try JWT auth
             authorization = request.headers.get("Authorization")
             if authorization and authorization.startswith("Bearer "):
                 token = authorization.split(" ")[1]
-                from .jwt_service import jwt_service
-                payload = jwt_service.verify_access_token(token)
-                if payload:
-                    user_id = payload.get("sub")
-                    user = await User.find_one({"did": user_id, "is_active": True})
-                    return user
+                try:
+                    # Decode JWT token
+                    payload = jwt.decode(token, self.jwt_secret, algorithms=[self.jwt_algorithm])
+                    user_id = payload.get("sub") or payload.get("user_id")
+                    if user_id:
+                        user = await User.find_one({"did": user_id, "is_active": True})
+                        if user:
+                            return user
+                except jwt.ExpiredSignatureError:
+                    logger.warning("JWT token expired")
+                except jwt.InvalidTokenError as e:
+                    logger.warning(f"Invalid JWT token: {e}")
+                except Exception as e:
+                    logger.error(f"JWT token processing error: {e}")
             
             return None
             

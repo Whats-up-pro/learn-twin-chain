@@ -351,7 +351,7 @@ async def get_my_achievements(
         try:
             user_achievements = await UserAchievement.aggregate(pipeline).to_list()
         except Exception as agg_error:
-            logger.warning(f"Aggregation failed, returning empty list: {agg_error}")
+            logger.debug(f"Achievement aggregation failed, returning empty list: {agg_error}")
             user_achievements = []
         
         return {
