@@ -28,12 +28,14 @@ from digital_twin.api.blockchain_api import router as blockchain_router
 from digital_twin.api.ipfs_api import router as ipfs_router
 from digital_twin.api.zkp_api import router as zkp_router
 from digital_twin.api.gemini_api import router as gemini_router
+from digital_twin.api.user_api import router as user_router
 
 # Import configuration and services
 from .config.config import config
 from .config.database import connect_to_mongo, close_mongo_connection
 from .services.auth_service import AuthService
 from .services.redis_service import RedisService
+from .middleware import SessionMiddleware
 from .utils import Logger
 
 # Legacy imports for backward compatibility
@@ -118,6 +120,9 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
+# Add Session middleware to automatically attach session data to req.user
+app.add_middleware(SessionMiddleware)
+
 # Include API routers
 app.include_router(auth_router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(course_router, prefix="/api/v1", tags=["Courses"])
@@ -131,6 +136,7 @@ app.include_router(blockchain_router, prefix="/api/v1", tags=["Blockchain"])
 app.include_router(ipfs_router, prefix="/api/v1", tags=["IPFS"])
 app.include_router(zkp_router, prefix="/api/v1", tags=["Zero-Knowledge Proofs"])
 app.include_router(gemini_router, prefix="/api/v1", tags=["AI/Gemini"])
+app.include_router(user_router, prefix="/api/v1", tags=["User Management"])
 
 @app.get("/")
 async def root():

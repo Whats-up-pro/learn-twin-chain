@@ -168,6 +168,7 @@ async def search_quizzes(
 @router.get("/{quiz_id}")
 async def get_quiz(
     quiz_id: str,
+    include_answers: bool = Query(False, description="Include correct answers and explanations"),
     current_user: User = Depends(get_current_user)
 ):
     """Get quiz by ID"""
@@ -182,7 +183,7 @@ async def get_quiz(
         
         quiz_data = quiz.dict()
         
-        # For students, shuffle questions/options if enabled and don't show correct answers
+        # For students, shuffle questions/options if enabled and conditionally show correct answers
         if current_user.role == "student":
             import random
             
@@ -192,13 +193,15 @@ async def get_quiz(
             if quiz.shuffle_questions:
                 random.shuffle(questions)
             
-            # Shuffle options and remove correct answers
+            # Shuffle options and conditionally remove correct answers
             for question in questions:
                 if quiz.shuffle_options and question.get("options"):
                     random.shuffle(question["options"])
-                # Remove correct answer for students
-                question.pop("correct_answer", None)
-                question.pop("explanation", None)
+                
+                # Only remove correct answers if not explicitly requested
+                if not include_answers:
+                    question.pop("correct_answer", None)
+                    question.pop("explanation", None)
             
             quiz_data["questions"] = questions
         
@@ -314,10 +317,10 @@ async def start_quiz_attempt(
             raise HTTPException(status_code=404, detail="Quiz not found or not published")
         
         # Check max attempts
-        existing_attempts = await QuizAttempt.count_documents({
+        existing_attempts = await QuizAttempt.find({
             "user_id": current_user.did,
             "quiz_id": quiz_id
-        })
+        }).count()
         
         if existing_attempts >= quiz.max_attempts:
             raise HTTPException(status_code=400, detail="Maximum attempts exceeded")
@@ -486,6 +489,46 @@ async def get_my_quiz_attempts(
         logger.error(f"User quiz attempts retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Quiz attempts retrieval failed")
 
+@router.get("/module/{module_id}")
+async def get_module_quizzes(
+    module_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all quizzes for a specific module"""
+    try:
+        logger.info(f"Getting quizzes for module: {module_id}")
+        
+        # Get quizzes for this module
+        filters = {"module_id": module_id}
+        if current_user.role == "student":
+            filters["status"] = "published"
+        
+        quizzes = await Quiz.find(filters).to_list()
+        logger.info(f"Found {len(quizzes)} quizzes for module {module_id}")
+        
+        quizzes_data = []
+        for quiz in quizzes:
+            quiz_data = quiz.dict()
+            
+            # For students, don't show correct answers
+            if current_user.role == "student":
+                for question in quiz_data["questions"]:
+                    question.pop("correct_answer", None)
+                    question.pop("explanation", None)
+            
+            quizzes_data.append(quiz_data)
+        
+        logger.info(f"Returning {len(quizzes_data)} quizzes for module {module_id}")
+        return {
+            "quizzes": quizzes_data,
+            "module_id": module_id,
+            "total_quizzes": len(quizzes_data)
+        }
+        
+    except Exception as e:
+        logger.error(f"Module quizzes retrieval failed for module {module_id}: {e}")
+        raise HTTPException(status_code=500, detail="Module quizzes retrieval failed")
+
 @router.get("/course/{course_id}")
 async def get_course_quizzes(
     course_id: str,
@@ -493,6 +536,8 @@ async def get_course_quizzes(
 ):
     """Get all quizzes for a specific course"""
     try:
+        logger.info(f"Getting quizzes for course: {course_id}")
+        
         # Verify course exists
         from ..models.course import Course
         course = await Course.find_one({"course_id": course_id})
@@ -505,6 +550,7 @@ async def get_course_quizzes(
             filters["status"] = "published"
         
         quizzes = await Quiz.find(filters).to_list()
+        logger.info(f"Found {len(quizzes)} quizzes for course {course_id}")
         
         quizzes_data = []
         for quiz in quizzes:

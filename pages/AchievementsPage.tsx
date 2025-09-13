@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { useAppContext } from '../contexts/AppContext';
-import { achievementService, ApiUserAchievement, ApiAchievement } from '../services/achievementService';
+import { achievementService, ApiUserAchievement } from '../services/achievementService';
 import { 
   TrophyIcon, 
   StarIcon, 
   CheckCircleIcon,
   LockClosedIcon,
   FireIcon, 
-  AcademicCapIcon,
   ChartBarIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
@@ -32,12 +30,12 @@ interface AchievementDisplayData {
 }
 
 const AchievementsPage: React.FC = () => {
-  const { learnerProfile } = useAppContext();
   const [achievements, setAchievements] = useState<AchievementDisplayData[]>([]);
-  const [userAchievements, setUserAchievements] = useState<ApiUserAchievement[]>([]);
+  const [, setUserAchievements] = useState<ApiUserAchievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTier, setSelectedTier] = useState<string>('all');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'unlocked' | 'locked'>('all');
   const [stats, setStats] = useState({
     totalAchievements: 0,
     unlockedCount: 0,
@@ -57,8 +55,35 @@ const AchievementsPage: React.FC = () => {
         limit: 100
       });
       
-      if (response && response.achievements) {
-        // This will be combined with user achievements to show progress
+      if (response && typeof response === 'object' && response !== null && 'achievements' in response) {
+        const allAchievements = (response as any).achievements;
+        
+        // If no user achievements, show all available achievements as unearned
+        if (achievements.length === 0 && allAchievements && Array.isArray(allAchievements)) {
+          const displayData: AchievementDisplayData[] = allAchievements.map((achievement: any) => ({
+            id: achievement.achievement_id,
+            title: achievement.title || 'Unknown Achievement',
+            description: achievement.description || '',
+            type: achievement.achievement_type || 'learning',
+            tier: achievement.tier || 'bronze',
+            category: achievement.category || 'general',
+            points: achievement.points_reward || 0,
+            icon: getTierIcon(achievement.tier || 'bronze'),
+            badgeColor: getTierColor(achievement.tier || 'bronze'),
+            isUnlocked: false, // Not earned yet
+            isCompleted: false,
+            progress: 0,
+            nftMinted: false,
+            tags: achievement.tags || []
+          }));
+          
+          // If no user achievements loaded yet, show available achievements
+          setTimeout(() => {
+            if (achievements.length === 0) {
+              setAchievements(displayData);
+            }
+          }, 500);
+        }
       }
     } catch (error) {
       console.error('Failed to load achievements:', error);
@@ -72,11 +97,12 @@ const AchievementsPage: React.FC = () => {
         limit: 100
       });
       
-      if (response && response.user_achievements) {
-        setUserAchievements(response.user_achievements);
+      if (response && typeof response === 'object' && response !== null && 'user_achievements' in response) {
+        const userAchievements = (response as any).user_achievements as ApiUserAchievement[];
+        setUserAchievements(userAchievements);
         
         // Convert to display format
-        const displayData: AchievementDisplayData[] = response.user_achievements.map((ua: ApiUserAchievement) => ({
+        const displayData: AchievementDisplayData[] = userAchievements.map((ua: ApiUserAchievement) => ({
           id: ua.achievement_id,
           title: ua.achievement?.title || 'Unknown Achievement',
           description: ua.achievement?.description || '',
@@ -96,12 +122,13 @@ const AchievementsPage: React.FC = () => {
         
         setAchievements(displayData);
       } else {
-        // Fallback to demo data
-        setAchievements(getDemoAchievements());
+        // Show placeholder achievements when no user achievements
+        setAchievements(getPlaceholderAchievements());
       }
     } catch (error) {
       console.error('Failed to load user achievements:', error);
-      setAchievements(getDemoAchievements());
+      // Show placeholder achievements on error
+      setAchievements(getPlaceholderAchievements());
     } finally {
       setLoading(false);
     }
@@ -110,8 +137,8 @@ const AchievementsPage: React.FC = () => {
   const loadStats = async () => {
     try {
       const response = await achievementService.getUserAchievementStats();
-      if (response && response.stats) {
-        setStats(response.stats);
+      if (response && typeof response === 'object' && response !== null && 'stats' in response) {
+        setStats((response as any).stats);
       }
     } catch (error) {
       console.error('Failed to load achievement stats:', error);
@@ -159,60 +186,144 @@ const AchievementsPage: React.FC = () => {
     }
   };
 
-  const getDemoAchievements = (): AchievementDisplayData[] => [
+  const getPlaceholderAchievements = (): AchievementDisplayData[] => [
     {
-      id: 'first-lesson',
-      title: 'First Steps',
-      description: 'Complete your first lesson',
-      type: 'learning',
+      id: 'course_completion_placeholder',
+      title: 'Course Completion Master',
+      description: 'Complete your first course to unlock achievements',
+      type: 'course_completion',
       tier: 'bronze',
       category: 'learning',
       points: 10,
-      icon: '🎯',
+      icon: '🎓',
       badgeColor: 'from-orange-300 to-yellow-600',
-      isUnlocked: true,
-      isCompleted: true,
-      progress: 100,
-      unlockedAt: new Date().toISOString(),
+      isUnlocked: false,
+      isCompleted: false,
+      progress: 0,
       nftMinted: false,
-      tags: ['beginner', 'milestone']
+      tags: ['course', 'milestone']
     },
     {
-      id: 'quiz-master',
+      id: 'data_type_master_placeholder',
+      title: 'Data Type Master',
+      description: 'Demonstrated proficiency in using different data types and operators.',
+      type: 'course_completion',
+      tier: 'bronze',
+      category: 'learning',
+      points: 10,
+      icon: '💎',
+      badgeColor: 'from-orange-300 to-yellow-600',
+      isUnlocked: false,
+      isCompleted: false,
+      progress: 0,
+      nftMinted: false,
+      tags: ['programming', 'fundamentals']
+    },
+    {
+      id: 'quiz_master_placeholder',
       title: 'Quiz Master',
-      description: 'Score 90% or higher on 5 quizzes',
-      type: 'assessment',
+      description: 'Score 90% or higher on course quizzes',
+      type: 'quiz_mastery',
       tier: 'silver',
       category: 'assessment',
-      points: 50,
+      points: 25,
       icon: '🧠',
       badgeColor: 'from-slate-300 to-slate-500',
-      isUnlocked: true,
+      isUnlocked: false,
       isCompleted: false,
-      progress: 60,
+      progress: 0,
+      nftMinted: false,
       tags: ['quiz', 'excellence']
     },
     {
-      id: 'course-complete',
-      title: 'Course Champion',
-      description: 'Complete an entire course',
-      type: 'completion',
+      id: 'speed_learner_placeholder',
+      title: 'Speed Learner',
+      description: 'Complete lessons quickly and efficiently',
+      type: 'speed',
+      tier: 'silver',
+      category: 'performance',
+      points: 30,
+      icon: '⚡',
+      badgeColor: 'from-slate-300 to-slate-500',
+      isUnlocked: false,
+      isCompleted: false,
+      progress: 0,
+      nftMinted: false,
+      tags: ['speed', 'efficiency']
+    },
+    {
+      id: 'perfectionist_placeholder',
+      title: 'Perfectionist',
+      description: 'Achieve perfect scores on multiple assessments',
+      type: 'perfectionist',
       tier: 'gold',
-      category: 'completion',
-      points: 100,
-      icon: '👑',
+      category: 'excellence',
+      points: 50,
+      icon: '⭐',
       badgeColor: 'from-yellow-400 to-orange-500',
       isUnlocked: false,
       isCompleted: false,
-      progress: 25,
-      tags: ['completion', 'dedication']
+      progress: 0,
+      nftMinted: false,
+      tags: ['perfection', 'mastery']
+    },
+    {
+      id: 'dedication_placeholder',
+      title: 'Dedicated Learner',
+      description: 'Maintain a consistent learning streak',
+      type: 'dedication',
+      tier: 'gold',
+      category: 'consistency',
+      points: 40,
+      icon: '🔥',
+      badgeColor: 'from-yellow-400 to-orange-500',
+      isUnlocked: false,
+      isCompleted: false,
+      progress: 0,
+      nftMinted: false,
+      tags: ['dedication', 'consistency']
+    },
+    {
+      id: 'explorer_placeholder',
+      title: 'Course Explorer',
+      description: 'Explore and enroll in multiple courses',
+      type: 'explorer',
+      tier: 'platinum',
+      category: 'exploration',
+      points: 75,
+      icon: '🔍',
+      badgeColor: 'from-purple-400 to-blue-500',
+      isUnlocked: false,
+      isCompleted: false,
+      progress: 0,
+      nftMinted: false,
+      tags: ['exploration', 'curiosity']
+    },
+    {
+      id: 'module_master_placeholder',
+      title: 'Module Master',
+      description: 'Complete all modules in a course',
+      type: 'module_completion',
+      tier: 'platinum',
+      category: 'completion',
+      points: 100,
+      icon: '📚',
+      badgeColor: 'from-purple-400 to-blue-500',
+      isUnlocked: false,
+      isCompleted: false,
+      progress: 0,
+      nftMinted: false,
+      tags: ['modules', 'completion']
     }
   ];
 
   const filteredAchievements = achievements.filter(achievement => {
     const matchesCategory = selectedCategory === 'all' || achievement.category === selectedCategory;
     const matchesTier = selectedTier === 'all' || achievement.tier === selectedTier;
-    return matchesCategory && matchesTier;
+    const matchesTab = selectedTab === 'all' || 
+                      (selectedTab === 'unlocked' && achievement.isUnlocked) ||
+                      (selectedTab === 'locked' && !achievement.isUnlocked);
+    return matchesCategory && matchesTier && matchesTab;
   });
 
   const categories = ['all', ...Array.from(new Set(achievements.map(a => a.category)))];
@@ -278,6 +389,25 @@ const AchievementsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+          <div className="flex items-center justify-center space-x-1 bg-slate-100 rounded-xl p-1">
+            {(['all', 'unlocked', 'locked'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSelectedTab(tab)}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  selectedTab === tab
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                {tab === 'all' ? 'All Achievements' : tab === 'unlocked' ? 'My Achievements' : 'Locked'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-8">
         <div className="flex flex-col md:flex-row gap-4">
@@ -323,7 +453,7 @@ const AchievementsPage: React.FC = () => {
                 ? 'border-green-200 hover:border-green-300' 
                 : achievement.isUnlocked
                 ? 'border-blue-200 hover:border-blue-300'
-                : 'border-slate-200 hover:border-slate-300'
+                : 'border-slate-200 hover:border-slate-300 opacity-60'
             }`}
           >
             {/* Header Gradient */}
@@ -343,7 +473,7 @@ const AchievementsPage: React.FC = () => {
             {/* Achievement Icon */}
             <div className="absolute top-12 left-6">
               <div className={`w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center text-2xl ${
-                !achievement.isUnlocked ? 'grayscale opacity-50' : ''
+                !achievement.isUnlocked ? 'grayscale opacity-40' : ''
               }`}>
                 {achievement.icon}
                   </div>
@@ -431,8 +561,8 @@ const AchievementsPage: React.FC = () => {
           <h3 className="text-lg font-medium text-slate-900 mb-2">No achievements found</h3>
           <p className="text-slate-600">
             {selectedCategory !== 'all' || selectedTier !== 'all' 
-              ? 'Try adjusting your filters'
-              : 'Start learning to unlock your first achievements!'
+              ? 'Try adjusting your filters to see more achievements'
+              : 'Start learning to unlock these amazing achievements! Complete courses, take quizzes, and explore to earn your first badges.'
             }
           </p>
           </div>

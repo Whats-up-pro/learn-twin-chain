@@ -17,13 +17,21 @@ auth_service = AuthService()
 async def get_current_user(request: Request) -> User:
     """Get current authenticated user"""
     try:
+        # Debug logging
+        session_id = request.cookies.get("session_id")
+        auth_header = request.headers.get("Authorization", "")
+        logger.debug(f"Auth attempt - Session: {'✅' if session_id else '❌'}, Bearer: {'✅' if auth_header.startswith('Bearer ') else '❌'}")
+        
         user = await auth_service.get_current_user(request)
         if not user:
+            logger.warning("Authentication failed: No user found")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required",
+                detail="Authentication required - Please login",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        logger.debug(f"Authenticated user: {user.email} ({user.did})")
         return user
     except HTTPException:
         raise
@@ -31,7 +39,7 @@ async def get_current_user(request: Request) -> User:
         logger.error(f"Current user retrieval error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication failed",
+            detail="Authentication failed - Please login",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -68,12 +76,15 @@ async def get_current_user_optional(request: Request) -> Optional[Dict[str, Any]
 def require_permission(permission: str):
     """Dependency factory for permission-based authorization"""
     async def permission_checker(current_user: User = Depends(get_current_user)) -> User:
+        logger.debug(f"Checking permission '{permission}' for user: {current_user.email}")
         has_permission = await auth_service.check_permission(current_user.did, permission)
         if not has_permission:
+            logger.warning(f"Permission denied: User {current_user.email} lacks '{permission}'")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Permission required: {permission}"
             )
+        logger.debug(f"Permission '{permission}' granted to user: {current_user.email}")
         return current_user
     return permission_checker
 

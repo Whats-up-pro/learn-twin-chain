@@ -50,16 +50,40 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
           setQuiz(quizData);
           
           // Convert API questions to frontend format
-          const convertedQuestions: QuizQuestion[] = quizData.questions.map((apiQ: ApiQuizQuestion) => ({
-            id: apiQ.question_id,
-            text: apiQ.question_text,
-            options: apiQ.options?.map(opt => ({
-              id: opt.option_id,
-              text: opt.text
-            })) || [],
-            correctOptionId: apiQ.options?.find(opt => opt.is_correct)?.option_id || '',
-            explanation: apiQ.explanation
-          }));
+          const convertedQuestions: QuizQuestion[] = quizData.questions.map((apiQ: ApiQuizQuestion) => {
+            // Handle MongoDB structure where options are strings and correct_answer is separate
+            let options = [];
+            let correctOptionId = '';
+            
+            if (Array.isArray(apiQ.options)) {
+              if (typeof apiQ.options[0] === 'string') {
+                // MongoDB format: options are array of strings
+                options = apiQ.options.map((optText: string, index: number) => ({
+                  id: `option_${index}`,
+                  text: optText
+                }));
+                
+                // Find correct option by matching correct_answer with option text
+                const correctIndex = apiQ.options.findIndex(opt => opt === apiQ.correct_answer);
+                correctOptionId = correctIndex >= 0 ? `option_${correctIndex}` : '';
+              } else {
+                // Legacy format: options are objects with id/text/is_correct
+                options = apiQ.options.map((opt: any) => ({
+                  id: opt.option_id || opt.id,
+                  text: opt.text
+                }));
+                correctOptionId = apiQ.options.find((opt: any) => opt.is_correct)?.option_id || apiQ.options.find((opt: any) => opt.is_correct)?.id || '';
+              }
+            }
+
+            return {
+              id: apiQ.question_id,
+              text: apiQ.question_text,
+              options,
+              correctOptionId,
+              explanation: apiQ.explanation
+            };
+          });
           
           setQuestions(convertedQuestions);
         } else if (!propQuestions) {
@@ -95,8 +119,20 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
       let scorePercentage = 0;
       
       if (quiz && attemptId) {
+        // Convert option IDs to actual answer text for API submission
+        const answerTexts: Record<string, string> = {};
+        Object.entries(selectedAnswers).forEach(([questionId, optionId]) => {
+          const question = questions.find(q => q.id === questionId);
+          if (question) {
+            const selectedOption = question.options.find(opt => opt.id === optionId);
+            if (selectedOption) {
+              answerTexts[questionId] = selectedOption.text;
+            }
+          }
+        });
+
         // Submit via API
-        const response = await quizService.submitQuizAttempt(attemptId, selectedAnswers);
+        const response = await quizService.submitQuizAttempt(attemptId, answerTexts);
         if (response && response.attempt) {
           scorePercentage = response.attempt.percentage;
           setScore(response.attempt.percentage / 100);
@@ -136,6 +172,13 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
       // Continue without attempt tracking for demo purposes
     }
   };
+
+  // Start quiz attempt when quiz is loaded
+  useEffect(() => {
+    if (quiz && !attemptId) {
+      startQuizAttempt();
+    }
+  }, [quiz, attemptId]);
 
   if (loading) {
     return (

@@ -309,13 +309,28 @@ class DigitalTwin(Document):
         self.enrollments.append(enrollment)
         self.update_timestamp()
     
+    def _serialize_datetime_recursive(self, obj: Any) -> Any:
+        """Recursively serialize datetime objects to ISO format strings"""
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {key: self._serialize_datetime_recursive(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._serialize_datetime_recursive(item) for item in obj]
+        elif hasattr(obj, 'dict') and callable(obj.dict):
+            # Handle Pydantic models
+            return self._serialize_datetime_recursive(obj.dict())
+        else:
+            return obj
+
     def get_canonical_payload(self) -> Dict[str, Any]:
-        """Get the canonical payload for IPFS storage"""
-        return {
+        """Get the canonical payload for IPFS storage with proper datetime serialization"""
+        payload = {
             "twin_id": self.twin_id,
             "owner_did": self.owner_did,
             "version": self.version,
             "timestamp": self.updated_at.isoformat(),
+            "created_at": self.created_at.isoformat(),
             "profile": self.profile,
             "learning_state": {
                 "current_modules": self.current_modules,
@@ -330,6 +345,9 @@ class DigitalTwin(Document):
             "checkpoint_history": [checkpoint.dict() for checkpoint in self.checkpoint_history],
             "privacy_level": self.privacy_level
         }
+        
+        # Recursively serialize all datetime objects
+        return self._serialize_datetime_recursive(payload)
 
 class DigitalTwinVersion(Document):
     """Version history for digital twins"""

@@ -16,7 +16,7 @@ sys.path.insert(0, backend_dir)
 
 from digital_twin.models.user import User
 from digital_twin.models.digital_twin import DigitalTwin
-from digital_twin.models.course import Course, Module
+from digital_twin.models.course import Course, Module, Enrollment
 from digital_twin.models.nft import NFTRecord
 from digital_twin.models.session import UserSession, RefreshToken
 from digital_twin.models.wallet import WalletLink
@@ -42,6 +42,7 @@ async def fix_timezone_data():
                 DigitalTwin, 
                 Course,
                 Module,
+                Enrollment,
                 NFTRecord,
                 UserSession,
                 RefreshToken,

@@ -236,7 +236,8 @@ class CourseService {
   // User-specific data
   async getMyEnrollments() {
     try {
-      const response = await fetch(`${API_BASE}/courses/my/enrollments`, {
+      // Use the same working endpoint as sidebar enrollment
+      const response = await fetch(`${API_BASE}/auth/me/enrollments`, {
         credentials: 'include'
       });
 

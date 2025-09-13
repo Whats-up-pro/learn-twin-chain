@@ -121,7 +121,7 @@ async def create_lesson(
         logger.error(f"Lesson creation failed: {e}")
         raise HTTPException(status_code=500, detail="Lesson creation failed")
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(require_permission("read_lessons"))])
 async def search_lessons(
     module_id: Optional[str] = Query(None, description="Filter by module ID"),
     course_id: Optional[str] = Query(None, description="Filter by course ID"),
@@ -164,7 +164,7 @@ async def search_lessons(
         logger.error(f"Lesson search failed: {e}")
         raise HTTPException(status_code=500, detail="Lesson search failed")
 
-@router.get("/{lesson_id}")
+@router.get("/{lesson_id}", dependencies=[Depends(require_permission("read_lessons"))])
 async def get_lesson(
     lesson_id: str,
     include_content: bool = Query(False, description="Include IPFS content"),
@@ -390,14 +390,42 @@ async def update_lesson_progress(
             from ..services.digital_twin_service import DigitalTwinService
             twin_service = DigitalTwinService()
             
-            twin_id = f"did:learntwin:{current_user.did.replace('did:learntwin:', '')}"
-            await twin_service.update_learning_progress(
-                twin_id,
-                lesson_id,
-                request.completion_percentage,
-                request.time_spent_minutes,
-                None  # No scores for regular lessons
-            )
+            from ..utils.did_utils import create_digital_twin_id
+            twin_id = create_digital_twin_id(current_user.did)
+            
+            # Try to update digital twin, create if not exists
+            try:
+                await twin_service.update_learning_progress(
+                    twin_id,
+                    lesson.module_id,
+                    lesson.course_id,
+                    request.completion_percentage,
+                    request.time_spent_minutes,
+                    None  # No scores for regular lessons
+                )
+            except ValueError as e:
+                if "Digital twin not found" in str(e):
+                    logger.warning(f"Digital twin not found for {current_user.did}, creating new one")
+                    try:
+                        # Create digital twin for existing user
+                        await twin_service.create_digital_twin(current_user)
+                        logger.info(f"Created missing digital twin for {current_user.did}")
+                        
+                        # Now try to update progress again
+                        await twin_service.update_learning_progress(
+                            twin_id,
+                            lesson.module_id,
+                            lesson.course_id,
+                            request.completion_percentage,
+                            request.time_spent_minutes,
+                            None
+                        )
+                    except Exception as creation_error:
+                        logger.error(f"Failed to create digital twin for {current_user.did}: {creation_error}")
+                        # Continue without failing the lesson progress update
+                else:
+                    logger.error(f"Digital twin update failed for {current_user.did}: {e}")
+                    # Continue without failing the lesson progress update
         
         logger.info(f"Lesson progress updated: {current_user.did} -> {lesson_id} ({request.completion_percentage}%)")
         return {
@@ -416,7 +444,7 @@ async def update_lesson_progress(
         logger.error(f"Lesson progress update failed: {e}")
         raise HTTPException(status_code=500, detail="Lesson progress update failed")
 
-@router.get("/{lesson_id}/progress")
+@router.get("/{lesson_id}/progress", dependencies=[Depends(require_permission("view_progress"))])
 async def get_lesson_progress(
     lesson_id: str,
     current_user: User = Depends(get_current_user)
@@ -464,7 +492,7 @@ async def get_lesson_progress(
         logger.error(f"Lesson progress retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Lesson progress retrieval failed")
 
-@router.get("/module/{module_id}")
+@router.get("/module/{module_id}", dependencies=[Depends(require_permission("read_lessons"))])
 async def get_module_lessons(
     module_id: str,
     include_progress: bool = Query(False, description="Include user progress"),
@@ -522,7 +550,7 @@ async def get_module_lessons(
         logger.error(f"Module lessons retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Module lessons retrieval failed")
 
-@router.get("/course/{course_id}")
+@router.get("/course/{course_id}", dependencies=[Depends(require_permission("read_lessons"))])
 async def get_course_lessons(
     course_id: str,
     include_progress: bool = Query(False, description="Include user progress"),
@@ -581,7 +609,7 @@ async def get_course_lessons(
         logger.error(f"Course lessons retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Course lessons retrieval failed")
 
-@router.get("/all/courses")
+@router.get("/all/courses", dependencies=[Depends(require_permission("read_lessons"))])
 async def get_all_courses_lessons(
     include_progress: bool = Query(False, description="Include user progress"),
     skip: int = Query(0, ge=0),

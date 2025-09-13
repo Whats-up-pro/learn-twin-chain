@@ -24,7 +24,7 @@ export default function LearningPath() {
     try {
       setLoading(true);
       const data = await courseService.searchCourses(searchQuery, filters);
-      setCourses(data.courses || []);
+      setCourses(data.items || data.courses || []);
     } catch (error) {
       console.error('Failed to load courses:', error);
     } finally {
@@ -155,6 +155,9 @@ function CourseCard({ course, onEnroll, canEnroll }) {
     return colors[level] || 'bg-gray-100 text-gray-800';
   };
 
+  // Check if course is already enrolled
+  const isEnrolled = course.is_enrolled || false;
+
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       <div className="p-6">
@@ -215,15 +218,22 @@ function CourseCard({ course, onEnroll, canEnroll }) {
         )}
 
         <button
-          onClick={onEnroll}
-          disabled={!canEnroll}
+          onClick={isEnrolled ? undefined : onEnroll}
+          disabled={isEnrolled || !canEnroll}
           className={`w-full py-2 px-4 rounded-md text-sm font-medium ${
-            canEnroll
+            isEnrolled
+              ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+              : canEnroll
               ? 'bg-blue-600 hover:bg-blue-700 text-white'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
         >
-          {canEnroll ? 'Enroll Now' : 'Connect Wallet to Enroll'}
+          {isEnrolled 
+            ? 'Already Enrolled' 
+            : canEnroll 
+            ? 'Enroll Now' 
+            : 'Connect Wallet to Enroll'
+          }
         </button>
       </div>
     </div>

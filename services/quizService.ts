@@ -28,11 +28,11 @@ export interface ApiQuizQuestion {
   question_id: string;
   question_text: string;
   question_type: string;
-  options?: Array<{
+  options?: string[] | Array<{
     option_id: string;
     text: string;
     is_correct: boolean;
-  }>;
+  }>; // Support both MongoDB format (string[]) and legacy format
   correct_answer?: string;
   explanation?: string;
   points: number;
@@ -54,14 +54,78 @@ export interface ApiQuizAttempt {
   feedback?: string;
 }
 
-// Helper to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+import { jwtService } from './jwtService';
+
+// Helper function for authenticated requests with token refresh
+async function makeAuthenticatedRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const authHeaders = jwtService.getAuthHeader();
+  
+  console.log(`🌐 Making authenticated request to: ${url}`);
+  console.log(`🔑 Auth headers:`, authHeaders);
+  
+  const response = await fetch(url, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders,
+      ...options.headers,
+    },
+    ...options,
+  });
+  
+  console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+  console.log(`📡 Response headers:`, Object.fromEntries(response.headers.entries()));
+
+  if (!response.ok) {
+    // Log response body for debugging
+    try {
+      const errorBody = await response.text();
+      console.log(`❌ Error response body:`, errorBody);
+    } catch (e) {
+      console.log(`❌ Could not read error response body:`, e);
+    }
+    // Handle 401 Unauthorized - try refresh token
+    if (response.status === 401) {
+      const refreshSuccess = await jwtService.handleUnauthorized();
+      if (refreshSuccess) {
+        // Retry the original request with new token
+        const retryResponse = await fetch(url, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...jwtService.getAuthHeader(),
+            ...options.headers,
+          },
+          ...options,
+        });
+        
+        if (!retryResponse.ok) {
+          const retryErrorData = await retryResponse.json().catch(() => ({ detail: 'Network error' }));
+          throw new Error(retryErrorData.detail || `HTTP ${retryResponse.status}`);
+        }
+        
+        return await retryResponse.json();
+      }
+      
+      // Refresh failed, clear tokens and redirect
+      localStorage.removeItem('learnerProfile');
+      localStorage.removeItem('userRole');
+      
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+      throw new Error('Authentication required');
+    }
+    
+    const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
+    throw new Error(errorData.detail || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  console.log(`✅ Response data:`, data);
+  return data;
+}
 
 class QuizService {
   
@@ -69,15 +133,7 @@ class QuizService {
   async getQuiz(quizId: string, includeAnswers = false) {
     try {
       const params = includeAnswers ? '?include_answers=true' : '';
-      const response = await fetch(`${API_BASE}/quizzes/${quizId}${params}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get quiz: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await makeAuthenticatedRequest(`${API_BASE}/quizzes/${quizId}${params}`);
     } catch (error) {
       console.error('Error getting quiz:', error);
       throw error;
@@ -86,32 +142,25 @@ class QuizService {
 
   async getModuleQuizzes(moduleId: string) {
     try {
-      const response = await fetch(`${API_BASE}/quizzes/module/${moduleId}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get module quizzes: ${response.statusText}`);
-      }
-
-      return await response.json();
+      console.log(`🔍 QuizService: Fetching quizzes for module ID: ${moduleId}`);
+      console.log(`🔍 QuizService: API URL: ${API_BASE}/quizzes/module/${moduleId}`);
+      console.log(`🔍 QuizService: User authenticated: ${jwtService.isAuthenticated()}`);
+      console.log(`🔍 QuizService: Auth header:`, jwtService.getAuthHeader());
+      
+      const result = await makeAuthenticatedRequest(`${API_BASE}/quizzes/module/${moduleId}`);
+      console.log(`📝 QuizService: API response for module ${moduleId}:`, result);
+      
+      return result;
     } catch (error) {
-      console.error('Error getting module quizzes:', error);
-      throw error;
+      console.error(`❌ QuizService: Error getting module quizzes for ${moduleId}:`, error);
+      // Return empty result instead of throwing to prevent breaking the flow
+      return { quizzes: [] };
     }
   }
 
   async getCourseQuizzes(courseId: string) {
     try {
-      const response = await fetch(`${API_BASE}/quizzes/course/${courseId}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get course quizzes: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await makeAuthenticatedRequest(`${API_BASE}/quizzes/course/${courseId}`);
     } catch (error) {
       console.error('Error getting course quizzes:', error);
       throw error;
@@ -142,17 +191,10 @@ class QuizService {
     tags?: string[];
   }) {
     try {
-      const response = await fetch(`${API_BASE}/quizzes/`, {
+      return await makeAuthenticatedRequest(`${API_BASE}/quizzes/`, {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify(quizData)
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create quiz: ${response.statusText}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Error creating quiz:', error);
       throw error;
@@ -164,7 +206,7 @@ class QuizService {
     try {
       const response = await fetch(`${API_BASE}/quizzes/${quizId}/start`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        ...jwtService.getAuthHeader()
       });
 
       if (!response.ok) {
@@ -182,7 +224,7 @@ class QuizService {
     try {
       const response = await fetch(`${API_BASE}/quizzes/attempts/${attemptId}/submit`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        ...jwtService.getAuthHeader(),
         body: JSON.stringify({ answers })
       });
 
@@ -197,35 +239,10 @@ class QuizService {
     }
   }
 
-  async getQuizAttempts(quizId?: string) {
-    try {
-      const params = quizId ? `?quiz_id=${quizId}` : '';
-      const response = await fetch(`${API_BASE}/quizzes/my/attempts${params}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get quiz attempts: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error getting quiz attempts:', error);
-      throw error;
-    }
-  }
 
   async getQuizAttempt(attemptId: string) {
     try {
-      const response = await fetch(`${API_BASE}/quizzes/attempts/${attemptId}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get quiz attempt: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await makeAuthenticatedRequest(`${API_BASE}/quizzes/attempts/${attemptId}`);
     } catch (error) {
       console.error('Error getting quiz attempt:', error);
       throw error;
@@ -233,36 +250,21 @@ class QuizService {
   }
 
   // User quiz progress
-  async getUserQuizProgress(userId?: string) {
+  async getQuizAttempts(courseId?: string) {
     try {
-      const params = userId ? `?user_id=${userId}` : '';
-      const response = await fetch(`${API_BASE}/quizzes/my/progress${params}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get quiz progress: ${response.statusText}`);
-      }
-
-      return await response.json();
+      const params = courseId ? `?course_id=${courseId}` : '';
+      return await makeAuthenticatedRequest(`${API_BASE}/quizzes/my/attempts${params}`);
     } catch (error) {
-      console.error('Error getting quiz progress:', error);
-      throw error;
+      console.error('Error getting user quiz attempts:', error);
+      // Return empty for graceful handling
+      return { attempts: [] };
     }
   }
 
   // Quiz statistics
   async getQuizStatistics(quizId: string) {
     try {
-      const response = await fetch(`${API_BASE}/quizzes/${quizId}/statistics`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get quiz statistics: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await makeAuthenticatedRequest(`${API_BASE}/quizzes/${quizId}/statistics`);
     } catch (error) {
       console.error('Error getting quiz statistics:', error);
       throw error;

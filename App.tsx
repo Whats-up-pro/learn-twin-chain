@@ -3,10 +3,14 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import SessionTimeoutPopup from './components/SessionTimeoutPopup';
+import MetaMaskConnectionNotification from './components/MetaMaskConnectionNotification';
+import ErrorBoundary from './components/ErrorBoundary';
 import DashboardPage from './pages/DashboardPage';
 import ModulePage from './pages/ModulePage';
 import VideoLearningPage from './pages/VideoLearningPage';
 import CourseLearnPage from './pages/CourseLearnPage';
+import CourseOverviewPage from './pages/CourseOverviewPage';
 import AchievementsPage from './pages/AchievementsPage';
 import NFTManagementPage from './pages/NFTManagementPage';
 import AiTutorPage from './pages/AiTutorPage';
@@ -19,9 +23,12 @@ import TeacherDashboardPage from './pages/TeacherDashboardPage';
 import EmployerDashboardPage from './pages/EmployerDashboardPage';
 import SearchPage from './pages/SearchPage';
 import CoursesPage from './pages/CoursesPage';
+import SettingsPage from './pages/SettingsPage';
+import WelcomePage from './pages/WelcomePage';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
 import { UserRole } from './types';
+import sessionMonitor from './services/sessionMonitorService';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: UserRole[] }> = ({ children, allowedRoles }) => {
   const { role } = useAppContext();
@@ -40,6 +47,11 @@ const AppContent: React.FC = () => {
   const { learnerProfile, updateLearnerProfile, role } = useAppContext();
   const location = useLocation();
   
+  // Session timeout state
+  const [showTimeoutPopup, setShowTimeoutPopup] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [sessionActive, setSessionActive] = useState(false);
+  
   // Check localStorage on mount to restore session
   useEffect(() => {
     const savedProfile = localStorage.getItem('learnerProfile');
@@ -56,8 +68,98 @@ const AppContent: React.FC = () => {
     }
   }, [learnerProfile, updateLearnerProfile]);
 
+  // Define isLoggedIn before using it
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
-  const hideNavbarAndSidebar = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/verify-email' || location.pathname === '/verify-email-sent';
+
+  // Session monitoring effect (optional - won't break app if it fails)
+  useEffect(() => {
+    // Add a small delay to prevent blocking initial render
+    const timeoutId = setTimeout(async () => {
+      try {
+        // Only monitor if user is logged in
+        if (isLoggedIn) {
+          console.log('🔍 Initializing session monitoring...');
+          
+          // Check if backend is available first
+          const status = await sessionMonitor.getCurrentStatus();
+          if (status?.authenticated) {
+            setSessionActive(true);
+            console.log('🔍 Starting session monitoring (15-second sessions)...');
+            
+            sessionMonitor.startMonitoring(
+              // On timeout (≤5 seconds remaining)
+              (timeLeft: number) => {
+                console.log('⏰ Session timeout warning:', timeLeft);
+                setTimeRemaining(timeLeft);
+                setShowTimeoutPopup(true);
+              },
+              // On session expired
+              () => {
+                console.log('❌ Session expired, forcing logout');
+                setSessionActive(false);
+                setShowTimeoutPopup(false);
+                handleForceLogout();
+              },
+              // On session refreshed
+              () => {
+                console.log('✅ Session was refreshed');
+                setShowTimeoutPopup(false);
+              }
+            );
+          } else {
+            console.log('ℹ️ No active session to monitor');
+            setSessionActive(false);
+          }
+        } else {
+          // Stop monitoring if not logged in
+          console.log('⏹️ User not logged in');
+          sessionMonitor.stopMonitoring();
+          setSessionActive(false);
+        }
+      } catch (error) {
+        console.warn('⚠️ Session monitoring unavailable:', error instanceof Error ? error.message : 'Unknown error');
+        // Don't fail the app if session monitoring fails
+        setSessionActive(false);
+      }
+    }, 1000); // 1 second delay
+
+    // Cleanup
+    return () => {
+      clearTimeout(timeoutId);
+      sessionMonitor.stopMonitoring();
+    };
+  }, [isLoggedIn]);
+
+  const handleStayLearning = async () => {
+    console.log('📚 User chose to stay learning...');
+    const success = await sessionMonitor.refreshSession();
+    if (success) {
+      setShowTimeoutPopup(false);
+      console.log('✅ Session extended for 15 more seconds');
+    } else {
+      console.error('❌ Failed to extend session');
+      await handleLogout();
+    }
+  };
+
+  const handleLogout = async () => {
+    console.log('🚪 User chose to logout...');
+    await sessionMonitor.logout();
+    setSessionActive(false);
+    setShowTimeoutPopup(false);
+    handleForceLogout();
+  };
+
+  const handleForceLogout = () => {
+    // Clear all local data
+    localStorage.removeItem('learnerProfile');
+    localStorage.removeItem('userRole');
+    localStorage.clear();
+    
+    // Force redirect to login
+    window.location.href = '/login';
+  };
+  const hideNavbarAndSidebar = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/verify-email' || location.pathname === '/verify-email-sent' || location.pathname === '/welcome';
   const showSidebar = isLoggedIn && role === UserRole.LEARNER && !hideNavbarAndSidebar;
 
   // Auto-open sidebar on desktop
@@ -75,22 +177,24 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* Sidebar for learners */}
-      {showSidebar && (
-        <Sidebar 
-          isOpen={isSidebarOpen} 
-          onToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
-        />
-      )}
-      
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Sidebar for learners */}
+        {showSidebar && (
+          <Sidebar 
+            isOpen={isSidebarOpen} 
+            onToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
+          />
+        )}
+        
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col min-h-screen">
         
         {/* Header */}
-        <Header 
-          onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-          showSidebar={showSidebar}
-        />
+        {!hideNavbarAndSidebar && (
+          <Header 
+            onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+            showSidebar={showSidebar}
+          />
+        )}
         
         {/* Toast notifications */}
         <Toaster 
@@ -138,10 +242,12 @@ const AppContent: React.FC = () => {
           } />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/verify-email-sent" element={<VerifyEmailSentPage />} />
-          <Route path="/" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/login"} />} />
+          <Route path="/" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/welcome"} />} />
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
-              <DashboardPage />
+              <ErrorBoundary>
+                <DashboardPage />
+              </ErrorBoundary>
             </ProtectedRoute>
           } />
           <Route path="/teacher" element={
@@ -158,6 +264,9 @@ const AppContent: React.FC = () => {
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
               <ModulePage />
             </ProtectedRoute>
+          } />
+          <Route path="/course/:courseId" element={
+            isLoggedIn ? <CourseOverviewPage /> : <Navigate to="/login" replace />
           } />
           <Route path="/course/:courseId/learn" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
@@ -188,14 +297,20 @@ const AppContent: React.FC = () => {
             isLoggedIn ? <SearchPage /> : <Navigate to="/login" replace />
           } />
           <Route path="/courses" element={
-            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
-              <CoursesPage />
-            </ProtectedRoute>
+            isLoggedIn ? <CoursesPage /> : <Navigate to="/login" replace />
           } />
           <Route path="/profile" element={
             isLoggedIn ? <ProfilePage /> : <Navigate to="/login" replace />
           } />
-          <Route path="*" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/login"} />} />
+          <Route path="/settings" element={
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/welcome" element={
+            isLoggedIn ? <Navigate to={role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard"} replace /> : <WelcomePage />
+          } />
+          <Route path="*" element={<Navigate to={isLoggedIn ? (role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard") : "/welcome"} />} />
         </Routes>
         </main>
         
@@ -205,8 +320,22 @@ const AppContent: React.FC = () => {
             © 2025 LearnTwinChain. Empowering Learners.
           </footer>
         )}
+
+        {/* Session Timeout Popup */}
+        {sessionActive && showTimeoutPopup && (
+          <SessionTimeoutPopup
+            isVisible={showTimeoutPopup}
+            timeRemaining={timeRemaining}
+            onStayLearning={handleStayLearning}
+            onLogout={handleLogout}
+            onClose={() => setShowTimeoutPopup(false)}
+          />
+        )}
+
+        {/* MetaMask Connection Notification */}
+        <MetaMaskConnectionNotification />
+        </div>
       </div>
-    </div>
   );
 };
 

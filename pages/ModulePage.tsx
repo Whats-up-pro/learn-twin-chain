@@ -7,6 +7,7 @@ import { LightBulbIcon, CodeBracketIcon, PlayCircleIcon } from '@heroicons/react
 import toast from 'react-hot-toast';
 import { blockchainService } from '../services/blockchainService';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
+import { isYouTubeUrl, createYouTubeIframeProps } from '../utils/videoUtils';
 
 const ModulePage: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -142,25 +143,16 @@ const ModulePage: React.FC = () => {
       case 'image':
         return <img key={index} src={item.value} alt={`Module content ${index + 1}`} className="my-4 rounded-lg shadow-md max-w-full h-auto mx-auto" />;
       case 'video': {
-        // Support YouTube embed links or direct video URLs
-        const isYouTube = item.value.includes('youtube.com') || item.value.includes('youtu.be');
-        if (isYouTube) {
-          // Normalize to embed URL
-          let embedUrl = item.value;
-          if (embedUrl.includes('watch?v=')) {
-            embedUrl = embedUrl.replace('watch?v=', 'embed/');
-          }
-          if (embedUrl.includes('youtu.be/')) {
-            embedUrl = embedUrl.replace('youtu.be/', 'www.youtube.com/embed/');
-          }
+        // Use our improved video utility functions
+        if (isYouTubeUrl(item.value)) {
           return (
             <div key={index} className="my-4 aspect-video w-full overflow-hidden rounded-xl shadow">
               <iframe
-                className="w-full h-full"
-                src={embedUrl}
-                title={`Video ${index + 1}`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
+                {...createYouTubeIframeProps(
+                  item.value,
+                  `Video ${index + 1}`,
+                  "w-full h-full"
+                )}
               />
             </div>
           );
