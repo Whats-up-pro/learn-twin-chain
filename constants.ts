@@ -4,6 +4,9 @@ import { getCurrentVietnamTimeISO } from './utils/dateUtils';
 export const GEMINI_MODEL_NAME = 'gemini-2.0-flash';
 export const APP_NAME = 'LearnTwinChain';
 
+// API Configuration
+export const API_BASE_URL = 'http://localhost:8000/api/v1';
+
 export const DEFAULT_LEARNER_PROFILE: LearnerProfile = {
   did: 'did:learntwin:student001',
   name: 'Alex Student',

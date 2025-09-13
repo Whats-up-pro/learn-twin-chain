@@ -1,0 +1,17 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with blue gradient -->
+  <rect width="32" height="32" rx="8" fill="url(#gradient)"/>
+  
+  <!-- Academic cap icon -->
+  <path d="M8 12L16 8L24 12V18C24 19.1046 23.1046 20 22 20H10C8.89543 20 8 19.1046 8 18V12Z" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M8 12L16 16L24 12" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 20V24C12 25.1046 12.8954 26 14 26H18C19.1046 26 20 25.1046 20 24V20" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>

@@ -332,14 +332,21 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       setCoursesLoading(true);
       const response = await apiService.getAllCourses(0, 50) as any;
-      console.log('AppContext: Loading courses from /all endpoint');
+      console.log('AppContext: Loading courses with enrollment status from /all endpoint');
       
       if (response && response.items) {
+        // Log enrollment status for debugging
+        const enrolledCount = response.items.filter((c: any) => c.is_enrolled).length;
+        console.log(`📊 Enrollment status: ${enrolledCount} enrolled out of ${response.items.length} courses`);
+        
         setCourses(response.items);
-        console.log(`AppContext: ✅ Loaded ${response.items.length} courses`);
+        console.log(`AppContext: ✅ Loaded ${response.items.length} courses with enrollment status`);
       } else if (response && Array.isArray(response)) {
+        const enrolledCount = response.filter((c: any) => c.is_enrolled).length;
+        console.log(`📊 Enrollment status: ${enrolledCount} enrolled out of ${response.length} courses`);
+        
         setCourses(response);
-        console.log(`AppContext: ✅ Loaded ${response.length} courses`);
+        console.log(`AppContext: ✅ Loaded ${response.length} courses with enrollment status`);
       } else {
         console.log('AppContext: No courses available');
         setCourses([]);
@@ -424,10 +431,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     if (learnerProfile?.did) {
       console.log('AppContext: Loading user data for', learnerProfile.did);
-      loadUserNFTs();
-      loadUserData();
-      loadCourses();
-      loadAchievements();
+      // Use setTimeout to prevent blocking the initial render
+      const loadData = async () => {
+        try {
+          await Promise.allSettled([
+            loadUserNFTs(),
+            loadUserData(),
+            loadCourses(),
+            loadAchievements()
+          ]);
+        } catch (error) {
+          console.error('AppContext: Error loading user data:', error);
+        }
+      };
+      
+      // Delay data loading to prevent blocking initial render
+      setTimeout(loadData, 100);
     } else {
       console.log('AppContext: Clearing data (no user profile)');
       setNfts([]);

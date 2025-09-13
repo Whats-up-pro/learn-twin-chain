@@ -27,7 +27,16 @@ class DigitalTwinService:
     async def create_digital_twin(self, user: User, initial_data: Dict[str, Any] = None) -> DigitalTwin:
         """Create a new digital twin for a user"""
         try:
-            twin_id = f"did:learntwin:{user.did.replace('did:learntwin:', '')}"
+            from ..utils.did_utils import create_digital_twin_id, validate_blockchain_compatibility
+            
+            # Create and validate twin ID
+            twin_id = create_digital_twin_id(user.did)
+            validation = validate_blockchain_compatibility(twin_id)
+            
+            if not validation["valid"]:
+                raise ValueError(f"Invalid DID for digital twin creation: {validation['issues']}")
+                
+            logger.info(f"Creating digital twin with validated ID: {twin_id}")
             
             # Create initial twin data
             twin_data = {

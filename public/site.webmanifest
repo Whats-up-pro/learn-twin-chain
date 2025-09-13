@@ -1,0 +1,22 @@
+{
+  "name": "LearnTwin - Digital Twin Blockchain NFT Learning",
+  "short_name": "LearnTwin",
+  "description": "Transform your skills with blockchain-powered learning and earn NFTs as you progress through your educational journey.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32",
+      "type": "image/x-icon"
+    }
+  ],
+  "theme_color": "#2563eb",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/dashboard",
+  "scope": "/"
+}

@@ -659,7 +659,7 @@ class CourseService:
             logger.error(f"Failed to sync user enrollments for {student_did}: {e}")
             return False
     
-    async def search_courses(self, query: str = None, filters: Dict[str, Any] = None, skip: int = 0, limit: int = 20) -> Dict[str, Any]:
+    async def search_courses(self, query: str = None, filters: Dict[str, Any] = None, skip: int = 0, limit: int = 20, current_user: Dict[str, Any] = None) -> Dict[str, Any]:
         """Search courses with filters"""
         try:
             logger.debug(f"Search courses: query='{query}', filters={filters}, skip={skip}, limit={limit}")
@@ -727,6 +727,29 @@ class CourseService:
                 total = await Course.find(search_criteria_no_status).count()
                 logger.debug(f"Found {len(courses)} courses without status filter")
             
+            # Get user enrollments if authenticated
+            user_enrollments = set()
+            if current_user:
+                try:
+                    # Handle both User object and dict formats
+                    user_did = current_user.did if hasattr(current_user, 'did') else current_user.get("did")
+                    
+                    # Method 1: Check Enrollment collection
+                    enrollments = await Enrollment.find({"user_id": user_did}).to_list()
+                    enrolled_from_collection = {e.course_id for e in enrollments if e.status == "active"}
+                    user_enrollments.update(enrolled_from_collection)
+                    
+                    # Method 2: Check user.enrollments field as fallback
+                    from ..models.user import User
+                    user_obj = await User.find_one({"did": user_did})
+                    if user_obj and user_obj.enrollments:
+                        user_enrollments.update(user_obj.enrollments)
+                    
+                    logger.debug(f"User {user_did} enrolled in: {user_enrollments}")
+                except Exception as e:
+                    logger.debug(f"Could not load enrollments: {e}")
+                    user_enrollments = set()
+            
             # Transform courses to match frontend expectations
             transformed_courses = []
             for course in courses:
@@ -744,12 +767,13 @@ class CourseService:
                         "difficulty_level": course_dict.get("metadata", {}).get("difficulty_level", "beginner"),
                         "enrollment_count": 0,  # Will be calculated separately
                         "rating": 4.5,  # Default rating
-                        "thumbnail_url": "https://via.placeholder.com/300x200?text=Course",
+                        "thumbnail_url": course_dict.get("thumbnail_url") or f"https://via.placeholder.com/300x200/4F46E5/FFFFFF?text={course_dict.get('title', 'Course').replace(' ', '+')[:20]}",
                         "institution": course_dict.get("institution", "Unknown"),
                         "tags": course_dict.get("metadata", {}).get("tags", []),
                         "status": course_dict.get("status", "published"),
                         "created_at": course_dict.get("created_at"),
-                        "updated_at": course_dict.get("updated_at")
+                        "updated_at": course_dict.get("updated_at"),
+                        "is_enrolled": course_dict.get("course_id") in user_enrollments if current_user else False
                     }
                     transformed_courses.append(transformed_course)
                 except Exception as e:

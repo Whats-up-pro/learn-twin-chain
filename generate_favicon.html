@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate LearnTwin Favicon</title>
+</head>
+<body>
+    <h1>LearnTwin Favicon Generator</h1>
+    <p>This page generates a favicon based on your current logo design.</p>
+    
+    <canvas id="faviconCanvas" width="32" height="32" style="border: 1px solid #ccc; margin: 20px;"></canvas>
+    
+    <div>
+        <button onclick="generateFavicon()">Generate Favicon</button>
+        <button onclick="downloadFavicon()">Download as ICO</button>
+    </div>
+    
+    <div id="result"></div>
+
+    <script>
+        function generateFavicon() {
+            const canvas = document.getElementById('faviconCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, 32, 32);
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 32, 32);
+            gradient.addColorStop(0, '#2563eb');
+            gradient.addColorStop(1, '#1d4ed8');
+            
+            // Draw rounded rectangle background
+            ctx.fillStyle = gradient;
+            ctx.roundRect(0, 0, 32, 32, 8);
+            ctx.fill();
+            
+            // Draw academic cap (simplified)
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1.5;
+            
+            // Cap body
+            ctx.beginPath();
+            ctx.moveTo(8, 12);
+            ctx.lineTo(16, 8);
+            ctx.lineTo(24, 12);
+            ctx.lineTo(24, 18);
+            ctx.lineTo(22, 20);
+            ctx.lineTo(10, 20);
+            ctx.lineTo(8, 18);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Cap brim
+            ctx.beginPath();
+            ctx.moveTo(8, 12);
+            ctx.lineTo(16, 16);
+            ctx.lineTo(24, 12);
+            ctx.stroke();
+            
+            // Tassel
+            ctx.beginPath();
+            ctx.moveTo(12, 20);
+            ctx.lineTo(12, 24);
+            ctx.lineTo(14, 26);
+            ctx.lineTo(18, 26);
+            ctx.lineTo(20, 24);
+            ctx.lineTo(20, 20);
+            ctx.stroke();
+            
+            // Update favicon
+            const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+            link.type = 'image/x-icon';
+            link.rel = 'shortcut icon';
+            link.href = canvas.toDataURL('image/x-icon');
+            document.getElementsByTagName('head')[0].appendChild(link);
+            
+            document.getElementById('result').innerHTML = '<p style="color: green;">Favicon generated successfully! Check your browser tab.</p>';
+        }
+        
+        function downloadFavicon() {
+            const canvas = document.getElementById('faviconCanvas');
+            const link = document.createElement('a');
+            link.download = 'favicon.ico';
+            link.href = canvas.toDataURL('image/x-icon');
+            link.click();
+        }
+        
+        // Generate favicon on page load
+        window.onload = function() {
+            generateFavicon();
+        };
+    </script>
+</body>
+</html>

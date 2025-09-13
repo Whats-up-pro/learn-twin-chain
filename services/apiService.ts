@@ -82,18 +82,24 @@ export class ApiService {
       return await response.json();
     } catch (error) {
       console.error(`API request failed for ${endpoint}:`, error);
+      // Don't throw errors for non-critical endpoints to prevent white page
+      if (endpoint.includes('/enrollments') || endpoint.includes('/progress') || endpoint.includes('/achievements')) {
+        console.warn(`Non-critical API call failed: ${endpoint}`, error);
+        return {} as T; // Return empty object for non-critical calls
+      }
       throw error;
     }
   }
 
-  // Courses API
+  // Courses API - Updated to include enrollment status
   async getAllCourses(skip = 0, limit = 50) {
     const params = new URLSearchParams({
       skip: skip.toString(),
       limit: limit.toString(),
+      include_enrollment: 'true', // Include user enrollment status
     });
 
-    return this.makeRequest(`/courses/all?${params}`);
+    return this.makeRequest(`/courses/?${params}`);
   }
 
   async searchCourses(query = '', filters: CourseFilters = {}, skip = 0, limit = 20) {
@@ -117,12 +123,18 @@ export class ApiService {
     return this.makeRequest(`/courses/${courseId}${params}`);
   }
 
+  async getCourseById(courseId: string, includeModules = false) {
+    // Alias for getCourse for consistency
+    return this.getCourse(courseId, includeModules);
+  }
+
   async getCourseModules(courseId: string) {
     return this.makeRequest(`/courses/${courseId}/modules`);
   }
 
   async getMyEnrollments() {
-    return this.makeRequest('/courses/my/enrollments');
+    // Use the same working endpoint as sidebar enrollment
+    return this.makeRequest('/auth/me/enrollments');
   }
 
   async getMyProgress(courseId?: string) {
@@ -132,6 +144,10 @@ export class ApiService {
 
   async enrollInCourse(courseId: string) {
     return this.makeRequest(`/courses/${courseId}/enroll`, { method: 'POST' });
+  }
+
+  async getUserEnrollments() {
+    return this.makeRequest('/auth/me/enrollments');
   }
 
   // Lessons API
@@ -164,6 +180,20 @@ export class ApiService {
     notes?: string;
   }) {
     return this.makeRequest(`/lessons/${lessonId}/progress`, {
+      method: 'POST',
+      body: JSON.stringify(progressData),
+    });
+  }
+
+  async updateCourseProgress(courseId: string, progressData: {
+    overall_progress: number;
+    completed_modules: number;
+    total_modules: number;
+    completed_lessons: number;
+    total_lessons: number;
+    last_updated: string;
+  }) {
+    return this.makeRequest(`/courses/${courseId}/progress`, {
       method: 'POST',
       body: JSON.stringify(progressData),
     });

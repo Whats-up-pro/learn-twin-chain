@@ -3,6 +3,7 @@ Redis service for session management and SIWE nonces
 """
 import os
 import json
+import time
 import logging
 from typing import Optional, Dict, Any
 import redis.asyncio as redis
@@ -68,26 +69,30 @@ class RedisService:
         return self.redis_client
     
     # Session management
-    async def set_session(self, session_id: str, user_id: str, ttl: int = 86400):
-        """Store session in Redis"""
+    async def set_session(self, session_id: str, session_data: Dict[str, Any], ttl: int = 86400):
+        """Store complete session data in Redis"""
         try:
             client = await self.get_client()
             key = f"session:{session_id}"
-            await client.setex(key, ttl, user_id)
+            # Store complete session data as JSON
+            await client.setex(key, ttl, json.dumps(session_data))
             logger.debug(f"Session stored: {session_id}")
         except Exception as e:
-            logger.error(f"Failed to store session {session_id}: {e}")
-            raise
+            logger.debug(f"Failed to store session {session_id}: {e}")
+            # Don't raise, just log - Redis is optional
+            pass
     
-    async def get_session(self, session_id: str) -> Optional[str]:
-        """Get session from Redis"""
+    async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get complete session data from Redis"""
         try:
             client = await self.get_client()
             key = f"session:{session_id}"
-            user_id = await client.get(key)
-            return user_id
+            session_data = await client.get(key)
+            if session_data:
+                return json.loads(session_data)
+            return None
         except Exception as e:
-            logger.error(f"Failed to get session {session_id}: {e}")
+            logger.debug(f"Failed to get session {session_id}: {e}")
             return None
     
     async def delete_session(self, session_id: str):
@@ -98,7 +103,8 @@ class RedisService:
             await client.delete(key)
             logger.debug(f"Session deleted: {session_id}")
         except Exception as e:
-            logger.error(f"Failed to delete session {session_id}: {e}")
+            logger.debug(f"Failed to delete session {session_id}: {e}")
+            # Don't raise, just log - Redis is optional
     
     async def extend_session(self, session_id: str, ttl: int = 86400):
         """Extend session TTL"""

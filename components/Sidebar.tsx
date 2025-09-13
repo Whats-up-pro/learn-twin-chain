@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
+import enrollmentService, { EnrollmentData } from '../services/enrollmentService';
+import { apiService } from '../services/apiService';
 import { 
   HomeIcon,
   BookOpenIcon,
@@ -12,10 +14,10 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   AcademicCapIcon,
-  SparklesIcon,
   ChatBubbleLeftRightIcon,
   DocumentTextIcon,
-  MagnifyingGlassIcon
+  ClockIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { 
   HomeIcon as HomeSolid,
@@ -23,12 +25,8 @@ import {
   TrophyIcon as TrophySolid,
   CreditCardIcon as CreditSolid,
   UserIcon as UserSolid,
-  CogIcon as CogSolid,
-  AcademicCapIcon as AcademicSolid,
-  SparklesIcon as SparklesSolid,
   ChatBubbleLeftRightIcon as ChatSolid,
-  DocumentTextIcon as DocumentSolid,
-  MagnifyingGlassIcon as MagnifyingGlassSolid
+  DocumentTextIcon as DocumentSolid
 } from '@heroicons/react/24/solid';
 
 interface SidebarProps {
@@ -51,11 +49,69 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
   const { learnerProfile, logout, nfts } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Enrollment state
+  const [enrollments, setEnrollments] = useState<EnrollmentData[]>([]);
+  const [isLoadingEnrollments, setIsLoadingEnrollments] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login', { replace: true });
   };
+
+  // Fetch user enrollments with real-time updates
+  const fetchEnrollments = async () => {
+    if (!learnerProfile?.did) return;
+    
+    setIsLoadingEnrollments(true);
+    try {
+        const response = await apiService.getUserEnrollments() as any;
+        console.log('✅ Sidebar enrollments from users collection:', response);
+        
+        if (response.success && response.enrollments) {
+        // Filter only active enrollments
+        const activeEnrollments = response.enrollments.filter(
+          (item: any) => item.enrollment.status === 'active'
+        );
+        setEnrollments(activeEnrollments.slice(0, 5)); // Show max 5 courses
+      } else {
+        setEnrollments([]);
+      }
+    } catch (error) {
+      console.error('Failed to load enrollments from users collection:', error);
+      setEnrollments([]);
+    } finally {
+      setIsLoadingEnrollments(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEnrollments();
+  }, [learnerProfile?.did]);
+
+  // Refresh enrollments when focus returns to window (to sync progress changes)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (learnerProfile?.did && !isLoadingEnrollments) {
+        fetchEnrollments();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [learnerProfile?.did, isLoadingEnrollments]);
+
+  // Listen for course progress updates from other components
+  useEffect(() => {
+    const handleProgressUpdate = () => {
+      if (learnerProfile?.did && !isLoadingEnrollments) {
+        setTimeout(fetchEnrollments, 1000); // Delay to allow backend to update
+      }
+    };
+    
+    window.addEventListener('courseProgressUpdated', handleProgressUpdate);
+    return () => window.removeEventListener('courseProgressUpdated', handleProgressUpdate);
+  }, [learnerProfile?.did, isLoadingEnrollments]);
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -65,14 +121,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
       icon: HomeIcon,
       iconSolid: HomeSolid,
       color: 'blue'
-    },
-    {
-      id: 'search',
-      name: 'Search',
-      href: '/search',
-      icon: MagnifyingGlassIcon,
-      iconSolid: MagnifyingGlassSolid,
-      color: 'gray'
     },
     {
       id: 'courses',
@@ -269,6 +317,95 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
               </Link>
             );
           })}
+
+          {/* My Enrollment Section */}
+          {isOpen && (
+            <div className="mt-6 pt-4 border-t border-slate-200">
+              <div className="px-3 mb-3">
+                <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  My Enrollment
+                </h3>
+              </div>
+
+              {isLoadingEnrollments ? (
+                <div className="px-3 py-2 text-center">
+                  <div className="inline-flex items-center text-xs text-slate-500">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading...
+                  </div>
+                </div>
+              ) : enrollments.length > 0 ? (
+                <div className="space-y-1">
+                  {enrollments.map((item) => {
+                    if (!item.course) return null;
+                    
+                    const course = item.course;
+                    const enrollment = item.enrollment;
+                    const progress = Math.round(enrollment.completion_percentage || 0);
+                    
+                    return (
+                      <Link
+                        key={course.course_id}
+                        to={`/course/${course.course_id}/learn`}
+                        className="block px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors group"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-900 truncate group-hover:text-blue-700">
+                              {course.title}
+                            </p>
+                            <div className="flex items-center mt-1 space-x-2">
+                              <div className="flex-1 bg-slate-200 rounded-full h-1.5">
+                                <div 
+                                  className={`h-1.5 rounded-full transition-all duration-300 ${enrollmentService.getProgressColor(progress)}`}
+                                  style={{ width: `${Math.max(progress, 2)}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs text-slate-500 font-medium">
+                                {progress}%
+                              </span>
+                            </div>
+                            <div className="flex items-center mt-1 space-x-2">
+                              <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded ${enrollmentService.getDifficultyColor(course.metadata.difficulty_level)}`}>
+                                {course.metadata.difficulty_level}
+                              </span>
+                              {progress === 100 ? (
+                                <CheckCircleIcon className="w-3 h-3 text-green-500" />
+                              ) : (
+                                <ClockIcon className="w-3 h-3 text-slate-400" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  
+                  {/* View All Link */}
+                  <Link
+                    to="/courses"
+                    className="block px-3 py-2 text-center text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    View All Courses →
+                  </Link>
+                </div>
+              ) : (
+                <div className="px-3 py-4 text-center">
+                  <BookOpenIcon className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs text-slate-500 mb-2">No enrollments yet</p>
+                  <Link
+                    to="/courses"
+                    className="inline-flex items-center px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Browse Courses
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
         {/* Settings & Logout */}

@@ -2,6 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dark mode support */
+:root {
+  --primary-color: #3B82F6;
+  --accent-color: #8B5CF6;
+}
+
+.dark {
+  --primary-color: #60A5FA;
+  --accent-color: #A78BFA;
+}
+
+/* Dark mode styles */
+.dark body {
+  @apply bg-gray-900 text-gray-100;
+}
+
+.dark .bg-white {
+  @apply bg-gray-800;
+}
+
+.dark .text-gray-900 {
+  @apply text-gray-100;
+}
+
+.dark .text-gray-700 {
+  @apply text-gray-300;
+}
+
+.dark .text-gray-600 {
+  @apply text-gray-400;
+}
+
+.dark .text-gray-500 {
+  @apply text-gray-500;
+}
+
+.dark .border-gray-200 {
+  @apply border-gray-700;
+}
+
+.dark .border-gray-300 {
+  @apply border-gray-600;
+}
+
+.dark .bg-gray-50 {
+  @apply bg-gray-700;
+}
+
+.dark .bg-gray-100 {
+  @apply bg-gray-600;
+}
+
+.dark .hover\\:bg-gray-50:hover {
+  @apply hover:bg-gray-700;
+}
+
+.dark .hover\\:bg-gray-100:hover {
+  @apply hover:bg-gray-600;
+}
+
+/* Custom animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s ease-out forwards;
+}
+
 /* Custom utilities for line clamping */
 @layer utilities {
   .line-clamp-2 {

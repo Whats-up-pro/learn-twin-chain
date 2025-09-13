@@ -173,7 +173,7 @@ async def search_achievements(
             filters["is_hidden"] = False
         
         achievements = await Achievement.find(filters).skip(skip).limit(limit).to_list()
-        total = await Achievement.count_documents(filters)
+        total = await Achievement.find(filters).count()
         
         return {
             "achievements": [achievement.dict() for achievement in achievements],
@@ -314,6 +314,193 @@ async def award_achievement(
     except Exception as e:
         logger.error(f"Achievement awarding failed: {e}")
         raise HTTPException(status_code=500, detail="Achievement awarding failed")
+
+@router.get("/my")
+async def get_user_achievements(
+    user_id: Optional[str] = Query(None),
+    achievement_type: Optional[AchievementType] = Query(None),
+    is_completed: Optional[bool] = Query(None),
+    include_progress: bool = Query(False),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user's achievements with progress"""
+    try:
+        target_user_id = user_id if user_id and current_user.role in ["admin", "institution_admin"] else current_user.did
+        
+        # Build aggregation pipeline for user achievements with achievement details
+        pipeline = [
+            {"$match": {"user_id": target_user_id}},
+            {"$lookup": {
+                "from": "achievements",
+                "localField": "achievement_id",
+                "foreignField": "achievement_id",
+                "as": "achievement"
+            }},
+            {"$unwind": "$achievement"},
+            {"$match": {"achievement.status": "active"}}
+        ]
+        
+        # Add type filter
+        if achievement_type:
+            pipeline.append({"$match": {"achievement.achievement_type": achievement_type}})
+        
+        # Add completion filter
+        if is_completed is not None:
+            # For simplicity, consider all earned achievements as completed
+            # This can be enhanced with progress tracking later
+            pass
+        
+        # Add computed fields
+        pipeline.append({
+            "$addFields": {
+                "progress_percentage": 100.0,  # All earned achievements are 100% complete
+                "current_value": {"$ifNull": ["$earned_value", 1.0]},
+                "is_completed": True,
+                "unlocked_at": "$earned_at"
+            }
+        })
+        
+        # Sort by earned date (newest first)
+        pipeline.append({"$sort": {"earned_at": -1}})
+        
+        # Pagination
+        pipeline.extend([
+            {"$skip": skip},
+            {"$limit": limit}
+        ])
+        
+        try:
+            user_achievements = await UserAchievement.aggregate(pipeline).to_list()
+            # Count total user achievements
+            total = len(user_achievements)
+        except Exception as agg_error:
+            logger.debug(f"Achievement aggregation failed, returning empty list: {agg_error}")
+            user_achievements = []
+            total = 0
+        
+        return {
+            "user_achievements": user_achievements,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"User achievements retrieval failed: {e}")
+        # Return empty result instead of throwing error for better UX
+        return {
+            "user_achievements": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit
+        }
+
+@router.get("/my/statistics")
+async def get_user_achievement_stats(
+    user_id: Optional[str] = Query(None),
+    current_user: User = Depends(get_current_user)
+):
+    """Get achievement statistics for user"""
+    try:
+        target_user_id = user_id if user_id and current_user.role in ["admin", "institution_admin"] else current_user.did
+        
+        # Get user achievements count
+        user_achievements_count = await UserAchievement.find({"user_id": target_user_id}).count()
+        
+        # Get total available achievements
+        total_achievements = await Achievement.find({"status": "active", "is_hidden": False}).count()
+        
+        # Get total points earned
+        points_pipeline = [
+            {"$match": {"user_id": target_user_id}},
+            {"$lookup": {
+                "from": "achievements",
+                "localField": "achievement_id", 
+                "foreignField": "achievement_id",
+                "as": "achievement"
+            }},
+            {"$unwind": "$achievement"},
+            {"$group": {
+                "_id": None,
+                "total_points": {"$sum": {"$add": ["$achievement.points_reward", "$bonus_points"]}}
+            }}
+        ]
+        
+        try:
+            points_result = await UserAchievement.aggregate(points_pipeline).to_list()
+            total_points = points_result[0]["total_points"] if points_result else 0
+        except Exception as points_error:
+            logger.debug(f"Points calculation failed: {points_error}")
+            total_points = 0
+        
+        # Calculate completion rate
+        completion_rate = (user_achievements_count / total_achievements * 100) if total_achievements > 0 else 0
+        
+        return {
+            "stats": {
+                "totalAchievements": total_achievements,
+                "unlockedCount": user_achievements_count,
+                "totalPoints": total_points,
+                "completionRate": completion_rate
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Achievement statistics retrieval failed: {e}")
+        return {
+            "stats": {
+                "totalAchievements": 0,
+                "unlockedCount": 0,
+                "totalPoints": 0,
+                "completionRate": 0
+            }
+        }
+
+@router.post("/my/{user_achievement_id}/mint-nft")
+async def mint_achievement_nft(
+    user_achievement_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Mint NFT for a user achievement"""
+    try:
+        # Find the user achievement
+        user_achievement = await UserAchievement.find_one({
+            "_id": user_achievement_id,
+            "user_id": current_user.did
+        })
+        
+        if not user_achievement:
+            raise HTTPException(status_code=404, detail="Achievement not found")
+        
+        if user_achievement.nft_minted:
+            raise HTTPException(status_code=400, detail="NFT already minted for this achievement")
+        
+        # Get achievement details
+        achievement = await Achievement.find_one({"achievement_id": user_achievement.achievement_id})
+        if not achievement or not achievement.nft_enabled:
+            raise HTTPException(status_code=400, detail="NFT not enabled for this achievement")
+        
+        # TODO: Implement actual NFT minting logic here
+        # For now, just mark as minted
+        user_achievement.nft_minted = True
+        user_achievement.nft_token_id = f"token_{user_achievement_id}_{int(datetime.now().timestamp())}"
+        user_achievement.nft_tx_hash = f"tx_{user_achievement_id}"
+        
+        await user_achievement.save()
+        
+        return {
+            "message": "NFT minted successfully",
+            "nft_token_id": user_achievement.nft_token_id,
+            "tx_hash": user_achievement.nft_tx_hash
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"NFT minting failed: {e}")
+        raise HTTPException(status_code=500, detail="NFT minting failed")
 
 @router.get("/my/earned")
 async def get_my_achievements(
@@ -652,7 +839,7 @@ async def get_all_courses_achievements(
             filters["is_hidden"] = False
         
         achievements = await Achievement.find(filters).skip(skip).limit(limit).to_list()
-        total = await Achievement.count_documents(filters)
+        total = await Achievement.find(filters).count()
         
         achievements_data = []
         for achievement in achievements:

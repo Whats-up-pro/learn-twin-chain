@@ -7,13 +7,15 @@ from beanie import init_beanie
 from typing import Optional
 import logging
 
-from ..models.user import User
-from ..models.digital_twin import DigitalTwin
-from ..models.course import Course, Module
+from ..models.user import User, UserProfile
+from ..models.user_settings import UserSettings
+from ..models.digital_twin import DigitalTwin, DigitalTwinVersion
+from ..models.course import Course, Module, Enrollment, ModuleProgress, Lesson
 from ..models.nft import NFTRecord
 from ..models.session import UserSession, RefreshToken
-from ..models.wallet import WalletLink
-from ..models.permission import Role, Permission
+from ..models.wallet import WalletLink, SIWENonce
+from ..models.permission import Role, Permission, UserRoleAssignment
+from ..models.quiz_achievement import Quiz, QuizAttempt, Achievement, UserAchievement
 
 logger = logging.getLogger(__name__)
 
@@ -44,15 +46,27 @@ async def connect_to_mongo():
             database=database.database,
             document_models=[
                 User,
-                DigitalTwin, 
+                UserProfile,
+                UserSettings,
+                DigitalTwin,
+                DigitalTwinVersion,
                 Course,
                 Module,
+                Lesson,
+                Enrollment,
+                ModuleProgress,
+                Quiz,
+                QuizAttempt,
+                Achievement,
+                UserAchievement,
                 NFTRecord,
                 UserSession,
                 RefreshToken,
                 WalletLink,
+                SIWENonce,
                 Role,
-                Permission
+                Permission,
+                UserRoleAssignment
             ]
         )
         

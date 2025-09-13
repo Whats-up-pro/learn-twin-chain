@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MagnifyingGlassIcon,
@@ -6,10 +6,12 @@ import {
   BookOpenIcon,
   ClockIcon,
   UserGroupIcon,
-  StarIcon,
-  PlayCircleIcon
+  StarIcon
 } from '@heroicons/react/24/outline';
 import { apiService } from '../services/apiService';
+import { useAppContext } from '../contexts/AppContext';
+import CompactBanner from '../components/CompactBanner';
+import toast from 'react-hot-toast';
 
 interface Course {
   id: string;
@@ -27,58 +29,29 @@ interface Course {
 
 const CoursesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const { courses, coursesLoading, loadCourses } = useAppContext();
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Load courses directly from /all endpoint
+  // Load courses from AppContext on mount
   useEffect(() => {
-    loadAllCourses();
-  }, []);
-
-  const loadAllCourses = async () => {
-    try {
-      setIsLoading(true);
-      const response = await apiService.getAllCourses(0, 50) as any;
-      console.log('✅ Single API call - All courses with enrollment loaded');
-      
-      if (response && response.items) {
-        // Courses now include enrollment status from backend
-        setAllCourses(response.items);
-        console.log(`✅ Loaded ${response.items.length} courses with enrollment status in ONE API call`);
-      } else if (response && Array.isArray(response)) {
-        // Handle case where response is directly an array
-        setAllCourses(response);
-        console.log(`✅ Loaded ${response.length} courses in ONE API call`);
-      } else {
-        console.warn('No courses found in response:', response);
-        setAllCourses([]);
-      }
-    } catch (error) {
-      console.error('Error loading courses:', error);
-      setAllCourses([]);
-    } finally {
-      setIsLoading(false);
+    if (courses.length === 0 && !coursesLoading) {
+      loadCourses();
     }
-  };
+  }, [courses.length, coursesLoading, loadCourses]);
 
-  useEffect(() => {
-    filterCourses();
-  }, [allCourses, searchQuery, selectedDifficulty]);
-
-  const filterCourses = () => {
-    let filtered = allCourses;
+  const filterCourses = useCallback(() => {
+    let filtered = courses;
 
     // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(course =>
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.instructor_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+        course.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.instructor_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -88,27 +61,40 @@ const CoursesPage: React.FC = () => {
     }
 
     setFilteredCourses(filtered);
-  };
+  }, [courses, searchQuery, selectedDifficulty]);
 
-  const handleCourseClick = (courseId: string) => {
-    navigate(`/course/${courseId}/learn`);
+  // Filter courses when AppContext courses or filters change
+  useEffect(() => {
+    filterCourses();
+  }, [filterCourses]);
+
+  const handleCourseClick = (courseId: string, isEnrolled: boolean) => {
+    if (isEnrolled) {
+      navigate(`/course/${courseId}/learn`);
+    } else {
+      navigate(`/course/${courseId}`);
+    }
   };
 
   const handleEnroll = async (courseId: string, event: React.MouseEvent) => {
     event.stopPropagation();
+
     try {
       const response = await apiService.enrollInCourse(courseId) as any;
       console.log('Enrollment response:', response);
       
       // Show success message
-      const message = response?.message || 'Successfully enrolled in course';
-      alert(message); // You can replace this with a toast notification
+      const message = response?.message || 'Successfully enrolled in course!';
+      toast.success(message);
       
-      // Refresh courses to update enrollment status
-      await loadAllCourses();
+      // Refresh courses from AppContext to ensure consistency with backend
+      setTimeout(() => {
+        loadCourses();
+      }, 500);
+      
     } catch (error) {
       console.error('Error enrolling in course:', error);
-      alert('Failed to enroll in course. Please try again.'); // You can replace this with a toast notification
+      toast.error('Failed to enroll in course. Please try again.');
     }
   };
 
@@ -142,6 +128,9 @@ const CoursesPage: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Available Courses</h1>
           <p className="text-gray-600">Discover and enroll in courses to enhance your skills</p>
         </div>
+
+        {/* Compact Banner */}
+        <CompactBanner />
 
         {/* Search and Filters */}
         <div className="mb-6">
@@ -200,12 +189,12 @@ const CoursesPage: React.FC = () => {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-sm text-gray-600">
-            Showing {filteredCourses.length} of {allCourses.length} courses
+            Showing {filteredCourses.length} of {courses.length} courses
           </p>
         </div>
 
         {/* Courses Grid */}
-        {isLoading ? (
+        {coursesLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
             <p className="mt-4 text-gray-600">Loading courses...</p>
@@ -215,7 +204,7 @@ const CoursesPage: React.FC = () => {
             {filteredCourses.map((course) => (
               <div
                 key={course.id}
-                onClick={() => handleCourseClick(course.id)}
+                onClick={() => handleCourseClick(course.id, course.is_enrolled || false)}
                 className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg 
                          transition-shadow cursor-pointer"
               >
@@ -293,21 +282,16 @@ const CoursesPage: React.FC = () => {
 
                   {/* Action Button */}
                   <button
-                    onClick={(e) => handleEnroll(course.id, e)}
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                    onClick={course.is_enrolled ? (e) => e.stopPropagation() : (e) => handleEnroll(course.id, e)}
+                    disabled={course.is_enrolled}
+                    className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-200 ${
                       course.is_enrolled
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'bg-green-100 text-green-700 cursor-not-allowed border-2 border-green-200'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
                     }`}
+                    title={course.is_enrolled ? 'You are already enrolled in this course' : 'Click to enroll in this course'}
                   >
-                    {course.is_enrolled ? (
-                      <span className="flex items-center justify-center">
-                        <PlayCircleIcon className="h-4 w-4 mr-2" />
-                        Continue Learning
-                      </span>
-                    ) : (
-                      'Enroll Now'
-                    )}
+                    {course.is_enrolled ? '✓ Already Enrolled' : 'Enroll Course'}
                   </button>
                 </div>
               </div>

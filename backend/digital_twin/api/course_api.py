@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from ..services.course_service import CourseService
 from ..models.user import User
-from ..dependencies import get_current_user, require_permission, require_teacher, get_current_user_optional
+from ..dependencies import get_current_user, require_permission, require_teacher, get_optional_user
 from ..models.course import Course, Module, Enrollment, ModuleProgress
 
 logger = logging.getLogger(__name__)
@@ -166,7 +166,7 @@ async def debug_search_test():
 async def get_all_courses(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_optional_user)
 ):
     """Get all published and public courses with enrollment status in one call"""
     try:
@@ -183,12 +183,20 @@ async def get_all_courses(
         
         logger.debug(f"Found {len(courses)} courses out of {total} total")
         
-        # Get user enrollments if authenticated
+        # Get user enrollments if authenticated (check both sources)
         user_enrollments = set()
         if current_user:
             try:
-                enrollments = await Enrollment.find({"user_id": current_user.get("did")}).to_list()
-                user_enrollments = {e.course_id for e in enrollments if e.status == "active"}
+                # Method 1: Check Enrollment collection
+                enrollments = await Enrollment.find({"user_id": current_user.did}).to_list()
+                enrolled_from_collection = {e.course_id for e in enrollments if e.status == "active"}
+                user_enrollments.update(enrolled_from_collection)
+                
+                # Method 2: Check user.enrollments field as fallback
+                user_enrolled_course_ids = current_user.enrollments or []
+                user_enrollments.update(user_enrolled_course_ids)
+                
+                logger.debug(f"User {current_user.did} enrolled in: {user_enrollments}")
             except Exception as e:
                 logger.debug(f"Could not load enrollments: {e}")
                 user_enrollments = set()
@@ -209,7 +217,7 @@ async def get_all_courses(
                     "difficulty_level": course_dict.get("metadata", {}).get("difficulty_level", "beginner"),
                     "enrollment_count": 0,  # Will be calculated separately
                     "rating": 4.5,  # Default rating
-                    "thumbnail_url": course_dict.get("thumbnail_url", "https://via.placeholder.com/300x200?text=Course"),
+                    "thumbnail_url": course_dict.get("thumbnail_url") or f"https://via.placeholder.com/300x200/4F46E5/FFFFFF?text={course_dict.get('title', 'Course').replace(' ', '+')[:20]}",
                     "institution": course_dict.get("institution", "Unknown"),
                     "tags": course_dict.get("metadata", {}).get("tags", []),
                     "status": course_dict.get("status", "published"),
@@ -240,9 +248,11 @@ async def search_courses(
     institution: Optional[str] = Query(None, description="Institution filter"),
     tags: Optional[List[str]] = Query(None, description="Tags filter"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100)
+    limit: int = Query(20, ge=1, le=100),
+    include_enrollment: bool = Query(False, description="Include user enrollment status"),
+    current_user: Optional[User] = Depends(get_optional_user)
 ):
-    """Search and filter courses"""
+    """Search and filter courses with enrollment status"""
     try:
         filters = {}
         if difficulty_level:
@@ -252,7 +262,14 @@ async def search_courses(
         if tags:
             filters["tags"] = tags
         
-        result = await course_service.search_courses(q, filters, skip, limit)
+        # If include_enrollment is requested but no user is authenticated, 
+        # try to get authenticated user instead of optional user
+        user_for_enrollment = None
+        if include_enrollment:
+            user_for_enrollment = current_user
+            logger.debug(f"Including enrollment status for user: {user_for_enrollment.did if user_for_enrollment else 'None'}")
+        
+        result = await course_service.search_courses(q, filters, skip, limit, user_for_enrollment)
         
         # The service now returns the correct format with "items" key
         return result
@@ -265,7 +282,7 @@ async def search_courses(
 async def get_course(
     course_id: str,
     include_modules: bool = Query(False),
-    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_optional_user)
 ):
     """Get course details by ID"""
     try:
@@ -281,11 +298,11 @@ async def get_course(
                 raise HTTPException(status_code=401, detail="Authentication required")
             
             # Check if user is instructor or enrolled
-            if (current_user.get("user_id") not in course.instructors and 
-                current_user.get("user_id") != course.created_by):
+            if (current_user.did not in course.instructors and 
+                current_user.did != course.created_by):
                 # Check if user is enrolled
                 enrollment = await Enrollment.find_one({
-                    "user_id": current_user.get("user_id"),
+                    "user_id": current_user.did,
                     "course_id": course_id,
                     "status": "active"
                 })
@@ -298,7 +315,7 @@ async def get_course(
         # Add enrollment info if user is authenticated
         if current_user:
             enrollment = await Enrollment.find_one({
-                "user_id": current_user.get("user_id"),
+                "user_id": current_user.did,
                 "course_id": course_id
             })
             if enrollment:
@@ -482,7 +499,7 @@ async def create_module(
 @router.get("/{course_id}/modules")
 async def get_course_modules(
     course_id: str,
-    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_optional_user)
 ):
     """Get modules for a course"""
     try:
@@ -497,11 +514,11 @@ async def get_course_modules(
                 raise HTTPException(status_code=401, detail="Authentication required")
             
             # Check if user is instructor or enrolled
-            if (current_user.get("user_id") not in course.instructors and 
-                current_user.get("user_id") != course.created_by):
+            if (current_user.did not in course.instructors and 
+                current_user.did != course.created_by):
                 # Check if user is enrolled
                 enrollment = await Enrollment.find_one({
-                    "user_id": current_user.get("user_id"),
+                    "user_id": current_user.did,
                     "course_id": course_id,
                     "status": "active"
                 })
@@ -518,7 +535,7 @@ async def get_course_modules(
             # Add progress info if user is authenticated
             if current_user:
                 progress = await ModuleProgress.find_one({
-                    "user_id": current_user.get("user_id"),
+                    "user_id": current_user.did,
                     "module_id": module.module_id
                 })
                 if progress:
@@ -584,66 +601,14 @@ async def get_module_progress(
         raise HTTPException(status_code=500, detail="Progress retrieval failed")
 
 # User-specific endpoints
+# DEPRECATED: Use /auth/me/enrollments instead (working endpoint)
+# This endpoint was causing 500 errors, now all services use the working /auth/me/enrollments
+"""
 @router.get("/my/enrollments")
 async def get_my_enrollments(current_user: User = Depends(get_current_user)):
-    """Get current user's course enrollments"""
-    try:
-        logger.debug(f"Getting enrollments for user {current_user.did}")
-        
-        # Get enrollments from Enrollment collection
-        enrollments = await Enrollment.find({"user_id": current_user.did}).to_list()
-        
-        if not enrollments:
-            logger.debug(f"No enrollments found for user {current_user.did}")
-            return {
-                "success": True,
-                "enrollments": [],
-                "total": 0,
-                "message": "No enrollments found"
-            }
-        
-        enrollment_data = []
-        for enrollment in enrollments:
-            try:
-                course = await course_service.get_course(enrollment.course_id)
-                if course:
-                    enrollment_info = {
-                        "enrollment": enrollment.dict(),
-                        "course": course.dict()
-                    }
-                    enrollment_data.append(enrollment_info)
-                else:
-                    # Course not found, still include enrollment but warn
-                    logger.debug(f"Course {enrollment.course_id} not found for enrollment")
-                    enrollment_info = {
-                        "enrollment": enrollment.dict(),
-                        "course": None
-                    }
-                    enrollment_data.append(enrollment_info)
-            except Exception as course_error:
-                logger.debug(f"Course retrieval error for {enrollment.course_id}: {course_error}")
-                # Still include enrollment even if course fails
-                enrollment_info = {
-                    "enrollment": enrollment.dict(),
-                    "course": None
-                }
-                enrollment_data.append(enrollment_info)
-        
-        return {
-            "success": True,
-            "enrollments": enrollment_data,
-            "total": len(enrollment_data)
-        }
-        
-    except Exception as e:
-        logger.debug(f"Enrollments retrieval error: {e}")
-        # Always return success to prevent frontend errors
-        return {
-            "success": True,
-            "enrollments": [],
-            "total": 0,
-            "message": "Enrollments temporarily unavailable"
-        }
+    # REMOVED: All services now use /auth/me/enrollments which works correctly
+    pass
+"""
 
 @router.post("/sync-enrollments")
 async def sync_enrollments(current_user: User = Depends(get_current_user)):

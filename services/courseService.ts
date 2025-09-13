@@ -130,14 +130,64 @@ export interface ApiModuleProgress {
   nft_tx_hash?: string;
 }
 
-// Helper to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('auth_token'); // Adjust based on your auth system
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
+import { apiService } from './apiService';
+import { jwtService } from './jwtService';
+
+// Helper function for authenticated requests not covered by apiService
+async function makeAuthenticatedRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
+  const authHeaders = jwtService.getAuthHeader();
+  
+  const response = await fetch(url, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders,
+      ...options.headers,
+    },
+    ...options,
+  });
+
+  if (!response.ok) {
+    // Handle 401 Unauthorized - try refresh token
+    if (response.status === 401) {
+      const refreshSuccess = await jwtService.handleUnauthorized();
+      if (refreshSuccess) {
+        // Retry the original request with new token
+        const retryResponse = await fetch(url, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...jwtService.getAuthHeader(),
+            ...options.headers,
+          },
+          ...options,
+        });
+        
+        if (!retryResponse.ok) {
+          const retryErrorData = await retryResponse.json().catch(() => ({ detail: 'Network error' }));
+          throw new Error(retryErrorData.detail || `HTTP ${retryResponse.status}`);
+        }
+        
+        return await retryResponse.json();
+      }
+      
+      // Refresh failed, clear tokens and redirect
+      localStorage.removeItem('learnerProfile');
+      localStorage.removeItem('userRole');
+      
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+      throw new Error('Authentication required');
+    }
+    
+    const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
+    throw new Error(errorData.detail || `HTTP ${response.status}`);
+  }
+
+  return await response.json();
+}
 
 class CourseService {
   
@@ -151,23 +201,17 @@ class CourseService {
     limit?: number;
   }) {
     try {
-      const searchParams = new URLSearchParams();
-      if (params?.q) searchParams.append('q', params.q);
-      if (params?.difficulty_level) searchParams.append('difficulty_level', params.difficulty_level);
-      if (params?.institution) searchParams.append('institution', params.institution);
-      if (params?.tags) params.tags.forEach(tag => searchParams.append('tags', tag));
-      if (params?.skip) searchParams.append('skip', params.skip.toString());
-      if (params?.limit) searchParams.append('limit', params.limit.toString());
+      return await apiService.searchCourses(
+        params?.q || '',
+        {
+          difficulty_level: params?.difficulty_level,
+          institution: params?.institution,
+          tags: params?.tags
+        },
+        params?.skip || 0,
+        params?.limit || 20
+      );
 
-      const response = await fetch(`${API_BASE}/courses?${searchParams}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to search courses: ${response.statusText}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Error searching courses:', error);
       throw error;
@@ -176,16 +220,7 @@ class CourseService {
 
   async getCourse(courseId: string, includeModules = false) {
     try {
-      const params = includeModules ? '?include_modules=true' : '';
-      const response = await fetch(`${API_BASE}/courses/${courseId}${params}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get course: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.getCourse(courseId, includeModules);
     } catch (error) {
       console.error('Error getting course:', error);
       throw error;
@@ -208,17 +243,10 @@ class CourseService {
     syllabus?: Record<string, any>;
   }) {
     try {
-      const response = await fetch(`${API_BASE}/courses/`, {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/`, {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify(courseData)
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create course: ${response.statusText}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Error creating course:', error);
       throw error;
@@ -227,17 +255,10 @@ class CourseService {
 
   async updateCourse(courseId: string, updates: Record<string, any>) {
     try {
-      const response = await fetch(`${API_BASE}/courses/${courseId}`, {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/${courseId}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
         body: JSON.stringify(updates)
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update course: ${response.statusText}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Error updating course:', error);
       throw error;
@@ -246,16 +267,9 @@ class CourseService {
 
   async publishCourse(courseId: string) {
     try {
-      const response = await fetch(`${API_BASE}/courses/${courseId}/publish`, {
-        method: 'POST',
-        headers: getAuthHeaders()
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/${courseId}/publish`, {
+        method: 'POST'
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to publish course: ${response.statusText}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Error publishing course:', error);
       throw error;
@@ -264,16 +278,7 @@ class CourseService {
 
   async enrollInCourse(courseId: string) {
     try {
-      const response = await fetch(`${API_BASE}/courses/${courseId}/enroll`, {
-        method: 'POST',
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to enroll in course: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.enrollInCourse(courseId);
     } catch (error) {
       console.error('Error enrolling in course:', error);
       throw error;
@@ -283,15 +288,7 @@ class CourseService {
   // Module management
   async getCourseModules(courseId: string) {
     try {
-      const response = await fetch(`${API_BASE}/courses/${courseId}/modules`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get course modules: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.getCourseModules(courseId);
     } catch (error) {
       console.error('Error getting course modules:', error);
       throw error;
@@ -313,17 +310,10 @@ class CourseService {
     completion_nft_enabled?: boolean;
   }) {
     try {
-      const response = await fetch(`${API_BASE}/courses/${courseId}/modules`, {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/${courseId}/modules`, {
         method: 'POST',
-        headers: getAuthHeaders(),
         body: JSON.stringify(moduleData)
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create module: ${response.statusText}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Error creating module:', error);
       throw error;
@@ -337,17 +327,10 @@ class CourseService {
     assessment_id?: string;
   }) {
     try {
-      const response = await fetch(`${API_BASE}/courses/modules/${moduleId}/progress`, {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/modules/${moduleId}/progress`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
         body: JSON.stringify(progressData)
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update module progress: ${response.statusText}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Error updating module progress:', error);
       throw error;
@@ -356,15 +339,7 @@ class CourseService {
 
   async getModuleProgress(moduleId: string) {
     try {
-      const response = await fetch(`${API_BASE}/courses/modules/${moduleId}/progress`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get module progress: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/modules/${moduleId}/progress`);
     } catch (error) {
       console.error('Error getting module progress:', error);
       throw error;
@@ -374,15 +349,7 @@ class CourseService {
   // User enrollment and progress
   async getMyEnrollments() {
     try {
-      const response = await fetch(`${API_BASE}/courses/my/enrollments`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get enrollments: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.getMyEnrollments();
     } catch (error) {
       console.error('Error getting my enrollments:', error);
       throw error;
@@ -391,16 +358,7 @@ class CourseService {
 
   async getMyProgress(courseId?: string) {
     try {
-      const params = courseId ? `?course_id=${courseId}` : '';
-      const response = await fetch(`${API_BASE}/courses/my/progress${params}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get progress: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.getMyProgress(courseId);
     } catch (error) {
       console.error('Error getting my progress:', error);
       throw error;
@@ -410,16 +368,7 @@ class CourseService {
   // Lessons
   async getModuleLessons(moduleId: string, includeProgress = false) {
     try {
-      const params = includeProgress ? '?include_progress=true' : '';
-      const response = await fetch(`${API_BASE}/lessons/module/${moduleId}${params}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get module lessons: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.getModuleLessons(moduleId, includeProgress);
     } catch (error) {
       console.error('Error getting module lessons:', error);
       throw error;
@@ -428,16 +377,7 @@ class CourseService {
 
   async getLesson(lessonId: string, includeContent = false) {
     try {
-      const params = includeContent ? '?include_content=true' : '';
-      const response = await fetch(`${API_BASE}/lessons/${lessonId}${params}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get lesson: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.getLesson(lessonId, includeContent);
     } catch (error) {
       console.error('Error getting lesson:', error);
       throw error;
@@ -450,34 +390,37 @@ class CourseService {
     notes?: string;
   }) {
     try {
-      const response = await fetch(`${API_BASE}/lessons/${lessonId}/progress`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(progressData)
+      return await apiService.updateLessonProgress(lessonId, {
+        completion_percentage: progressData.completion_percentage,
+        time_spent_minutes: progressData.time_spent_minutes || 0,
+        notes: progressData.notes
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update lesson progress: ${response.statusText}`);
-      }
-
-      return await response.json();
     } catch (error) {
       console.error('Error updating lesson progress:', error);
       throw error;
     }
   }
 
+  async updateCourseProgress(courseId: string, progressData: {
+    overall_progress: number;
+    completed_modules: number;
+    total_modules: number;
+    completed_lessons: number;
+    total_lessons: number;
+    last_updated: string;
+  }) {
+    try {
+      return await apiService.updateCourseProgress(courseId, progressData);
+    } catch (error) {
+      console.error('Error updating course progress:', error);
+      throw error;
+    }
+  }
+
   async getLessonProgress(lessonId: string) {
     try {
-      const response = await fetch(`${API_BASE}/lessons/${lessonId}/progress`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get lesson progress: ${response.statusText}`);
-      }
-
-      return await response.json();
+      // Note: This could also use apiService if we add this method there
+      return await makeAuthenticatedRequest(`${API_BASE}/lessons/${lessonId}/progress`);
     } catch (error) {
       console.error('Error getting lesson progress:', error);
       throw error;
