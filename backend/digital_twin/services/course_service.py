@@ -75,6 +75,14 @@ class CourseService:
             # Cache course data
             await self.redis_service.set_cache(f"course:{course_id}", course.dict(), 3600)
             
+            # Update course analytics
+            try:
+                from ..services.course_analytics_service import CourseAnalyticsService
+                analytics_service = CourseAnalyticsService()
+                await analytics_service.update_course_analytics(course_id)
+            except Exception as e:
+                logger.warning(f"Failed to update course analytics: {e}")
+            
             logger.info(f"Course created: {course_id}")
             return course
             
@@ -418,6 +426,14 @@ class CourseService:
                     logger.info(f"Updated user enrollments list for {student_did}")
             except Exception as user_error:
                 logger.warning(f"User enrollments update failed (non-critical): {user_error}")
+            
+            # Update course analytics after enrollment
+            try:
+                from ..services.course_analytics_service import CourseAnalyticsService
+                analytics_service = CourseAnalyticsService()
+                await analytics_service.update_course_analytics(course_id)
+            except Exception as e:
+                logger.warning(f"Failed to update course analytics after enrollment: {e}")
             
             logger.info(f"Student enrolled: {student_did} -> {course_id}")
             return enrollment
@@ -765,8 +781,9 @@ class CourseService:
                         "instructor_name": course_dict.get("instructors", [""])[0] if course_dict.get("instructors") else "Unknown",
                         "duration_minutes": course_dict.get("metadata", {}).get("estimated_hours", 0) * 60,
                         "difficulty_level": course_dict.get("metadata", {}).get("difficulty_level", "beginner"),
-                        "enrollment_count": 0,  # Will be calculated separately
-                        "rating": 4.5,  # Default rating
+                        "enrollment_count": course_dict.get("enrollment_count", 0),
+                        "average_rating": course_dict.get("average_rating", 0.0),
+                        "total_ratings": course_dict.get("total_ratings", 0),
                         "thumbnail_url": course_dict.get("thumbnail_url") or f"https://via.placeholder.com/300x200/4F46E5/FFFFFF?text={course_dict.get('title', 'Course').replace(' ', '+')[:20]}",
                         "institution": course_dict.get("institution", "Unknown"),
                         "tags": course_dict.get("metadata", {}).get("tags", []),
@@ -836,7 +853,8 @@ class CourseService:
                     "completion_nft_enabled": True,
                     "status": "published",
                     "enrollment_count": 25,
-                    "rating": 4.5,
+                    "average_rating": 4.5,
+                    "total_ratings": 12,
                     "thumbnail_url": "https://example.com/python-basics.jpg"
                 },
                 {
@@ -863,7 +881,8 @@ class CourseService:
                     "completion_nft_enabled": True,
                     "status": "published",
                     "enrollment_count": 15,
-                    "rating": 4.8,
+                    "average_rating": 4.8,
+                    "total_ratings": 8,
                     "thumbnail_url": "https://example.com/react-web.jpg"
                 },
                 {
@@ -890,7 +909,8 @@ class CourseService:
                     "completion_nft_enabled": True,
                     "status": "published",
                     "enrollment_count": 8,
-                    "rating": 4.6,
+                    "average_rating": 4.6,
+                    "total_ratings": 5,
                     "thumbnail_url": "https://example.com/data-science.jpg"
                 }
             ]
@@ -901,7 +921,7 @@ class CourseService:
                 if not existing_course:
                     # Remove fields that are not in the Course model
                     course_model_data = {k: v for k, v in course_data.items() 
-                                       if k not in ["enrollment_count", "rating", "thumbnail_url"]}
+                                       if k not in ["enrollment_count", "average_rating", "total_ratings", "thumbnail_url"]}
                     course = Course(**course_model_data)
                     await course.insert()
                     logger.info(f"Created sample course: {course_data['course_id']}")

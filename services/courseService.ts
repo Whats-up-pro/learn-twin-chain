@@ -37,6 +37,11 @@ export interface ApiCourse {
   nft_contract_address?: string;
   created_at: string;
   updated_at: string;
+  // Analytics fields
+  average_rating: number;
+  total_ratings: number;
+  enrollment_count: number;
+  completion_count: number;
 }
 
 export interface ApiModule {
@@ -423,6 +428,55 @@ class CourseService {
       return await makeAuthenticatedRequest(`${API_BASE}/lessons/${lessonId}/progress`);
     } catch (error) {
       console.error('Error getting lesson progress:', error);
+      throw error;
+    }
+  }
+
+  // Course Rating and Analytics methods
+  async rateCourse(courseId: string, rating: number, review?: string) {
+    try {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/${courseId}/rate`, {
+        method: 'POST',
+        body: JSON.stringify({ rating, review })
+      });
+    } catch (error) {
+      console.error('Error rating course:', error);
+      throw error;
+    }
+  }
+
+  async getCourseRatings(courseId: string, skip: number = 0, limit: number = 20) {
+    try {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/${courseId}/ratings?skip=${skip}&limit=${limit}`);
+    } catch (error) {
+      console.error('Error getting course ratings:', error);
+      throw error;
+    }
+  }
+
+  async getCourseAnalytics(courseId: string) {
+    try {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/${courseId}/analytics`);
+    } catch (error) {
+      console.error('Error getting course analytics:', error);
+      throw error;
+    }
+  }
+
+  async getPopularCourses(limit: number = 10) {
+    try {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/popular?limit=${limit}`);
+    } catch (error) {
+      console.error('Error getting popular courses:', error);
+      throw error;
+    }
+  }
+
+  async getHighlyRatedCourses(limit: number = 10) {
+    try {
+      return await makeAuthenticatedRequest(`${API_BASE}/courses/highly-rated?limit=${limit}`);
+    } catch (error) {
+      console.error('Error getting highly rated courses:', error);
       throw error;
     }
   }

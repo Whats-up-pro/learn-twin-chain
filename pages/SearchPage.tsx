@@ -9,26 +9,12 @@ import {
   TrophyIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import { apiService } from '../services/apiService';
+import { searchService, SearchResult } from '../services/searchService';
 
-interface SearchResult {
-  id: string;
-  type: 'course' | 'module' | 'lesson' | 'achievement';
-  title: string;
-  description?: string;
-  course_name?: string;
-  module_name?: string;
-  achievement_type?: string;
-  tier?: string;
-  url: string;
-  tags?: string[];
-  difficulty_level?: string;
-  duration_minutes?: number;
-  completion_percentage?: number;
-}
+// Using SearchResult from searchService
 
 interface SearchFilters {
-  type: 'all' | 'course' | 'module' | 'lesson' | 'achievement';
+  type: 'all' | 'course' | 'module' | 'lesson' | 'quiz' | 'achievement';
   difficulty_level?: string;
   achievement_type?: string;
   tier?: string;
@@ -49,6 +35,7 @@ const SearchPage: React.FC = () => {
     courses: 0,
     modules: 0,
     lessons: 0,
+    quizzes: 0,
     achievements: 0
   });
 
@@ -70,7 +57,7 @@ const SearchPage: React.FC = () => {
       performSearch();
     } else {
       setResults([]);
-      setStats({ courses: 0, modules: 0, lessons: 0, achievements: 0 });
+      setStats({ courses: 0, modules: 0, lessons: 0, quizzes: 0, achievements: 0 });
     }
   }, [query, filters]);
 
@@ -80,138 +67,25 @@ const SearchPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const allResults: SearchResult[] = [];
-      const newStats = { courses: 0, modules: 0, lessons: 0, achievements: 0 };
-
-      // Search courses
-      if (filters.type === 'all' || filters.type === 'course') {
-        try {
-          const courseFilters: any = {};
-          if (filters.difficulty_level) courseFilters.difficulty_level = filters.difficulty_level;
-          
-          const courseResults = await apiService.searchCourses(query, courseFilters, 0, 20);
-          if (courseResults && courseResults.items) {
-            courseResults.items.forEach((course: any) => {
-              allResults.push({
-                id: course.id,
-                type: 'course',
-                title: course.title,
-                description: course.description,
-                tags: course.tags,
-                difficulty_level: course.difficulty_level,
-                duration_minutes: course.duration_minutes,
-                url: `/course/${course.id}/learn`
-              });
-            });
-            newStats.courses = courseResults.items.length;
-          }
-        } catch (error) {
-          console.error('Error searching courses:', error);
-        }
-      }
-
-      // Search modules
-      if (filters.type === 'all' || filters.type === 'module') {
-        try {
-          const courseResults = await apiService.searchCourses(query, {}, 0, 20);
-          if (courseResults && courseResults.items) {
-            for (const course of courseResults.items) {
-              try {
-                const modules = await apiService.getCourseModules(course.id);
-                if (modules && modules.items) {
-                  modules.items.forEach((module: any) => {
-                    if (module.title.toLowerCase().includes(query.toLowerCase())) {
-                      allResults.push({
-                        id: module.id,
-                        type: 'module',
-                        title: module.title,
-                        description: module.description,
-                        course_name: course.title,
-                        duration_minutes: module.duration_minutes,
-                        completion_percentage: module.completion_percentage,
-                        url: `/module/${module.id}`
-                      });
-                    }
-                  });
-                }
-              } catch (error) {
-                console.error('Error fetching modules for course:', course.id, error);
-              }
-            }
-            newStats.modules = allResults.filter(r => r.type === 'module').length;
-          }
-        } catch (error) {
-          console.error('Error searching modules:', error);
-        }
-      }
-
-      // Search lessons
-      if (filters.type === 'all' || filters.type === 'lesson') {
-        try {
-          const lessonResults = await apiService.searchLessons(query, undefined, undefined, 0, 20);
-          if (lessonResults && lessonResults.items) {
-            lessonResults.items.forEach((lesson: any) => {
-              allResults.push({
-                id: lesson.id,
-                type: 'lesson',
-                title: lesson.title,
-                description: lesson.description,
-                module_name: lesson.module_title,
-                course_name: lesson.course_title,
-                duration_minutes: lesson.duration_minutes,
-                url: `/course/${lesson.course_id}/video?lesson=${lesson.id}`
-              });
-            });
-            newStats.lessons = lessonResults.items.length;
-          }
-        } catch (error) {
-          console.error('Error searching lessons:', error);
-        }
-      }
-
-      // Search achievements
-      if (filters.type === 'all' || filters.type === 'achievement') {
-        try {
-          const achievementFilters: any = {};
-          if (filters.achievement_type) achievementFilters.achievement_type = filters.achievement_type;
-          if (filters.tier) achievementFilters.tier = filters.tier;
-          
-          const achievementResults = await apiService.searchAchievements(achievementFilters, 0, 20);
-          if (achievementResults && achievementResults.items) {
-            achievementResults.items.forEach((achievement: any) => {
-              if (achievement.title.toLowerCase().includes(query.toLowerCase())) {
-                allResults.push({
-                  id: achievement.id,
-                  type: 'achievement',
-                  title: achievement.title,
-                  description: achievement.description,
-                  achievement_type: achievement.achievement_type,
-                  tier: achievement.tier,
-                  url: `/achievements`
-                });
-              }
-            });
-            newStats.achievements = allResults.filter(r => r.type === 'achievement').length;
-          }
-        } catch (error) {
-          console.error('Error searching achievements:', error);
-        }
-      }
-
-      // Sort results by relevance
-      const sortedResults = allResults.sort((a, b) => {
-        const aExact = a.title.toLowerCase() === query.toLowerCase();
-        const bExact = b.title.toLowerCase() === query.toLowerCase();
-        if (aExact && !bExact) return -1;
-        if (!aExact && bExact) return 1;
-        return a.title.localeCompare(b.title);
+      const searchResponse = await searchService.search({
+        q: query,
+        type: filters.type === 'all' ? undefined : filters.type as any,
+        difficulty_level: filters.difficulty_level,
+        limit: 50
       });
 
-      setResults(sortedResults);
-      setStats(newStats);
+      setResults(searchResponse.results);
+      setStats({
+        courses: searchResponse.type_counts.course || 0,
+        modules: searchResponse.type_counts.module || 0,
+        lessons: searchResponse.type_counts.lesson || 0,
+        quizzes: searchResponse.type_counts.quiz || 0,
+        achievements: searchResponse.type_counts.achievement || 0
+      });
     } catch (error) {
       console.error('Search error:', error);
       setResults([]);
+      setStats({ courses: 0, modules: 0, lessons: 0, quizzes: 0, achievements: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -291,7 +165,7 @@ const SearchPage: React.FC = () => {
               className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
                          bg-white text-gray-900 placeholder-gray-500 focus:outline-none 
                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Search courses, modules, lessons, achievements..."
+              placeholder="Search courses, modules, lessons, quizzes, achievements..."
             />
           </div>
         </div>
@@ -359,6 +233,7 @@ const SearchPage: React.FC = () => {
                   <option value="course">Courses</option>
                   <option value="module">Modules</option>
                   <option value="lesson">Lessons</option>
+                  <option value="quiz">Quizzes</option>
                   <option value="achievement">Achievements</option>
                 </select>
               </div>
@@ -538,7 +413,7 @@ const SearchPage: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Start searching</h3>
               <p className="text-gray-600">
-                Enter keywords to search for courses, modules, lessons, and achievements.
+                Enter keywords to search for courses, modules, lessons, quizzes, and achievements.
               </p>
             </div>
           )}

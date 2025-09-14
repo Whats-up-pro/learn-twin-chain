@@ -21,7 +21,8 @@ interface Course {
   duration_minutes: number;
   difficulty_level: string;
   enrollment_count: number;
-  rating: number;
+  average_rating: number;
+  total_ratings: number;
   tags: string[];
   thumbnail_url?: string;
   is_enrolled?: boolean;
@@ -253,10 +254,13 @@ const CoursesPage: React.FC = () => {
                       <UserGroupIcon className="h-4 w-4 mr-1" />
                       <span>{course.enrollment_count} enrolled</span>
                     </div>
-                    {course.rating > 0 && (
+                    {course.average_rating > 0 && (
                       <div className="flex items-center text-sm text-gray-500">
                         <StarIcon className="h-4 w-4 mr-1 text-yellow-400" />
-                        <span>{course.rating.toFixed(1)}</span>
+                        <span>{course.average_rating.toFixed(1)}</span>
+                        {course.total_ratings > 0 && (
+                          <span className="text-xs text-gray-500 ml-1">({course.total_ratings})</span>
+                        )}
                       </div>
                     )}
                   </div>
