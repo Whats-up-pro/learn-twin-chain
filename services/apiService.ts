@@ -303,6 +303,196 @@ export class ApiService {
   async getStudentDetail(twinId: string) {
     return this.makeRequest(`/learning/students/${twinId}`);
   }
+
+  // Discussion API methods
+  async getDiscussions(params: Record<string, any> = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+    return this.makeRequest(`/discussions/?${queryParams.toString()}`);
+  }
+
+  async getDiscussion(discussionId: string) {
+    return this.makeRequest(`/discussions/${discussionId}`);
+  }
+
+  async createDiscussion(data: any) {
+    return this.makeRequest('/discussions/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDiscussion(discussionId: string, data: any) {
+    return this.makeRequest(`/discussions/${discussionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDiscussion(discussionId: string) {
+    return this.makeRequest(`/discussions/${discussionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getComments(discussionId: string, params: Record<string, any> = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+    return this.makeRequest(`/discussions/${discussionId}/comments/?${queryParams.toString()}`);
+  }
+
+  async createComment(discussionId: string, data: any) {
+    return this.makeRequest(`/discussions/${discussionId}/comments/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateComment(discussionId: string, commentId: string, data: any) {
+    return this.makeRequest(`/discussions/${discussionId}/comments/${commentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteComment(discussionId: string, commentId: string) {
+    return this.makeRequest(`/discussions/${discussionId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async likeDiscussion(discussionId: string) {
+    return this.makeRequest(`/discussions/${discussionId}/like`, {
+      method: 'POST',
+    });
+  }
+
+  async unlikeDiscussion(discussionId: string) {
+    return this.makeRequest(`/discussions/${discussionId}/unlike`, {
+      method: 'POST',
+    });
+  }
+
+  // Video Settings API methods
+  async getVideoSettings() {
+    return this.makeRequest('/video-settings');
+  }
+
+  async updateVideoSettings(data: any) {
+    return this.makeRequest('/video-settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async resetVideoSettings() {
+    return this.makeRequest('/video-settings/reset', {
+      method: 'PUT',
+    });
+  }
+
+  async exportVideoSettings() {
+    return this.makeRequest('/video-settings/export');
+  }
+
+  async createVideoSession(data: any) {
+    return this.makeRequest('/video-sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getVideoSession(sessionId: string) {
+    return this.makeRequest(`/video-sessions/${sessionId}`);
+  }
+
+  async updateVideoSession(sessionId: string, data: any) {
+    return this.makeRequest(`/video-sessions/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getVideoSessions(params: Record<string, any> = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+    return this.makeRequest(`/video-sessions/?${queryParams.toString()}`);
+  }
+
+  async deleteVideoSession(sessionId: string) {
+    return this.makeRequest(`/video-sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getVideoSessionAnalytics(params: Record<string, any> = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+    return this.makeRequest(`/video-sessions/analytics?${queryParams.toString()}`);
+  }
+
+  async getVideoSettingsOptions() {
+    return this.makeRequest('/video-settings/available-options');
+  }
+
+  // Search API methods
+  async searchContent(query: string, params: Record<string, any> = {}) {
+    const queryParams = new URLSearchParams();
+    queryParams.append('q', query);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+    return this.makeRequest(`/search/?${queryParams.toString()}`);
+  }
+
+  async getSearchSuggestions(query: string) {
+    return this.makeRequest(`/search/suggestions?q=${encodeURIComponent(query)}`);
+  }
+
+  async getSearchStats() {
+    return this.makeRequest('/search/stats');
+  }
+
+  // Generic HTTP methods
+  async get<T>(endpoint: string): Promise<T> {
+    return this.makeRequest<T>(endpoint, { method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data?: any): Promise<T> {
+    return this.makeRequest<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async put<T>(endpoint: string, data?: any): Promise<T> {
+    return this.makeRequest<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.makeRequest<T>(endpoint, { method: 'DELETE' });
+  }
 }
 
 // Export singleton instance

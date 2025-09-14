@@ -3,6 +3,7 @@ import { sendMessageToGemini, startChatSession } from '../services/geminiService
 import { ChatMessage } from '../types';
 import { PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { useAppContext } from '../contexts/AppContext';
+import FeatureAccessGate from '../components/FeatureAccessGate';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm'; // For GitHub Flavored Markdown (tables, etc.)
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -66,7 +67,8 @@ const AiTutorPage: React.FC = () => {
   }, [input, isLoading, messages, updateBehavior, digitalTwin.behavior.mostAskedTopics]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-150px)] max-w-3xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
+    <FeatureAccessGate feature="ai_queries" requiredPlan="basic">
+      <div className="flex flex-col h-[calc(100vh-150px)] max-w-3xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
       <header className="bg-sky-600 text-white p-4 flex items-center space-x-2">
         <h1 className="text-xl font-semibold">AI Tutor (Gemini)</h1>
       </header>
@@ -143,7 +145,8 @@ const AiTutorPage: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </FeatureAccessGate>
   );
 };
 

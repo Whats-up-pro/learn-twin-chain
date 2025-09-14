@@ -5,23 +5,13 @@ import {
   XMarkIcon,
   BookOpenIcon,
   AcademicCapIcon,
-  PlayCircleIcon,
+  PlayIcon,
   TrophyIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
-import { apiService } from '../services/apiService';
+import { searchService, SearchResult } from '../services/searchService';
 
-interface SearchResult {
-  id: string;
-  type: 'course' | 'module' | 'lesson' | 'achievement';
-  title: string;
-  description?: string;
-  course_name?: string;
-  module_name?: string;
-  achievement_type?: string;
-  tier?: string;
-  url: string;
-}
+// Using SearchResult from searchService
 
 interface SearchBarProps {
   className?: string;
@@ -31,12 +21,12 @@ interface SearchBarProps {
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
   className = '', 
-  placeholder = 'Search courses, modules, lessons, achievements...',
+  placeholder = 'Search courses, modules, lessons, quizzes, achievements...',
   onSearch 
 }) => {
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [searchType, setSearchType] = useState<'all' | 'course' | 'module' | 'lesson' | 'achievement'>('all');
+  const [searchType, setSearchType] = useState<'all' | 'course' | 'module' | 'lesson' | 'quiz' | 'achievement'>('all');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -79,116 +69,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
     setIsOpen(true);
 
     try {
-      const allResults: SearchResult[] = [];
-
-      // Search courses
-      if (searchType === 'all' || searchType === 'course') {
-        try {
-          const courseResults = await apiService.searchCourses(query, {}, 0, 5);
-          if (courseResults && courseResults.items) {
-            courseResults.items.forEach((course: any) => {
-              allResults.push({
-                id: course.id,
-                type: 'course',
-                title: course.title,
-                description: course.description,
-                url: `/course/${course.id}/learn`
-              });
-            });
-          }
-        } catch (error) {
-          console.error('Error searching courses:', error);
-        }
-      }
-
-      // Search modules (through courses)
-      if (searchType === 'all' || searchType === 'module') {
-        try {
-          const courseResults = await apiService.searchCourses(query, {}, 0, 10);
-          if (courseResults && courseResults.items) {
-            for (const course of courseResults.items) {
-              try {
-                const modules = await apiService.getCourseModules(course.id);
-                if (modules && modules.items) {
-                  modules.items.forEach((module: any) => {
-                    if (module.title.toLowerCase().includes(query.toLowerCase())) {
-                      allResults.push({
-                        id: module.id,
-                        type: 'module',
-                        title: module.title,
-                        description: module.description,
-                        course_name: course.title,
-                        url: `/module/${module.id}`
-                      });
-                    }
-                  });
-                }
-              } catch (error) {
-                console.error('Error fetching modules for course:', course.id, error);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error searching modules:', error);
-        }
-      }
-
-      // Search lessons
-      if (searchType === 'all' || searchType === 'lesson') {
-        try {
-          const lessonResults = await apiService.searchLessons(query, undefined, undefined, 0, 5);
-          if (lessonResults && lessonResults.items) {
-            lessonResults.items.forEach((lesson: any) => {
-              allResults.push({
-                id: lesson.id,
-                type: 'lesson',
-                title: lesson.title,
-                description: lesson.description,
-                module_name: lesson.module_title,
-                course_name: lesson.course_title,
-                url: `/course/${lesson.course_id}/video?lesson=${lesson.id}`
-              });
-            });
-          }
-        } catch (error) {
-          console.error('Error searching lessons:', error);
-        }
-      }
-
-      // Search achievements
-      if (searchType === 'all' || searchType === 'achievement') {
-        try {
-          const achievementResults = await apiService.searchAchievements({}, 0, 5);
-          if (achievementResults && achievementResults.items) {
-            achievementResults.items.forEach((achievement: any) => {
-              if (achievement.title.toLowerCase().includes(query.toLowerCase())) {
-                allResults.push({
-                  id: achievement.id,
-                  type: 'achievement',
-                  title: achievement.title,
-                  description: achievement.description,
-                  achievement_type: achievement.achievement_type,
-                  tier: achievement.tier,
-                  url: `/achievements`
-                });
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Error searching achievements:', error);
-        }
-      }
-
-      // Sort results by relevance (exact matches first)
-      const sortedResults = allResults.sort((a, b) => {
-        const aExact = a.title.toLowerCase() === query.toLowerCase();
-        const bExact = b.title.toLowerCase() === query.toLowerCase();
-        if (aExact && !bExact) return -1;
-        if (!aExact && bExact) return 1;
-        return a.title.localeCompare(b.title);
+      const searchResponse = await searchService.search({
+        q: query,
+        type: searchType === 'all' ? undefined : searchType as any,
+        limit: 10
       });
 
-      setResults(sortedResults.slice(0, 10));
+      setResults(searchResponse.results);
     } catch (error) {
       console.error('Search error:', error);
       setResults([]);
@@ -222,7 +109,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
       case 'module':
         return <AcademicCapIcon className="w-4 h-4" />;
       case 'lesson':
-        return <PlayCircleIcon className="w-4 h-4" />;
+        return <PlayIcon className="w-4 h-4" />;
+      case 'quiz':
+        return <TrophyIcon className="w-4 h-4" />;
       case 'achievement':
         return <TrophyIcon className="w-4 h-4" />;
       default:
@@ -231,33 +120,11 @@ const SearchBar: React.FC<SearchBarProps> = ({
   };
 
   const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'course':
-        return 'bg-blue-100 text-blue-700';
-      case 'module':
-        return 'bg-indigo-100 text-indigo-700';
-      case 'lesson':
-        return 'bg-green-100 text-green-700';
-      case 'achievement':
-        return 'bg-amber-100 text-amber-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
+    return searchService.getTypeColor(type);
   };
 
   const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'course':
-        return 'Course';
-      case 'module':
-        return 'Module';
-      case 'lesson':
-        return 'Lesson';
-      case 'achievement':
-        return 'Achievement';
-      default:
-        return 'Item';
-    }
+    return searchService.getTypeLabel(type);
   };
 
   return (
@@ -328,7 +195,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
       {showDropdown && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 
                         rounded-lg shadow-lg z-50">
-          {['all', 'course', 'module', 'lesson', 'achievement'].map((type) => (
+          {['all', 'course', 'module', 'lesson', 'quiz', 'achievement'].map((type) => (
             <button
               key={type}
               onClick={() => {

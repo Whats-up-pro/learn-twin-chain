@@ -16,6 +16,7 @@ import {
 import { apiService } from '../services/apiService';
 import { useAppContext } from '../contexts/AppContext';
 import { blockchainService } from '../services/blockchainService';
+import CourseAccessGate from '../components/CourseAccessGate';
 import toast from 'react-hot-toast';
 
 interface Course {
@@ -28,7 +29,8 @@ interface Course {
   duration_minutes: number;
   difficulty_level: string;
   enrollment_count: number;
-  rating: number;
+  average_rating: number;
+  total_ratings: number;
   tags: string[];
   thumbnail_url?: string;
   is_enrolled?: boolean;
@@ -198,8 +200,12 @@ const CourseOverviewPage: React.FC = () => {
   const moduleCount = course.modules?.length || 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <CourseAccessGate 
+      courseId={courseId || ''} 
+      difficultyLevel={course.difficulty_level}
+    >
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
@@ -266,8 +272,10 @@ const CourseOverviewPage: React.FC = () => {
                 </div>
                 <div className="text-center p-4 bg-white/50 rounded-xl">
                   <StarIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-gray-800">{course.rating || 0}</div>
-                  <div className="text-sm text-gray-600">Rating</div>
+                  <div className="text-2xl font-bold text-gray-800">{course.average_rating || 0}</div>
+                  <div className="text-sm text-gray-600">
+                    {course.total_ratings > 0 ? `Rating (${course.total_ratings})` : 'No ratings'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -430,7 +438,8 @@ const CourseOverviewPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </CourseAccessGate>
   );
 };
 

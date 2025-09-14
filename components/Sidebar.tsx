@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../contexts/AppContext';
 import enrollmentService, { EnrollmentData } from '../services/enrollmentService';
 import { apiService } from '../services/apiService';
+import SubscriptionStatus from './SubscriptionStatus';
 import { 
   HomeIcon,
   BookOpenIcon,
@@ -17,7 +18,8 @@ import {
   ChatBubbleLeftRightIcon,
   DocumentTextIcon,
   ClockIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import { 
   HomeIcon as HomeSolid,
@@ -272,6 +274,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
               </div>
             )}
           </div>
+          
+          {/* Subscription Status */}
+          {isOpen && (
+            <div className="mt-3">
+              <SubscriptionStatus className="justify-center" showUpgrade={true} />
+            </div>
+          )}
         </div>
 
         {/* Navigation Items */}

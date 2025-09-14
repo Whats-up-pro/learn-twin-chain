@@ -29,12 +29,17 @@ from digital_twin.api.ipfs_api import router as ipfs_router
 from digital_twin.api.zkp_api import router as zkp_router
 from digital_twin.api.gemini_api import router as gemini_router
 from digital_twin.api.user_api import router as user_router
+from digital_twin.api.discussion_api import router as discussion_router
+from digital_twin.api.video_settings_api import router as video_settings_router
+from digital_twin.api.search_api import router as search_router
+from digital_twin.api.subscription_api import router as subscription_router
 
 # Import configuration and services
 from .config.config import config
 from .config.database import connect_to_mongo, close_mongo_connection
 from .services.auth_service import AuthService
 from .services.redis_service import RedisService
+from .services.subscription_service import SubscriptionService
 from .middleware import SessionMiddleware
 from .utils import Logger
 
@@ -51,6 +56,7 @@ logger = Logger("main")
 # Initialize services
 auth_service = AuthService()
 redis_service = RedisService()
+subscription_service = SubscriptionService()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -70,6 +76,10 @@ async def lifespan(app: FastAPI):
         # Create default roles and permissions
         await auth_service.create_default_roles()
         logger.info("Default roles and permissions created")
+        
+        # Initialize subscription plans
+        await subscription_service.initialize_default_plans()
+        logger.info("Subscription plans initialized")
         
         logger.info("Application startup completed successfully")
         
@@ -137,6 +147,10 @@ app.include_router(ipfs_router, prefix="/api/v1", tags=["IPFS"])
 app.include_router(zkp_router, prefix="/api/v1", tags=["Zero-Knowledge Proofs"])
 app.include_router(gemini_router, prefix="/api/v1", tags=["AI/Gemini"])
 app.include_router(user_router, prefix="/api/v1", tags=["User Management"])
+app.include_router(discussion_router, prefix="/api/v1", tags=["Discussions"])
+app.include_router(video_settings_router, prefix="/api/v1", tags=["Video Settings"])
+app.include_router(subscription_router, prefix="/api/v1", tags=["Subscription"])
+app.include_router(search_router, prefix="/api/v1", tags=["Search"])
 
 @app.get("/")
 async def root():

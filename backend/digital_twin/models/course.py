@@ -84,6 +84,12 @@ class Course(Document):
     completion_nft_enabled: bool = Field(default=True, description="Enable completion NFTs")
     nft_contract_address: Optional[str] = Field(default=None, description="NFT contract address")
     
+    # Analytics and ratings
+    average_rating: float = Field(default=0.0, description="Average course rating")
+    total_ratings: int = Field(default=0, description="Total number of ratings")
+    enrollment_count: int = Field(default=0, description="Total number of enrollments")
+    completion_count: int = Field(default=0, description="Total number of completions")
+    
     # Timestamps
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -215,6 +221,36 @@ class Enrollment(Document):
             IndexModel("enrolled_at"),
             IndexModel("completed_at"),
             IndexModel("certificate_issued")
+        ]
+
+class CourseRating(Document):
+    """Course rating and review tracking"""
+    
+    rating_id: Indexed(str, unique=True) = Field(..., description="Unique rating ID")
+    course_id: Indexed(str) = Field(..., description="Course identifier")
+    user_id: Indexed(str) = Field(..., description="User who rated")
+    
+    # Rating details
+    rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5")
+    review: Optional[str] = Field(None, description="Optional review text")
+    
+    # Metadata
+    is_verified: bool = Field(default=False, description="Whether user completed the course")
+    helpful_votes: int = Field(default=0, description="Number of helpful votes")
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    
+    class Settings:
+        name = "course_ratings"
+        indexes = [
+            IndexModel("rating_id", unique=True),
+            IndexModel("course_id"),
+            IndexModel("user_id"),
+            IndexModel("rating"),
+            IndexModel("created_at"),
+            [("course_id", 1), ("user_id", 1)],  # Unique rating per user per course
         ]
 
 class Lesson(Document):

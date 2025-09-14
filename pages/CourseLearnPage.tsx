@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { courseService } from '../services/courseService';
 import { quizService } from '../services/quizService';
+import { videoSettingsService, VideoSession } from '../services/videoSettingsService';
+import { discussionService } from '../services/discussionService';
+import DiscussionPanel from '../components/DiscussionPanel';
+import VideoSettingsPanel from '../components/VideoSettingsPanel';
 import { ApiCourse, ApiModule } from '../types';
 import { 
   isYouTubeUrl, 
@@ -83,6 +87,12 @@ const CourseLearnPage: React.FC = () => {
   // Quiz state
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<ModuleQuiz | null>(null);
+  
+  // Discussion and Video Settings state
+  const [showDiscussionPanel, setShowDiscussionPanel] = useState(false);
+  const [showVideoSettingsPanel, setShowVideoSettingsPanel] = useState(false);
+  const [discussionCount, setDiscussionCount] = useState(0);
+  const [videoSession, setVideoSession] = useState<VideoSession | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
   const [quizTimeLeft, setQuizTimeLeft] = useState<number>(0);
@@ -273,6 +283,64 @@ const CourseLearnPage: React.FC = () => {
 
     loadCourse();
   }, [courseId]);
+
+  // Load video settings and discussion count
+  useEffect(() => {
+    const loadVideoSettings = async () => {
+      try {
+        await videoSettingsService.getVideoSettings();
+      } catch (error) {
+        console.warn('Failed to load video settings:', error);
+      }
+    };
+
+    loadVideoSettings();
+  }, []);
+
+  // Load discussion count for current lesson
+  useEffect(() => {
+    const loadDiscussionCount = async () => {
+      if (!courseId || !currentLesson) return;
+      
+      try {
+        const discussions = await discussionService.getDiscussions({
+          course_id: courseId,
+          lesson_id: currentLesson.id,
+          limit: 1
+        });
+        setDiscussionCount(discussions.total || 0);
+      } catch (error) {
+        console.warn('Failed to load discussion count:', error);
+        setDiscussionCount(0);
+      }
+    };
+
+    loadDiscussionCount();
+  }, [courseId, currentLesson]);
+
+  // Create video session when lesson starts
+  useEffect(() => {
+    const createVideoSession = async () => {
+      if (!courseId || !currentLesson || !currentModule) return;
+      
+      try {
+        const session = await videoSettingsService.createVideoSession({
+          course_id: courseId,
+          module_id: currentModule.id,
+          lesson_id: currentLesson.id,
+          video_url: currentLesson.video_url || '',
+          video_duration: parseInt(currentLesson.duration) || 0
+        });
+        setVideoSession(session);
+      } catch (error) {
+        console.warn('Failed to create video session:', error);
+      }
+    };
+
+    if (currentLesson && currentLesson.type === 'video') {
+      createVideoSession();
+    }
+  }, [courseId, currentLesson, currentModule]);
 
   // Quiz timer effect
   useEffect(() => {
@@ -674,6 +742,16 @@ const CourseLearnPage: React.FC = () => {
           time_spent_minutes: 5, // TODO: Track actual time spent
           notes: `Completed lesson: ${currentLesson.title}`
         });
+
+        // Complete video session if it exists
+        if (videoSession) {
+          try {
+            await videoSettingsService.completeVideoSession(videoSession.session_id);
+            setVideoSession(null);
+          } catch (error) {
+            console.warn('Failed to complete video session:', error);
+          }
+        }
         
         // Update local state
         const updatedLesson = { ...currentLesson, completed: true };
@@ -993,13 +1071,23 @@ const CourseLearnPage: React.FC = () => {
           
           <div className="flex items-center space-x-2">
             <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
-              📺 0 DISCUSSIONS
+              💬 {discussionCount} DISCUSSIONS
             </span>
-            <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-              <ChatBubbleLeftIcon className="w-5 h-5 text-slate-600" />
+            <button 
+              onClick={() => setShowDiscussionPanel(!showDiscussionPanel)}
+              className={`p-2 rounded-lg transition-colors ${
+                showDiscussionPanel ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'
+              }`}
+            >
+              <ChatBubbleLeftIcon className="w-5 h-5" />
             </button>
-            <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-              <Cog6ToothIcon className="w-5 h-5 text-slate-600" />
+            <button 
+              onClick={() => setShowVideoSettingsPanel(!showVideoSettingsPanel)}
+              className={`p-2 rounded-lg transition-colors ${
+                showVideoSettingsPanel ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'
+              }`}
+            >
+              <Cog6ToothIcon className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -1336,6 +1424,25 @@ const CourseLearnPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Discussion Panel */}
+      {showDiscussionPanel && courseId && currentModule && currentLesson && (
+        <DiscussionPanel
+          courseId={courseId}
+          moduleId={currentModule.id}
+          lessonId={currentLesson.id}
+          isOpen={showDiscussionPanel}
+          onClose={() => setShowDiscussionPanel(false)}
+        />
+      )}
+
+      {/* Video Settings Panel */}
+      {showVideoSettingsPanel && (
+        <VideoSettingsPanel
+          isOpen={showVideoSettingsPanel}
+          onClose={() => setShowVideoSettingsPanel(false)}
+        />
       )}
     </div>
   );
