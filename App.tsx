@@ -29,6 +29,7 @@ import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
 import { UserRole } from './types';
 import sessionMonitor from './services/sessionMonitorService';
+import './src/i18n';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: UserRole[] }> = ({ children, allowedRoles }) => {
   const { role } = useAppContext();

@@ -20,6 +20,7 @@ import {
   CubeIcon as CubeIconSolid
 } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface NFT {
   id: string;
@@ -44,6 +45,7 @@ interface NFT {
 }
 
 const NFTManagementPage: React.FC = () => {
+  const { t } = useTranslation();
   const { digitalTwin } = useAppContext();
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [selectedTab, setSelectedTab] = useState<'all' | 'minting' | 'minted' | 'achievements'>('all');
@@ -184,7 +186,7 @@ const NFTManagementPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading your NFT collection...</p>
+          <p className="text-gray-600 text-lg">{t('pages.nftManagementPage.LoadingYourNFTCollection')}</p>
         </div>
       </div>
     );
@@ -199,15 +201,15 @@ const NFTManagementPage: React.FC = () => {
             <div>
               <h1 className="text-4xl font-bold text-gray-900 flex items-center">
                 <SparklesIconSolid className="h-10 w-10 text-purple-500 mr-3" />
-                NFT Collection
+                {t('pages.nftManagementPage.nftCollection')}
               </h1>
-              <p className="text-gray-600 mt-2">Manage your learning achievement NFTs and module progress tokens</p>
+              <p className="text-gray-600 mt-2">{t('pages.nftManagementPage.manageYourLearningAchievementNFTsAndModuleProgressTokens')}</p>
             </div>
             <Link 
               to="/dashboard"
               className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
             >
-              Back to Dashboard
+              {t('pages.nftManagementPage.backToDashboard')}
             </Link>
           </div>
 
@@ -216,7 +218,7 @@ const NFTManagementPage: React.FC = () => {
             <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-purple-100 text-sm font-medium">Total NFTs</p>
+                  <p className="text-purple-100 text-sm font-medium">{t('pages.nftManagementPage.TotalNFTs')}</p>
                   <p className="text-3xl font-bold">{nfts.length}</p>
                 </div>
                 <SparklesIconSolid className="h-12 w-12 text-purple-200" />
@@ -236,7 +238,7 @@ const NFTManagementPage: React.FC = () => {
             <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-emerald-100 text-sm font-medium">Minted</p>
+                  <p className="text-emerald-100 text-sm font-medium">{t('pages.nftManagementPage.Minted')}</p>
                   <p className="text-3xl font-bold">{mintedCount}</p>
                 </div>
                 <CheckCircleIcon className="h-12 w-12 text-emerald-200" />
@@ -246,7 +248,7 @@ const NFTManagementPage: React.FC = () => {
             <div className="bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-blue-100 text-sm font-medium">Achievements</p>
+                  <p className="text-blue-100 text-sm font-medium">{t('pages.nftManagementPage.Achievements')}</p>
                   <p className="text-3xl font-bold">{achievementCount}</p>
                 </div>
                 <TrophyIcon className="h-12 w-12 text-blue-200" />
@@ -297,11 +299,11 @@ const NFTManagementPage: React.FC = () => {
                   {nft.status === 'minting' && (
                     <div className="flex items-center space-x-1">
                       <div className="w-2 h-2 bg-yellow-600 rounded-full animate-pulse"></div>
-                      <span>Minting...</span>
+                      <span>{t('pages.nftManagementPage.Minting')}...</span>
                     </div>
                   )}
-                  {nft.status === 'minted' && <span>Minted</span>}
-                  {nft.status === 'failed' && <span>Failed</span>}
+                  {nft.status === 'minted' && <span>{t('pages.nftManagementPage.Minted')}</span>}
+                  {nft.status === 'failed' && <span>{t('pages.nftManagementPage.Failed')}</span>}
                 </div>
 
                 {/* NFT Type Badge */}
@@ -338,26 +340,26 @@ const NFTManagementPage: React.FC = () => {
                   {/* Attributes */}
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Course:</span>
+                      <span className="text-gray-500">{t('pages.nftManagementPage.Course')}:</span>
                       <span className="font-medium text-gray-800 truncate ml-2">{nft.attributes.course}</span>
                     </div>
                     
                     {nft.attributes.module && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">Module:</span>
+                        <span className="text-gray-500">{t('pages.nftManagementPage.Module')}:</span>
                         <span className="font-medium text-gray-800 truncate ml-2">{nft.attributes.module}</span>
                       </div>
                     )}
 
                     {nft.attributes.score && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">Score:</span>
+                        <span className="text-gray-500">{t('pages.nftManagementPage.Score')}:</span>
                         <span className="font-bold text-emerald-600">{nft.attributes.score}%</span>
                       </div>
                     )}
 
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Completed:</span>
+                      <span className="text-gray-500">{t('pages.nftManagementPage.Completed')}:</span>
                       <span className="font-medium text-gray-800">
                         {new Date(nft.attributes.completionDate).toLocaleDateString()}
                       </span>
@@ -371,7 +373,7 @@ const NFTManagementPage: React.FC = () => {
                         <div className="text-xs text-gray-500">
                           <div className="flex items-center space-x-1">
                             <TagIcon className="h-3 w-3" />
-                            <span>Token #{nft.tokenId}</span>
+                            <span>{t('pages.nftManagementPage.Token')}: #{nft.tokenId}</span>
                           </div>
                         </div>
                         <div className="flex space-x-2">
@@ -386,7 +388,7 @@ const NFTManagementPage: React.FC = () => {
                       
                       {nft.transactionHash && (
                         <div className="mt-2 text-xs text-gray-400 truncate">
-                          Tx: {nft.transactionHash}
+                          {t('pages.nftManagementPage.Tx')}: {nft.transactionHash}
                         </div>
                       )}
                     </div>
@@ -396,7 +398,7 @@ const NFTManagementPage: React.FC = () => {
                     <div className="border-t border-gray-200 pt-4">
                       <div className="flex items-center justify-center space-x-2 text-yellow-600">
                         <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-sm font-medium">Minting in progress...</span>
+                        <span className="text-sm font-medium">{t('pages.nftManagementPage.MintingInProgress')}...</span>
                       </div>
                     </div>
                   )}
@@ -409,14 +411,14 @@ const NFTManagementPage: React.FC = () => {
         {filteredNFTs.length === 0 && (
           <div className="text-center py-12">
             <SparklesIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">No NFTs found</h3>
-            <p className="text-gray-500 mb-6">Complete learning modules and achievements to earn NFTs!</p>
+            <h3 className="text-xl font-semibold text-gray-600 mb-2">{t('pages.nftManagementPage.noNFTsFound')}</h3>
+            <p className="text-gray-500 mb-6">{t('pages.nftManagementPage.CompleteLearningModulesAndAchievementsToEarnNFTs')}</p>
             <Link 
               to="/dashboard"
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
             >
               <RocketLaunchIcon className="h-5 w-5 mr-2" />
-              Start Learning
+              {t('pages.nftManagementPage.StartLearning')}
             </Link>
           </div>
         )}

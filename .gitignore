@@ -44,9 +44,11 @@ myenv/
 # backend directories and files
 backend/venv/
 backend/logs/
+venv311/
 
 # Hardhat files
 cache/
 artifacts/
 typechain/ 
 __pycache__/
+/h origin settingfeatures

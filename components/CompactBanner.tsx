@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAppContext } from '../contexts/AppContext';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface CompactSlide {
   id: string;
@@ -22,6 +23,7 @@ interface CompactSlide {
 }
 
 const CompactBanner: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { achievements } = useAppContext();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -75,7 +77,7 @@ const CompactBanner: React.FC = () => {
 
   const handleSlideAction = (slide: CompactSlide) => {
     navigate(slide.actionUrl);
-    toast.success('Navigating to your destination 🎯');
+    toast.success(t('components.compactBanner.NavigatingToYourDestination'));
   };
 
   const currentSlideData = slides[currentSlide];

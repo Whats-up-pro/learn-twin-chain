@@ -8,8 +8,10 @@ import remarkGfm from 'remark-gfm'; // For GitHub Flavored Markdown (tables, etc
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 const AiTutorPage: React.FC = () => {
+  const { t } = useTranslation();
   const { digitalTwin, updateBehavior, learnerProfile } = useAppContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -26,7 +28,7 @@ const AiTutorPage: React.FC = () => {
       { 
         id: 'initial-ai-message', 
         sender: 'ai', 
-        text: `Hello ${learnerProfile?.name || 'User'}! I'm your AI Tutor, powered by Gemini. How can I help you with your Python learning journey today?`, 
+        text: `${t('pages.aiTutorPage.hello')} ${learnerProfile?.name || 'User'}! ${t('pages.aiTutorPage.imYourAiTutor')}`, 
         timestamp: new Date() 
       }
     ]);
@@ -52,11 +54,11 @@ const AiTutorPage: React.FC = () => {
         mostAskedTopics: [...(digitalTwin.behavior.mostAskedTopics || []), ...input.toLowerCase().split(' ').filter(word => word.length > 3 && !['python', 'code', 'help'].includes(word))]
       });
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error(t('pages.aiTutorPage.errorSendingMessage'), error);
       const errorMessage: ChatMessage = { 
         id: (Date.now() + 1).toString(), 
         sender: 'ai', 
-        text: "Sorry, I encountered an error. Please try again.", 
+        text: t('pages.aiTutorPage.sorryIEncountered'),
         timestamp: new Date() 
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -133,7 +135,7 @@ const AiTutorPage: React.FC = () => {
             onClick={handleSendMessage}
             disabled={isLoading || input.trim() === ''}
             className="bg-sky-500 hover:bg-sky-600 text-white p-3 rounded-lg disabled:opacity-50 transition-colors shadow hover:shadow-md"
-            aria-label="Send message"
+            aria-label={t('pages.aiTutorPage.sendMessage')}
           >
             {isLoading ? (
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>

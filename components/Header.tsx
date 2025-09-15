@@ -14,6 +14,7 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { AcademicCapIcon } from '@heroicons/react/24/solid';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -21,6 +22,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) => {
+  const { t } = useTranslation();
   const { learnerProfile, logout, role } = useAppContext();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const location = useLocation();
@@ -81,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
           <div className="flex-1 max-w-3xl mx-4 hidden md:flex items-center space-x-3">
             <div className="flex-1">
               <SearchBar 
-                placeholder="Search courses, modules, lessons, achievements..."
+                placeholder={t('components.header.searchPlaceholder')}
                 className="w-full"
               />
             </div>
@@ -127,13 +129,13 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                 <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
                   <div className="p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
+                      <h3 className="text-lg font-medium text-gray-900">{t('components.header.notifications')}</h3>
                       {unreadCount > 0 && (
                         <button
                           onClick={markAllAsRead}
                           className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                         >
-                          Mark all as read
+                          {t('components.header.markAllAsRead')}
                         </button>
                       )}
                     </div>
@@ -142,9 +144,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                     {notifications.length === 0 ? (
                       <div className="p-6 text-center text-gray-500">
                         <BellIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                        <p className="text-sm">No notifications yet</p>
+                        <p className="text-sm">{t('components.header.noNotificationsYet')}</p>
                         <p className="text-xs text-gray-400 mt-1">
-                          Complete lessons and earn achievements to see them here!
+                          {t('components.header.completeLessonsAndEarnAchievements')}
                         </p>
                       </div>
                     ) : (
@@ -198,7 +200,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                               to="/notifications"
                               className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                             >
-                              View all {notifications.length} notifications
+                              {t('components.header.viewAllNotifications', {count: notifications.length})}
                             </Link>
                           </div>
                         )}
@@ -254,7 +256,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                       onClick={() => setShowUserMenu(false)}
                     >
                       <UserCircleIcon className="h-4 w-4 mr-2" />
-                      Profile
+                      {t('components.header.profile')}
                     </Link>
                     
                     <Link
@@ -264,7 +266,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                       onClick={() => setShowUserMenu(false)}
                     >
                       <CogIcon className="h-4 w-4 mr-2" />
-                      Settings
+                      {t('components.header.settings')}
                     </Link>
                     
                     <button
@@ -276,7 +278,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                                transition-colors"
                     >
                       <ArrowLeftOnRectangleIcon className="h-4 w-4 mr-2" />
-                      Logout
+                      {t('components.header.logout')}
                     </button>
                   </div>
                 </div>
@@ -288,7 +290,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
         {/* Mobile Search Bar */}
         <div className="md:hidden pb-4">
           <SearchBar 
-            placeholder="Search..."
+            placeholder={t('components.header.search')}
             className="w-full"
           />
         </div>

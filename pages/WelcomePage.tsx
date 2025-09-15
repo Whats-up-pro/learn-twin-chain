@@ -118,7 +118,7 @@ const WelcomePage: React.FC = () => {
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold text-gray-800 mb-6">
-              Learn, Earn, and
+              Learn, Earn and
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Verify</span>
             </h1>
             

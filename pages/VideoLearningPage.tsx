@@ -6,6 +6,7 @@ import QuizComponent from '../components/QuizComponent';
 import { courseService } from '../services/courseService';
 import { quizService } from '../services/quizService';
 import jwtService from '../services/jwtService';
+import { useTranslation } from '../src/hooks/useTranslation';
 // achievementService import commented out as it's not used yet
 import { 
   isYouTubeUrl, 
@@ -72,6 +73,7 @@ interface Course {
 }
 
 const VideoLearningPage: React.FC = () => {
+  const { t } = useTranslation();
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { digitalTwin, updateKnowledge, updateBehavior } = useAppContext();
@@ -102,11 +104,11 @@ const VideoLearningPage: React.FC = () => {
       setLoading(true);
       
       // Fetch course data and modules separately
-      console.log(`🔍 Fetching course data for: ${id}`);
+      console.log(`🔍 ${t('pages.videoLearningPage.FetchingCourseData')} ${id}`);
       
       // Get auth headers for authenticated requests
       const authHeaders = jwtService.getAuthHeader();
-      console.log(`🔑 Auth headers for requests:`, authHeaders);
+      console.log(`🔑 ${t('pages.videoLearningPage.AuthHeaders')}`, authHeaders);
       
       const [courseResponse, modulesResponse] = await Promise.all([
         fetch(`http://localhost:8000/api/v1/courses/course/${id}`, {
@@ -123,33 +125,33 @@ const VideoLearningPage: React.FC = () => {
         })
       ]);
       
-      console.log(`📡 Course response status: ${courseResponse.status}`);
-      console.log(`📡 Modules response status: ${modulesResponse.status}`);
+      console.log(`📡 ${t('pages.videoLearningPage.CourseResponse')} ${courseResponse.status}`);
+      console.log(`📡 ${t('pages.videoLearningPage.ModulesResponse')} ${modulesResponse.status}`);
       
       if (courseResponse.ok && modulesResponse.ok) {
         const courseData = await courseResponse.json();
         const modulesData = await modulesResponse.json();
         
-        console.log('📚 Course data:', courseData);
-        console.log('📚 Modules data:', modulesData);
-        console.log('📚 Module IDs found:', modulesData.modules?.map((m: any) => m.module_id));
+        console.log(`📚 ${t('pages.videoLearningPage.CourseData')}`, courseData);
+        console.log(`📚 ${t('pages.videoLearningPage.ModulesData')}`, modulesData);
+        console.log(`📚 ${t('pages.videoLearningPage.ModuleIDs')}`, modulesData.modules?.map((m: any) => m.module_id));
         
         // Load quizzes for each module
         const enhancedModules = await Promise.all(
           modulesData.modules.map(async (module: CourseModule) => {
             try {
-              console.log(`🔍 Fetching quizzes for module: ${module.module_id} (${module.title})`);
+              console.log(`🔍 ${t('pages.videoLearningPage.FetchingQuizzes')} ${module.module_id} (${module.title})`);
               const quizResponse = await quizService.getModuleQuizzes(module.module_id) as any;
-              console.log(`📝 Quiz response for module ${module.module_id}:`, quizResponse);
-              console.log(`📝 Number of quizzes found: ${quizResponse?.quizzes?.length || 0}`);
+              console.log(`📝 ${t('pages.videoLearningPage.QuizResponse')} ${module.module_id}:`, quizResponse);
+              console.log(`📝 ${t('pages.videoLearningPage.NumberofQuizzes')} ${quizResponse?.quizzes?.length || 0}`);
               
               if (quizResponse?.quizzes?.length > 0) {
-                console.log(`✅ Found ${quizResponse.quizzes.length} quiz(es) for module ${module.module_id}`);
+                console.log(`✅ ${t('pages.VideoLearningPage.Foundquizzes', {count: quizResponse.quizzes.length, module_id: module.module_id})}`);
                 quizResponse.quizzes.forEach((quiz: any, quizIndex: number) => {
-                  console.log(`  Quiz ${quizIndex + 1}: ${quiz.title} (ID: ${quiz.quiz_id})`);
+                  console.log(`  ${t('pages.VideoLearningPage.QuizID', {index: quizIndex + 1, title: quiz.title, quiz_id: quiz.quiz_id})}`);
                 });
               } else {
-                console.log(`❌ No quizzes found for module ${module.module_id}`);
+                console.log(`❌ ${t('pages.VideoLearningPage.NoQuizzesFound')} ${module.module_id}`);
               }
               
               return {
@@ -157,7 +159,7 @@ const VideoLearningPage: React.FC = () => {
                 quizzes: quizResponse?.quizzes || []
               };
             } catch (error) {
-              console.error(`❌ Failed to load quizzes for module ${module.module_id}:`, error);
+              console.error(`❌ ${t('pages.VideoLearningPage.FailedToLoadQuizzes')} ${module.module_id}:`, error);
               return {
                 ...module,
                 quizzes: []
@@ -166,15 +168,15 @@ const VideoLearningPage: React.FC = () => {
           })
         );
         
-        console.log('🎯 Final enhanced modules:', enhancedModules);
+        console.log(`🎯 ${t('pages.VideoLearningPage.FinalEnhanceModules')}:`, enhancedModules);
         enhancedModules.forEach((module, index) => {
-          console.log(`Module ${index + 1}: ${module.title}`);
-          console.log(`  - Module ID: ${module.module_id}`);
-          console.log(`  - Lessons: ${module.content?.lessons?.length || 0}`);
-          console.log(`  - Quizzes: ${module.quizzes?.length || 0}`);
+          console.log(`${t('pages.VideoLearningPage.Module')} ${index + 1}: ${module.title}`);
+          console.log(`  - ${t('pages.VideoLearningPage.ModuleID')}: ${module.module_id}`);
+          console.log(`  - ${t('pages.VideoLearningPage.Lessons')}: ${module.content?.lessons?.length || 0}`);
+          console.log(`  - ${t('pages.VideoLearningPage.Quizzes')}: ${module.quizzes?.length || 0}`);
           if (module.quizzes && module.quizzes.length > 0) {
             module.quizzes.forEach((quiz: any, quizIndex: number) => {
-              console.log(`    Quiz ${quizIndex + 1}: ${quiz.title} (${quiz.quiz_id})`);
+              console.log(`    ${t('pages.VideoLearningPage.QuizID', {index: quizIndex + 1, title: quiz.title, quiz_id: quiz.quiz_id})}`);
             });
           }
         });
@@ -188,16 +190,16 @@ const VideoLearningPage: React.FC = () => {
         await loadLessonCompletionStatus({...courseData.course, modules: enhancedModules});
         await loadQuizCompletionStatus({...courseData.course, modules: enhancedModules});
       } else {
-        console.error('❌ Failed to load course or modules:', {
+        console.error(`❌ ${t('pages.VideoLearningPage.FailedToLoadCourseOrModules')}:`, {
           courseResponse: courseResponse.status,
           modulesResponse: modulesResponse.status
         });
-        toast.error('Failed to load course');
+        toast.error(t('pages.VideoLearningPage.FailedToLoadCourse'));
         navigate('/dashboard');
       }
     } catch (error) {
-      console.error('Error fetching course:', error);
-      toast.error('Error loading course');
+      console.error(`❌ ${t('pages.VideoLearningPage.ErrorFetchingCourse')}:`, error);
+      toast.error(t('pages.VideoLearningPage.ErrorLoadingCourse'));
       navigate('/dashboard');
     } finally {
       setLoading(false);
@@ -231,14 +233,14 @@ const VideoLearningPage: React.FC = () => {
               }
             }
           } catch (error) {
-            console.warn(`Failed to load progress for lesson ${lesson.lesson_id}:`, error);
+            console.warn(`❌ ${t('pages.VideoLearningPage.FailedToLoadProgress', {lessonId: lesson.lesson_id})}:`, error);
           }
         }
       }
       
       setCompletedLessons(completedLessonIds);
     } catch (error) {
-      console.error('Failed to load lesson completion status:', error);
+      console.error(`${t('pages.videoLearningPage.FailedToLoadLesson')}:`, error);
     }
   };
 
@@ -258,7 +260,7 @@ const VideoLearningPage: React.FC = () => {
       
       setCompletedQuizzes(completedQuizIds);
     } catch (error) {
-      console.warn('Failed to load quiz completion status:', error);
+      console.warn(`${t('pages.videoLearningPage.FailedToLoadQuiz')}:`, error);
     }
   };
 
@@ -290,9 +292,9 @@ const VideoLearningPage: React.FC = () => {
         last_updated: new Date().toISOString()
       });
       
-      console.log(`✅ Synced course progress: ${overallProgress.toFixed(1)}% for "${course.title}"`);
+      console.log(`✅ ${t('pages.videoLearningPage.SyncedCourseProgress', {overallProgress: overallProgress.toFixed(1), courseTitle: course.title})}`);
     } catch (error) {
-      console.warn('Failed to sync course progress to dashboard:', error);
+      console.warn(`${t('pages.videoLearningPage.FailedToSyncCourseProgressToDashboard')}:`, error);
     }
   };
 
@@ -311,7 +313,7 @@ const VideoLearningPage: React.FC = () => {
       ) || [];
       
       toast.error(
-        `🔒 Quiz locked! Complete ${incompleteLessons.length} remaining lesson${incompleteLessons.length > 1 ? 's' : ''} in "${targetModule.title}" first.`, 
+        `🔒 ${t('pages.videoLearningPage.QuizLocked', {count: incompleteLessons.length, moduleTitle: targetModule.title})}`, 
         {
           duration: 5000,
           icon: '🔒'
@@ -332,7 +334,7 @@ const VideoLearningPage: React.FC = () => {
         youtubePlayer.pauseVideo();
         youtubePlayer.destroy();
       } catch (error) {
-        console.warn('Failed to stop YouTube player:', error);
+        console.warn(t('pages.videoLearningPage.FailedToStopPlayer'), error);
       }
       setYoutubePlayer(null);
     }
@@ -352,7 +354,7 @@ const VideoLearningPage: React.FC = () => {
         try {
           youtubePlayer.pauseVideo();
         } catch (error) {
-          console.warn('Failed to pause YouTube video:', error);
+          console.warn(t('pages.videoLearningPage.FailedToPauseYoutubeVideo'), error);
         }
       }
       setIsPlaying(false);
@@ -387,7 +389,7 @@ const VideoLearningPage: React.FC = () => {
       // Notify other components (like sidebar) about progress update
       window.dispatchEvent(new CustomEvent('courseProgressUpdated'));
 
-      toast.success('Lesson completed! 🎉');
+      toast.success(`${t('pages.videoLearningPage.LessonCompleted')} 🎉`);
       
       // Check if this is the last lesson in the module and we have quizzes
       const isLastLessonInModule = currentLessonIndex === (currentModule.content?.lessons?.length || 0) - 1;
@@ -395,7 +397,7 @@ const VideoLearningPage: React.FC = () => {
       
       if (isLastLessonInModule && moduleHasQuizzes) {
         // Show recommendation to take the quiz
-        toast.success('🎯 Module completed! Quiz is now unlocked! Take it to test your knowledge!', {
+        toast.success(`🎯 ${t('pages.videoLearningPage.ModuleCompleted')}`, {
           duration: 5000,
           icon: '📝'
         });
@@ -406,8 +408,8 @@ const VideoLearningPage: React.FC = () => {
       }
       
     } catch (error) {
-      console.error('Failed to save lesson completion:', error);
-      toast.error('Failed to save progress. Please try again.');
+      console.error(`${t('pages.videoLearningPage.FailedToSaveLessonCompletition')}`, error);
+      toast.error(t('pages.videoLearningPage.FailedToSaveProgress'));
     } finally {
       setIsCompletingLesson(false); // End loading
     }
@@ -442,13 +444,13 @@ const VideoLearningPage: React.FC = () => {
       setCurrentContentType('lesson');
       
       if (score >= 70) {
-        toast.success(`Excellent! Quiz passed with ${score}%! 🎉`);
+        toast.success(`${t('pages.videoLearningPage.ExcellentQuizPassed', {score: score})}`);
       } else {
-        toast.error(`Quiz score: ${score}%. You can retake it to improve!`);
+        toast.error(`${t('pages.videoLearningPage.QuizScore', {score: score})}`);
       }
       
     } catch (error) {
-      console.error('Error handling quiz completion:', error);
+      console.error(`${t('pages.videoLearningPage.ErrorHandlingQuizCompletition')}`, error);
     }
   };
 
@@ -462,22 +464,22 @@ const VideoLearningPage: React.FC = () => {
       // Check for different achievement milestones
       if (completionRate >= 1.0) {
         // Course completion achievement
-        toast.success('🏆 Achievement Unlocked: Course Completion Master!', {
+        toast.success(`🏆 ${t('pages.videoLearningPage.AchievementUnlockedCourseCompletionMaster')}`, {
           duration: 5000,
           icon: '🎖️',
         });
         
         // Show achievement popup
-        showAchievementPopup('Course Completion Master', 'Completed your first course!');
+        showAchievementPopup(t('pages.videoLearningPage.CourseCompletionMaster'), t('pages.videoLearningPage.CompletedYourFirstCourse'));
         
       } else if (completionRate >= 0.5) {
         // Halfway achievement
-        toast.success('🏆 Achievement Unlocked: Dedicated Learner!', {
+        toast.success(`🏆 ${t('pages.videoLearningPage.AchievementUnlockedDedicatedLearner')}`, {
           duration: 5000,
           icon: '🔥',
         });
         
-        showAchievementPopup('Dedicated Learner', 'Completed 50% of the course material!');
+        showAchievementPopup(t('pages.videoLearningPage.DedicatedLearner'), t('pages.videoLearningPage.DedicatedLearnerDescription'));
       }
 
       // Check for module completion achievements
@@ -488,11 +490,11 @@ const VideoLearningPage: React.FC = () => {
       if (completedModules > 0) {
         const moduleTitle = course.modules[completedModules - 1]?.title;
         if (moduleTitle) {
-          showAchievementPopup('Module Master', `Completed "${moduleTitle}" module!`);
+          showAchievementPopup(t('pages.videoLearningPage.ModuleMaster'), `${t('pages.videoLearningPage.CompletedTitleModule', {moduleTitle: moduleTitle})}`);
         }
       }
     } catch (error) {
-      console.error('Error checking achievements:', error);
+      console.error(`${t('pages.videoLearningPage.ErrorCheckingAchievements')}:`, error);
     }
   };
 
@@ -530,9 +532,9 @@ const VideoLearningPage: React.FC = () => {
     
     // Show specific success message based on NFT type
     if (nftType === 'learning_achievement') {
-      toast.success('🏆 Learning Achievement NFT minting started!', { duration: 5000 });
+      toast.success(`🏆 ${t('pages.videoLearningPage.LearningAchievementNFT')}`, { duration: 5000 });
     } else {
-      toast.success('📊 Module Progress NFT minting started!', { duration: 5000 });
+      toast.success(`📊 ${t('pages.videoLearningPage.ModuleProgressNFT')}`, { duration: 5000 });
     }
     
     // You could add blockchain interaction here
@@ -586,13 +588,13 @@ const VideoLearningPage: React.FC = () => {
       const targetLesson = targetModule?.content?.lessons[lessonIndex];
       
       if (lessonIndex === 0 && moduleIndex > 0) {
-        toast.error(`Complete all lessons in "${course.modules[moduleIndex - 1]?.title}" before accessing this module!`, {
+        toast.error(`${t('pages.videoLearningPage.completeAllLessonsBeforeAccessing', {moduleTitle: course.modules[moduleIndex - 1]?.title})}`, {
           duration: 4000,
           icon: '🔒'
         });
       } else {
         const previousLesson = targetModule?.content?.lessons?.[lessonIndex - 1];
-        toast.error(`Complete "${previousLesson?.title}" before accessing "${targetLesson?.title}"!`, {
+        toast.error(`${t('pages.videoLearningPage.completeBeforeAccessing', {previousLesson: previousLesson?.title, lesson: targetLesson?.title})}`, {
           duration: 4000,
           icon: '🔒'
         });
@@ -646,7 +648,7 @@ const VideoLearningPage: React.FC = () => {
           try {
             youtubePlayer.destroy();
           } catch (error) {
-            console.warn('Failed to destroy existing player:', error);
+            console.warn(t('pages.videoLearningPage.failedToDestroyPlayer'), error);
           }
         }
 
@@ -703,7 +705,7 @@ const VideoLearningPage: React.FC = () => {
         }, 500);
         
       } catch (error) {
-        console.error('Failed to initialize YouTube player:', error);
+        console.error(t('pages.videoLearningPage.failedToInitializePlayer'), error);
       }
     };
 
@@ -730,7 +732,7 @@ const VideoLearningPage: React.FC = () => {
         youtubePlayer.playVideo();
       }
     } catch (error) {
-      console.error('Error controlling video playback:', error);
+      console.error(`${t('pages.videoLearningPage.ErrorontrollingVideoPlayback')}: `, error);
     }
   };
 
@@ -750,7 +752,7 @@ const VideoLearningPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading course content...</p>
+          <p className="text-gray-600 text-lg">{t('pages.videoLearningPage.LoadingCourseContent')}</p>
         </div>
       </div>
     );
@@ -761,14 +763,14 @@ const VideoLearningPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="text-center">
           <div className="text-6xl mb-4">📚</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Course Not Found</h2>
-          <p className="text-gray-600 mb-6">The course you're looking for doesn't exist or failed to load.</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('pages.videoLearningPage.courseNotFound')}</h2>
+          <p className="text-gray-600 mb-6">{t('pages.videoLearningPage.courseNotFoundDescription')}</p>
           <Link 
             to="/dashboard" 
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
           >
             <ChevronRightIcon className="h-5 w-5 mr-2 rotate-180" />
-            Back to Dashboard
+            {t('pages.videoLearningPage.backToDashboard')}
           </Link>
         </div>
       </div>
@@ -791,7 +793,7 @@ const VideoLearningPage: React.FC = () => {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
                 <p className="text-sm text-gray-600">
-                  Module {currentModuleIndex + 1}: {currentModule.title}
+                  {t('pages.videoLearningPage.ModuleIndex', {index: currentModuleIndex + 1, title: currentModule.title})}
                 </p>
               </div>
             </div>
@@ -838,15 +840,15 @@ const VideoLearningPage: React.FC = () => {
                     }}
                   >
                     <source src={currentLesson.content_url} />
-                    Your browser does not support the video tag.
+                    {t('pages.videoLearningPage.yourBrowserDoesNotSupportTheVideoTag')}
                   </video>
                 )
               ) : (
                 <div className="flex items-center justify-center h-full bg-gray-900 text-white">
                   <div className="text-center">
                     <PlayIcon className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg">Video not available</p>
-                    <p className="text-sm opacity-75 mt-2">Please contact your instructor</p>
+                    <p className="text-lg">{t('pages.videoLearningPage.videoNotAvailable')}</p>
+                    <p className="text-sm opacity-75 mt-2">{t('pages.videoLearningPage.pleaseContactYourInstructor')}</p>
                   </div>
                 </div>
               )}
@@ -909,15 +911,15 @@ const VideoLearningPage: React.FC = () => {
                 {completedLessons.has(currentLesson.lesson_id) ? (
                   <>
                     <CheckCircleIconSolid className="h-5 w-5" />
-                    <span>Completed</span>
+                    <span>{t('pages.videoLearningPage.Completed')}</span>
                   </>
                 ) : isCompletingLesson ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Completing...</span>
+                    <span>{t('pages.videoLearningPage.Completing')}</span>
                   </>
                 ) : (
-                  <span>Mark Complete</span>
+                  <span>{t('pages.videoLearningPage.MarkComplete')}</span>
                 )}
               </button>
             </div>
@@ -925,7 +927,7 @@ const VideoLearningPage: React.FC = () => {
             {/* Progress Bar */}
             <div className="mb-4">
               <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Module Progress</span>
+                <span>{t('pages.videoLearningPage.moduleProgress')}</span>
                 <span>{Math.round(getModuleProgress(currentModule))}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -962,10 +964,10 @@ const VideoLearningPage: React.FC = () => {
             <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
               <h3 className="text-lg font-bold flex items-center">
                 <BookOpenIcon className="h-5 w-5 mr-2" />
-                Course Modules
+               {t('pages.videoLearningPage.CourseModule')}
               </h3>
               <p className="text-blue-100 text-sm mt-1">
-                {course.modules.length} modules • {course.estimated_hours || Math.round(course.modules.reduce((acc, m) => acc + (m.estimated_duration || 0), 0) / 60)}h total
+                {t('pages.videoLearningPage.TotalModulesAndTotalHours', {totalModules: course.modules.length, totalHours: course.estimated_hours || Math.round(course.modules.reduce((acc, m) => acc + (m.estimated_duration || 0), 0) / 60)})}
               </p>
             </div>
 
@@ -975,7 +977,7 @@ const VideoLearningPage: React.FC = () => {
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-gray-900 text-sm">
-                        Module {moduleIndex + 1}: {module.title}
+                        {t('pages.videoLearningPage.ModuleIndex', {index: moduleIndex + 1, title: module.title})}
                       </h4>
                       <div className="flex items-center space-x-1">
                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -1002,7 +1004,7 @@ const VideoLearningPage: React.FC = () => {
                           <span> • {module.quizzes.length} quiz{module.quizzes.length !== 1 ? 'zes' : ''}</span>
                         )}
                         {(!module.quizzes || module.quizzes.length === 0) && (
-                          <span className="text-gray-400"> • No quizzes available</span>
+                          <span className="text-gray-400"> • {t('pages.videoLearningPage.NoQuizzesAvailable')}</span>
                         )}
                       </div>
 
@@ -1030,7 +1032,7 @@ const VideoLearningPage: React.FC = () => {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2">
                                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                                    Lesson {lessonIndex + 1}
+                                    {t('pages.videoLearningPage.Lesson', {index: lessonIndex + 1})}
                                   </span>
                                 </div>
                                 <p className={`text-sm font-medium truncate mt-1 ${
@@ -1067,7 +1069,7 @@ const VideoLearningPage: React.FC = () => {
 
                       {/* Quizzes Section */}
                       {(() => {
-                        console.log(`🎯 Quiz section render check for module ${moduleIndex + 1}:`, {
+                        console.log(`🎯 ${t('pages.videoLearningPage.QuizSectionRender', {moduleIndex: moduleIndex + 1})}:`, {
                           hasQuizzes: !!module.quizzes,
                           quizLength: module.quizzes?.length || 0,
                           willRender: !!(module.quizzes && module.quizzes.length > 0)
@@ -1080,7 +1082,7 @@ const VideoLearningPage: React.FC = () => {
                             <div className="flex items-center space-x-2 mb-2">
                               <TrophyIcon className="h-4 w-4 text-purple-500" />
                               <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                                Quizzes & Assessments
+                                {t('pages.videoLearningPage.Quizzes&Assessments')}
                               </span>
                             </div>
                           </div>
@@ -1114,11 +1116,11 @@ const VideoLearningPage: React.FC = () => {
                                           ? 'bg-purple-100 text-purple-700' 
                                           : 'bg-gray-100 text-gray-500'
                                       }`}>
-                                        Quiz
+                                        {t('pages.videoLearningPage.Quiz')}
                                       </span>
                                       {!isQuizAccessible && (
                                         <span className="text-xs text-gray-400">
-                                          (Complete all lessons)
+                                          ({t('pages.videoLearningPage.completeAllLessons')})
                                         </span>
                                       )}
                                     </div>
@@ -1168,7 +1170,7 @@ const VideoLearningPage: React.FC = () => {
             {/* Course completion status */}
             <div className="p-6 bg-gray-50 border-t">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">Overall Progress</span>
+                <span className="text-sm font-medium text-gray-700">{t('pages.videoLearningPage.OverallProgress')}</span>
                 <TrophyIcon className="h-5 w-5 text-yellow-500" />
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
@@ -1180,7 +1182,7 @@ const VideoLearningPage: React.FC = () => {
                 />
               </div>
               <p className="text-xs text-gray-600">
-                {completedLessons.size} of {course.modules.reduce((acc, mod) => acc + (mod.content?.lessons?.length || 0), 0)} lessons completed
+                {t('pages.videoLearningPage.LessonsCompleted', {count: completedLessons.size, total: course.modules.reduce((acc, mod) => acc + (mod.content?.lessons?.length || 0), 0)})}
               </p>
             </div>
           </div>

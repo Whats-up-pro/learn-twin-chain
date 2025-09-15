@@ -10,6 +10,7 @@ import {
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { apiService } from '../services/apiService';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface SearchResult {
   id: string;
@@ -31,9 +32,10 @@ interface SearchBarProps {
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
   className = '', 
-  placeholder = 'Search courses, modules, lessons, achievements...',
+  placeholder = t('components.searchBar.searchPlaceholder'),
   onSearch 
 }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [searchType, setSearchType] = useState<'all' | 'course' | 'module' | 'lesson' | 'achievement'>('all');
@@ -97,7 +99,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
             });
           }
         } catch (error) {
-          console.error('Error searching courses:', error);
+          console.error(`${t('components.searchBar.errorSearchingCourses')}`, error);
         }
       }
 
@@ -124,12 +126,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
                   });
                 }
               } catch (error) {
-                console.error('Error fetching modules for course:', course.id, error);
+                console.error(`${t('components.searchBar.errorFeatchingModules')}`, course.id, error);
               }
             }
           }
         } catch (error) {
-          console.error('Error searching modules:', error);
+          console.error(`${t('components.searchBar.errorSearchingModules')}`, error);
         }
       }
 
@@ -151,7 +153,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
             });
           }
         } catch (error) {
-          console.error('Error searching lessons:', error);
+          console.error(t('components.searchBar.errorSearchingLessons'), error);
         }
       }
 
@@ -175,7 +177,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
             });
           }
         } catch (error) {
-          console.error('Error searching achievements:', error);
+          console.error(t('components.searchBar.errorSearchingAchievements'), error);
         }
       }
 
@@ -190,7 +192,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
       setResults(sortedResults.slice(0, 10));
     } catch (error) {
-      console.error('Search error:', error);
+      console.error(t('components.searchBar.searchError'), error);
       setResults([]);
     } finally {
       setIsLoading(false);
@@ -351,7 +353,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           {isLoading ? (
             <div className="p-4 text-center text-gray-500">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-2 text-sm">Searching...</p>
+              <p className="mt-2 text-sm">{t('components.searchBar.Searching...')}</p>
             </div>
           ) : results.length > 0 ? (
             <div className="py-2">
@@ -411,8 +413,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
             </div>
           ) : (
             <div className="p-4 text-center text-gray-500">
-              <p className="text-sm">No results found for "{query}"</p>
-              <p className="text-xs mt-1">Try different keywords or search type</p>
+              <p className="text-sm">{t('components.searchBar.noResultsFound', {query: query})}</p>
+              <p className="text-xs mt-1">{t('components.searchBar.TryDifferentKeywordsOrSearchType')}</p>
             </div>
           )}
         </div>

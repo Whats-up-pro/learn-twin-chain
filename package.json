@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "generate-translations": "node scripts/generate-translations.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
@@ -16,10 +17,13 @@
     "@mui/material": "^7.1.1",
     "@openzeppelin/contracts": "^5.4.0",
     "circom": "^0.5.46",
+    "i18next": "^25.5.2",
+    "i18next-browser-languagedetector": "^8.2.0",
     "jose": "^6.0.11",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.5.2",
+    "react-i18next": "^15.7.3",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.6.2",
     "react-syntax-highlighter": "^15.6.1",

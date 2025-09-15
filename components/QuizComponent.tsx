@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { QuizQuestion } from '../types';
 import { quizService, ApiQuiz, ApiQuizQuestion } from '../services/quizService';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface QuizProps {
   quizId?: string;
@@ -12,6 +13,7 @@ interface QuizProps {
 }
 
 const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQuestions, onQuizComplete }) => {
+  const { t } = useTranslation();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [showResults, setShowResults] = useState(false);
@@ -87,11 +89,11 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
           
           setQuestions(convertedQuestions);
         } else if (!propQuestions) {
-          throw new Error('No quiz found');
+          throw new Error(t('components.quizComponent.noQuizFound'));
         }
       } catch (error) {
-        console.error('Failed to load quiz:', error);
-        toast.error('Failed to load quiz');
+        console.error(`${t('components.quizComponent.FailedToLoadQuiz')}:`, error);
+        toast.error(t('components.quizComponent.FailedToLoadQuiz'));
         
         // Fallback to demo questions if provided
         if (propQuestions) {
@@ -111,7 +113,7 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
 
   const handleSubmitQuiz = async () => {
     if (Object.keys(selectedAnswers).length !== questions.length) {
-      toast.error("Please answer all questions before submitting.");
+      toast.error(t('components.quizComponent.PleaseAnswer'));
       return;
     }
 
@@ -152,10 +154,10 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
 
       setShowResults(true);
       onQuizComplete(scorePercentage);
-      toast.success(`Quiz submitted! Score: ${scorePercentage}%`);
+      toast.success(`${t('components.quizComponent.QuizSubmitted')} Score: ${scorePercentage}%`);
     } catch (error) {
-      console.error('Failed to submit quiz:', error);
-      toast.error('Failed to submit quiz. Please try again.');
+      console.error(`${t('components.quizComponent.FailedToSubmitQuiz')}:`, error);
+      toast.error(t('components.quizComponent.FailedToSubmitQuiz'));
     }
   };
 
@@ -168,7 +170,7 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
         setAttemptId(response.attempt.attempt_id);
       }
     } catch (error) {
-      console.error('Failed to start quiz attempt:', error);
+      console.error(`${t('components.quizComponent.FailedToStart')}:`, error);
       // Continue without attempt tracking for demo purposes
     }
   };
@@ -184,7 +186,7 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
     return (
       <div className="flex items-center justify-center p-8 bg-white rounded-xl shadow-lg border border-slate-200">
         <div className="loading-spinner w-8 h-8"></div>
-        <span className="ml-3 text-slate-600">Loading quiz...</span>
+        <span className="ml-3 text-slate-600">{t('components.quizComponent.loadingQuiz')}</span>
       </div>
     );
   }
@@ -207,21 +209,21 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
               {scorePercentage}%
             </span>
           </div>
-          <h3 className="text-3xl font-bold text-slate-900 mb-2">Quiz Completed!</h3>
+          <h3 className="text-3xl font-bold text-slate-900 mb-2">{t('components.quizComponent.quizCompleted')}</h3>
           <p className={`text-lg font-medium ${
             passed ? 'text-green-600' : 'text-red-600'
           }`}>
-            {passed ? "🎉 Excellent work! You passed!" : "📚 Keep studying and try again."}
+            {passed ? `${t('components.quizComponent.Excellent')}` : `${t('components.quizComponent.Keep')}`}
           </p>
           <p className="text-slate-600 mt-2">
-            You got {correctCount} out of {questions.length} questions correct
+            {t('components.quizComponent.YouGot', {count: correctCount, value: questions.length})}
           </p>
         </div>
 
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between text-sm font-medium text-slate-600 mb-2">
-            <span>Your Score</span>
+            <span>{t('components.quizComponent.YourScore')}</span>
             <span>{scorePercentage}% ({correctCount}/{questions.length})</span>
           </div>
           <div className="w-full bg-slate-200 rounded-full h-4">
@@ -244,13 +246,13 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
               }`}>
                 <p className="font-medium text-slate-800 mb-2">{index + 1}. {q.text}</p>
                 <p className="text-sm text-slate-600 mb-1">
-                  <span className="font-medium">Your answer:</span> {
+                  <span className="font-medium">{t('components.quizComponent.YourAnswer')}:</span> {
                     q.options.find(opt => opt.id === selectedAnswers[q.id])?.text || 'Not answered'
                   }
                 </p>
                 {!isCorrect && (
                   <p className="text-sm text-green-700 mb-1">
-                    <span className="font-medium">Correct answer:</span> {
+                    <span className="font-medium">{t('components.quizComponent.CorrectAnswer')}:</span> {
                       q.options.find(opt => opt.id === q.correctOptionId)?.text
                     }
                   </p>
@@ -280,13 +282,13 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
             }}
             className="btn-secondary flex-1"
           >
-            Retake Quiz
+            {t('components.quizComponent.RetakeQuiz')}
           </button>
           <button 
             onClick={() => onQuizComplete(scorePercentage)}
             className="btn-primary flex-1"
           >
-            Continue Learning
+            {t('components.quizComponent.ContinueLearning')}
           </button>
         </div>
       </div>
@@ -298,7 +300,7 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
   if (!currentQuestion) {
     return (
       <div className="p-8 bg-white rounded-xl shadow-lg border border-slate-200 text-center">
-        <p className="text-slate-600">No quiz questions available.</p>
+        <p className="text-slate-600">{t('components.quizComponent.NoQuizQuestions')}</p>
       </div>
     );
   }
@@ -309,7 +311,7 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-2xl font-bold text-slate-900">
-            {quiz?.title || 'Quiz'}
+            {quiz?.title || t('components.quizComponent.Quiz')}
           </h3>
           <div className="flex items-center space-x-2">
             <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
@@ -326,7 +328,7 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
           ></div>
         </div>
         <p className="text-sm text-slate-600">
-          Progress: {Math.round(((currentQuestionIndex + 1) / questions.length) * 100)}% complete
+          {t('components.quizComponent.Progress', {value: Math.round(((currentQuestionIndex + 1) / questions.length) * 100)})}
         </p>
       </div>
 
@@ -377,7 +379,7 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
           disabled={currentQuestionIndex === 0}
           className="btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          ← Previous
+          ← {t('components.quizComponent.Previous')}
         </button>
         
         <div className="flex space-x-2">
@@ -402,14 +404,14 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
             disabled={Object.keys(selectedAnswers).length !== questions.length}
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Submit Quiz →
+            {t('components.quizComponent.SubmitQuiz')} →
           </button>
         ) : (
           <button
             onClick={() => setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1))}
             className="btn-primary"
           >
-            Next →
+            {t('components.quizComponent.Next')} →
           </button>
         )}
       </div>

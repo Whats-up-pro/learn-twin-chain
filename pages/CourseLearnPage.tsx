@@ -24,6 +24,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface Lesson {
   id: string;
@@ -65,6 +66,7 @@ interface Course {
 }
 
 const CourseLearnPage: React.FC = () => {
+  const { t } = useTranslation();
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   
@@ -133,7 +135,7 @@ const CourseLearnPage: React.FC = () => {
                           isCompleted = true;
                         }
                       } catch (error) {
-                        console.warn(`Failed to load progress for lesson ${apiLesson.lesson_id}:`, error);
+                        console.warn(`${t('pages.courseLearnPage.failedToLoadProgress')} ${apiLesson.lesson_id}:`, error);
                       }
                       
                       lessons.push({
@@ -149,15 +151,19 @@ const CourseLearnPage: React.FC = () => {
                   }
 
                   // Load quizzes for this module
-                  console.log(`🔍 Fetching quizzes for module: ${apiModule.module_id} (${apiModule.title})`);
+                  console.log(`🔍 ${t('pages.courseLearnPage.fetchingQuizzes')} ${apiModule.module_id} (${apiModule.title})`);
                   let moduleQuizzes: ModuleQuiz[] = [];
                   try {
                     const quizResponse = await quizService.getModuleQuizzes(apiModule.module_id) as any;
-                    console.log(`📝 Quiz response for module ${apiModule.module_id}:`, quizResponse);
-                    console.log(`📝 Number of quizzes found: ${quizResponse?.quizzes?.length || 0}`);
+                    console.log(`📝 ${t('pages.courseLearnPage.quizResponse')} ${apiModule.module_id}:`, quizResponse);
+                    console.log(`📝 ${t('pages.courseLearnPage.numberOfQuizzesFound')} ${quizResponse?.quizzes?.length || 0}`);
                     
                     if (quizResponse?.quizzes?.length > 0) {
-                      console.log(`✅ Found ${quizResponse.quizzes.length} quiz(es) for module ${apiModule.module_id}`);
+                      const message = t("quiz.foundQuizzes", {
+                        count: quizResponse.quizzes.length,
+                        moduleId: apiModule.module_id
+                      });
+                      console.log(message);
                       moduleQuizzes = quizResponse.quizzes.map((quiz: any) => ({
                         quiz_id: quiz.quiz_id,
                         title: quiz.title,
@@ -168,10 +174,10 @@ const CourseLearnPage: React.FC = () => {
                         max_attempts: quiz.max_attempts
                       }));
                     } else {
-                      console.log(`❌ No quizzes found for module ${apiModule.module_id}`);
+                      console.log(`❌ ${t('pages.courseLearnPage.noQuizzesFound')} ${apiModule.module_id}`);
                     }
                   } catch (error) {
-                    console.error(`❌ Failed to load quizzes for module ${apiModule.module_id}:`, error);
+                    console.error(`❌${t('pages.courseLearnPage.failToLoadQuizzes')} ${apiModule.module_id}:`, error);
                   }
                   
                   // Calculate module progress based on completed lessons
@@ -187,7 +193,7 @@ const CourseLearnPage: React.FC = () => {
                     quizzes: moduleQuizzes
                   };
                 } catch (error) {
-                  console.error(`Failed to load lessons for module ${apiModule.module_id}:`, error);
+                  console.error(`${t('pages.courseLearnPage.failToLoadLessons')} ${apiModule.module_id}:`, error);
                   return {
                     id: apiModule.module_id,
                     title: apiModule.title,
@@ -232,8 +238,8 @@ const CourseLearnPage: React.FC = () => {
           throw new Error('Course not found');
         }
       } catch (error) {
-        console.error('Failed to load course:', error);
-        toast.error('Failed to load course');
+        console.error(`${t('pages.courseLearnPage.failToLoadCourse')}: `, error);
+        toast.error(t('pages.courseLearnPage.failToLoadCourse'));
         
         // Fallback to demo data
         const mockCourse: Course = {
@@ -246,14 +252,14 @@ const CourseLearnPage: React.FC = () => {
           modules: [
             {
               id: 'welcome',
-              title: 'Welcome',
-              description: 'Introduction to the course',
+              title: t('pages.courseLearnPage.welcome'),
+              description: t('pages.courseLearnPage.introductionToTheCourse'),
               progress: 100,
               lessons: [
                 {
                   id: 'welcome-1',
-                  title: 'A message from your instructor',
-                  description: 'Welcome message and course overview',
+                  title: t('pages.courseLearnPage.welcomeLessons'),
+                  description: t('pages.courseLearnPage.welcomeMessage'),
                   duration: '1 MIN',
                   video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
                   completed: false,
@@ -312,7 +318,7 @@ const CourseLearnPage: React.FC = () => {
       
       setCompletedQuizzes(completedQuizIds);
     } catch (error) {
-      console.warn('Failed to load quiz completion status:', error);
+      console.warn(`${t('pages.courseLearnPage.failToLoadQuizStatus')}`, error);
     }
   };
 
@@ -324,7 +330,10 @@ const CourseLearnPage: React.FC = () => {
       const incompleteLessons = module.lessons.filter(lesson => !lesson.completed);
       
       toast.error(
-        `🔒 Quiz locked! Complete ${incompleteLessons.length} remaining lesson${incompleteLessons.length > 1 ? 's' : ''} in "${module.title}" first.`, 
+        `🔒 ${t('pages.courseLearnPage.quizLocked', {
+          count: incompleteLessons.length,
+          moduleTitle: module.title
+        })}`, 
         {
           duration: 5000,
           icon: '🔒'
@@ -335,7 +344,7 @@ const CourseLearnPage: React.FC = () => {
 
     try {
       // Load the full quiz with questions
-      console.log(`🔍 Loading quiz: ${quiz.quiz_id}`);
+      console.log(`🔍 ${t('pages.courseLearnPage.loadingQuiz')} ${quiz.quiz_id}`);
       const quizResponse = await quizService.getQuiz(quiz.quiz_id, true) as any;
       
       if (quizResponse && quizResponse.quiz) {
@@ -360,14 +369,16 @@ const CourseLearnPage: React.FC = () => {
         setQuizResults(null);
         setShowQuiz(true);
         
-        console.log(`✅ Quiz loaded: ${fullQuiz.questions?.length || 0} questions`);
-        console.log(`📝 Correct answers stored:`, correctAnswers);
+        console.log(`✅ ${t('pages.courseLearnPage.quizLoaded', {
+          count: fullQuiz.questions?.length || 0
+        })}`);
+        console.log(`📝 ${t('pages.courseLearnPage.correctAnswers')}`, correctAnswers);
       } else {
-        throw new Error('Quiz not found');
+        throw new Error(t('pages.courseLearnPage.quizNotFound'));
       }
     } catch (error) {
-      console.error('Failed to load quiz:', error);
-      toast.error('Failed to load quiz. Please try again.');
+      console.error(`${t('pages.courseLearnPage.failedToLoadQuiz')}`, error);
+      toast.error(t('pages.courseLearnPage.failToLoadQuizTryAgain'));
     }
   };
 
@@ -414,20 +425,24 @@ const CourseLearnPage: React.FC = () => {
       
       // Show result message
       if (passed) {
-        toast.success(`🎉 Quiz passed! Score: ${score.toFixed(1)}%`, {
+        toast.success(`🎉 ${t('pages.courseLearnPage.quizPassedScore', {
+          score: score.toFixed(1)
+        })}`, {
           duration: 5000,
           icon: '🏆'
         });
       } else {
-        toast.error(`Quiz score: ${score.toFixed(1)}%. You can retake it to improve!`, {
+        toast.error(`${t('pages.courseLearnPage.quizScore', {
+          score: score.toFixed(1)
+        })}`, {
           duration: 5000,
           icon: '📝'
         });
       }
       
     } catch (error) {
-      console.error('Error submitting quiz:', error);
-      toast.error('Failed to submit quiz. Please try again.');
+      console.error(`${t('pages.courseLearnPage.errorSubmittingQuiz')}`, error);
+      toast.error(t('pages.courseLearnPage.failedToSubmitQuiz'));
       setQuizSubmitted(false);
     }
   };
@@ -484,13 +499,18 @@ const CourseLearnPage: React.FC = () => {
       const lessonIndex = module.lessons.findIndex(l => l.id === lesson.id);
       
       if (lessonIndex === 0 && moduleIndex > 0) {
-        toast.error(`Complete all lessons in "${course.modules[moduleIndex - 1]?.title}" before accessing this module!`, {
+        toast.error(`${t('pages.courseLearnPage.completeAllLessons', {
+          moduleTitle: course.modules[moduleIndex - 1]?.title
+        })}`, {
           duration: 4000,
           icon: '🔒'
         });
       } else {
         const previousLesson = module.lessons[lessonIndex - 1];
-        toast.error(`Complete "${previousLesson?.title}" before accessing "${lesson.title}"!`, {
+        toast.error(`${t('pages.courseLearnPage.completePreviousLesson', {
+          previousLesson: previousLesson?.title,
+          lesson: lesson.title
+        })}`, {
           duration: 4000,
           icon: '🔒'
         });
@@ -504,7 +524,7 @@ const CourseLearnPage: React.FC = () => {
         youtubePlayer.pauseVideo();
         youtubePlayer.destroy();
       } catch (error) {
-        console.warn('Failed to stop/destroy YouTube player:', error);
+        console.warn(`${t('pages.courseLearnPage.failYoutube')}`, error);
       }
       setYoutubePlayer(null);
     }
@@ -545,7 +565,7 @@ const CourseLearnPage: React.FC = () => {
           try {
             youtubePlayer.destroy();
           } catch (error) {
-            console.warn('Failed to destroy existing player:', error);
+            console.warn(`${t('pages.courseLearnPage.failedToDestroyPlayer')}`, error);
           }
         }
 
@@ -602,7 +622,7 @@ const CourseLearnPage: React.FC = () => {
         }, 500);
         
       } catch (error) {
-        console.error('Failed to initialize YouTube player:', error);
+        console.error(`${t('pages.courseLearnPage.failedToInitializePlayer')}`, error);
       }
     };
 
@@ -629,7 +649,7 @@ const CourseLearnPage: React.FC = () => {
         youtubePlayer.playVideo();
       }
     } catch (error) {
-      console.error('Error controlling video playback:', error);
+      console.error(`${t('pages.courseLearnPage.errorControllingVideoPlayback')}`, error);
     }
   };
 
@@ -647,9 +667,12 @@ const CourseLearnPage: React.FC = () => {
         total_lessons: courseData.modules.reduce((acc, m) => acc + m.lessons.length, 0),
         last_updated: new Date().toISOString()
       });
-      console.log(`✅ Synced course progress: ${courseData.progress.toFixed(1)}% for "${courseData.title}"`);
+      console.log(`✅ ${t('pages.courseLearnPage.syncCourseProgress', {
+        progress: courseData.progress.toFixed(1),
+        title: courseData.title
+      })}`);
     } catch (error) {
-      console.warn('Failed to sync course progress to dashboard:', error);
+      console.warn(`${t('pages.courseLearnPage.failToSyncCourseProgress')}`, error);
     }
   };
 
@@ -663,7 +686,7 @@ const CourseLearnPage: React.FC = () => {
           try {
             youtubePlayer.pauseVideo();
           } catch (error) {
-            console.warn('Failed to pause YouTube video:', error);
+            console.warn(`${t('pages.courseLearnPage.failedToPauseYoutube')}`, error);
           }
         }
         setIsPlaying(false);
@@ -672,7 +695,9 @@ const CourseLearnPage: React.FC = () => {
         await courseService.updateLessonProgress(currentLesson.id, {
           completion_percentage: 100,
           time_spent_minutes: 5, // TODO: Track actual time spent
-          notes: `Completed lesson: ${currentLesson.title}`
+          notes: `${t('pages.courseLearnPage.completedLesson', {
+            lesson: currentLesson.title
+          })}`
         });
         
         // Update local state
@@ -712,7 +737,7 @@ const CourseLearnPage: React.FC = () => {
           window.dispatchEvent(new CustomEvent('courseProgressUpdated'));
         }
         
-        toast.success('Lesson completed!');
+        toast.success(t('pages.courseLearnPage.lessionCompleted'));
 
         // Auto-advance to next lesson after completion
         setTimeout(() => {
@@ -723,8 +748,8 @@ const CourseLearnPage: React.FC = () => {
         }, 1000); // Small delay to let user see completion message
         
       } catch (error) {
-        console.error('Failed to update lesson progress:', error);
-        toast.error('Failed to save progress. Please try again.');
+        console.error(`${t('pages.courseLearnPage.failedToUpdateLessonPregress')}`, error);
+        toast.error(t('pages.courseLearnPage.failedToSaveProgress'));
       } finally {
         setIsCompletingLesson(false); // End loading
       }
@@ -769,12 +794,12 @@ const CourseLearnPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-slate-700 mb-2">Course not found</h2>
+          <h2 className="text-xl font-semibold text-slate-700 mb-2">{t('pages.courseLearnPage.courseNotFound')}</h2>
           <button
             onClick={() => navigate('/dashboard')}
             className="btn-primary"
           >
-            Back to Dashboard
+            {t('pages.courseLearnPage.backToDashboard')}
           </button>
         </div>
       </div>
@@ -794,7 +819,7 @@ const CourseLearnPage: React.FC = () => {
                 className="flex items-center text-blue-600 hover:text-blue-700 mb-4 text-sm font-medium"
               >
                 <ArrowLeftIcon className="w-4 h-4 mr-2" />
-                Go to Dashboard
+                {t('pages.courseLearnPage.goToDashboar')}
               </button>
               
               <h1 className="text-xl font-bold text-slate-900 mb-2">{course.title}</h1>
@@ -807,7 +832,7 @@ const CourseLearnPage: React.FC = () => {
               
               <div className="mb-3">
                 <div className="flex justify-between text-sm text-slate-600 mb-1">
-                  <span>{course.progress.toFixed(0)}% complete</span>
+                  <span>{t("pages.courseLearnPage.complete", { value: course.progress.toFixed(0) })}</span>
                   <span>{course.totalDuration}</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2">
@@ -824,7 +849,7 @@ const CourseLearnPage: React.FC = () => {
               <div className="p-4">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
                   <ListBulletIcon className="w-4 h-4 mr-2" />
-                  Search by lesson title
+                  {t('pages.courseLearnPage.searchByLessonTitle')}
                 </h3>
                 
                 <div className="space-y-4">
@@ -911,7 +936,7 @@ const CourseLearnPage: React.FC = () => {
                             <div className="flex items-center space-x-2 mb-2">
                               <BookOpenIcon className="h-4 w-4 text-purple-500" />
                               <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                                Quizzes & Assessments
+                                {t('pages.courseLearnPage.quizzesAndAssessments')}
                               </span>
                             </div>
                           </div>
@@ -953,7 +978,7 @@ const CourseLearnPage: React.FC = () => {
                                           isQuizAccessible ? 'text-slate-500' : 'text-slate-400'
                                         }`}>
                                           {quiz.total_points} pts • {quiz.time_limit_minutes || 30} min
-                                          {!isQuizAccessible && ' • Complete all lessons'}
+                                          {!isQuizAccessible && ` • ${t('pages.courseLearnPage.completeAllLessonsAccessible')}`}
                                         </p>
                                       </div>
                                     </div>
@@ -993,7 +1018,7 @@ const CourseLearnPage: React.FC = () => {
           
           <div className="flex items-center space-x-2">
             <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
-              📺 0 DISCUSSIONS
+              📺 {t('pages.courseLearnPage.discussion')}
             </span>
             <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
               <ChatBubbleLeftIcon className="w-5 h-5 text-slate-600" />
@@ -1030,7 +1055,7 @@ const CourseLearnPage: React.FC = () => {
                   }}
                 >
                   <source src={currentLesson.video_url} />
-                  Your browser does not support the video tag.
+                  {t('pages.courseLearnPage.yourBrowserDoesNotSupportTheVideoTag')}
                 </video>
               )}
             </div>
@@ -1048,7 +1073,7 @@ const CourseLearnPage: React.FC = () => {
               <h3 className="text-lg font-medium mb-2">{currentLesson?.title}</h3>
               <p className="text-white text-opacity-75">{currentLesson?.description}</p>
               {currentLesson?.type === 'video' && !currentLesson.video_url && (
-                <p className="text-sm text-red-400 mt-2">Video URL not available</p>
+                <p className="text-sm text-red-400 mt-2">{t('pages.courseLearnPage.videoURLNotAvailable')}</p>
               )}
             </div>
           )}
@@ -1101,7 +1126,7 @@ const CourseLearnPage: React.FC = () => {
                     {isCompletingLesson && (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     )}
-                    <span>{isCompletingLesson ? 'COMPLETING...' : 'COMPLETE & CONTINUE'}</span>
+                    <span>{isCompletingLesson ? t('pages.courseLearnPage.Completing') : t('pages.courseLearnPage.completeAndContinue')}</span>
                   </button>
                 )}
                 
@@ -1121,7 +1146,7 @@ const CourseLearnPage: React.FC = () => {
                     disabled={getNextLesson() ? !isLessonAccessible(getNextLesson()!.module, getNextLesson()!.lesson) : true}
                   >
                     <ArrowRightIcon className="w-5 h-5 mr-1" />
-                    Next
+                    {t('pages.courseLearnPage.next')}
                   </button>
                 )}
               </div>
@@ -1151,11 +1176,11 @@ const CourseLearnPage: React.FC = () => {
                         {formatTime(quizTimeLeft)}
                       </span>
                       {quizTimeLeft < 300 && quizTimeLeft > 0 && (
-                        <span className="text-red-600 text-xs font-medium">Time running low!</span>
+                        <span className="text-red-600 text-xs font-medium">{t('pages.courseLearnPage.timeRunningLow')}</span>
                       )}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {quizQuestions.length} questions
+                      {t('pages.courseLearnPage.questions', { count: quizQuestions.length })}
                     </div>
                   </div>
                 </div>
@@ -1167,16 +1192,16 @@ const CourseLearnPage: React.FC = () => {
                   {currentQuiz.description}
                 </p>
                 <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-                  <span>🏆 {currentQuiz.total_points} pts</span>
-                  <span>⏱️ {currentQuiz.time_limit_minutes || 30} min</span>
-                  <span>✅ {currentQuiz.passing_score}% to pass</span>
+                  <span>🏆 {t('pages.courseLearnPage.pts', { value: currentQuiz.total_points })}</span>
+                  <span>⏱️ {t('pages.courseLearnPage.min', { value: currentQuiz.time_limit_minutes || 30 })}</span>
+                  <span>✅ {t('pages.courseLearnPage.toPass', { value: currentQuiz.passing_score })}</span>
                 </div>
                 
                 {/* Progress Bar */}
                 <div className="mt-4">
                   <div className="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Progress</span>
-                    <span>{Object.keys(quizAnswers).length} of {quizQuestions.length} answered</span>
+                    <span>{t('pages.courseLearnPage.progress')}</span>
+                    <span>{t('pages.courseLearnPage.answered', { count: Object.keys(quizAnswers).length, value: quizQuestions.length })}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
@@ -1194,7 +1219,7 @@ const CourseLearnPage: React.FC = () => {
                     <div key={question.question_id} className="bg-gray-50 rounded-lg p-6">
                       <div className="mb-4">
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          Question {index + 1} of {quizQuestions.length}
+                          {t('pages.courseLearnPage.questionOF', { count: index + 1, value: quizQuestions.length })}
                         </h3>
                         <p className="text-gray-700 leading-relaxed">
                           {question.question_text}
@@ -1249,7 +1274,7 @@ const CourseLearnPage: React.FC = () => {
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      Submit Quiz ({Object.keys(quizAnswers).length}/{quizQuestions.length} answered)
+                      {t('pages.courseLearnPage.submitQuiz', { value: `${Object.keys(quizAnswers).length}/${quizQuestions.length}` })}
                     </button>
                   </div>
                 </div>
@@ -1267,7 +1292,7 @@ const CourseLearnPage: React.FC = () => {
                   <h3 className={`text-2xl font-bold mb-2 ${
                     quizResults?.passed ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {quizResults?.passed ? 'Quiz Passed!' : 'Quiz Not Passed'}
+                    {quizResults?.passed ? t('pages.courseLearnPage.quizPassed') : t('pages.courseLearnPage.quizNotPassed')}
                   </h3>
                   
                   <div className="text-4xl font-bold text-gray-900 mb-4">
@@ -1275,8 +1300,8 @@ const CourseLearnPage: React.FC = () => {
                   </div>
                   
                   <p className="text-gray-600 mb-6">
-                    You answered {quizResults?.correctAnswers} out of {quizResults?.totalQuestions} questions correctly.
-                    {quizResults?.passed ? ' Great job!' : ` You need ${currentQuiz.passing_score}% to pass.`}
+                    {t('pages.courseLearnPage.youAnswered', { count: quizResults?.correctAnswers, value: quizResults?.totalQuestions })}
+                    {quizResults?.passed ? t('pages.courseLearnPage.greatJob') : t('pages.courseLearnPage.youNeed', { value: currentQuiz.passing_score })}
                   </p>
                   
                   {/* Detailed Results */}
@@ -1287,22 +1312,22 @@ const CourseLearnPage: React.FC = () => {
                       }`}>
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="font-semibold text-gray-900">
-                            Question {index + 1}
+                            {t('pages.courseLearnPage.questionNum', { count: index + 1 })}
                           </h4>
                           <span className={`text-sm font-medium ${
                             result.isCorrect ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {result.isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                            {result.isCorrect ? '✓ ' + t('pages.courseLearnPage.correct') : '✗ ' + t('pages.courseLearnPage.incorrect')}
                           </span>
                         </div>
                         <p className="text-gray-700 mb-2">{result.question.question_text}</p>
                         <div className="text-sm">
                           <p className="text-gray-600">
-                            <span className="font-medium">Your answer:</span> {result.userAnswer || 'No answer'}
+                            <span className="font-medium">{t('pages.courseLearnPage.yourAnswer')}</span> {result.userAnswer || t('pages.courseLearnPage.noAnswer')}
                           </p>
                           {!result.isCorrect && (
                             <p className="text-green-600">
-                              <span className="font-medium">Correct answer:</span> {result.correctAnswer}
+                              <span className="font-medium">{t('pages.courseLearnPage.correctAnswer')}</span> {result.correctAnswer}
                             </p>
                           )}
                         </div>
@@ -1315,7 +1340,7 @@ const CourseLearnPage: React.FC = () => {
                       onClick={handleQuizClose}
                       className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
                     >
-                      Close Quiz
+                      {t('pages.courseLearnPage.closeQuiz')}
                     </button>
                     {!quizResults?.passed && (
                       <button
@@ -1327,7 +1352,7 @@ const CourseLearnPage: React.FC = () => {
                         }}
                         className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors"
                       >
-                        Retake Quiz
+                        {t('pages.courseLearnPage.retakeQuiz')}
                       </button>
                     )}
                   </div>

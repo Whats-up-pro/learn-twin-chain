@@ -28,6 +28,7 @@ import {
   ChatBubbleLeftRightIcon as ChatSolid,
   DocumentTextIcon as DocumentSolid
 } from '@heroicons/react/24/solid';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ interface SidebarItem {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) => {
+  const { t } = useTranslation();
   const { learnerProfile, logout, nfts } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
@@ -116,7 +118,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
   const sidebarItems: SidebarItem[] = [
     {
       id: 'dashboard',
-      name: 'Dashboard',
+      name: t('components.sidebar.Dashboard'),
       href: '/dashboard',
       icon: HomeIcon,
       iconSolid: HomeSolid,
@@ -124,7 +126,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
     },
     {
       id: 'courses',
-      name: 'Courses',
+      name: t('components.sidebar.Courses'),
       href: '/courses',
       icon: BookOpenIcon,
       iconSolid: BookSolid,
@@ -132,7 +134,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
     },
     {
       id: 'ai-tutor',
-      name: 'AI Tutor',
+      name: t('components.sidebar.AI Tutor'),
       href: '/tutor',
       icon: ChatBubbleLeftRightIcon,
       iconSolid: ChatSolid,
@@ -140,7 +142,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
     },
     {
       id: 'achievements',
-      name: 'Achievements',
+      name: t('components.sidebar.Achievements'),
       href: '/achievements',
       icon: TrophyIcon,
       iconSolid: TrophySolid,
@@ -148,7 +150,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
     },
     {
       id: 'nfts',
-      name: 'NFTs',
+      name: t('components.sidebar.NFTs'),
       href: '/nfts',
       icon: CreditCardIcon,
       iconSolid: CreditSolid,
@@ -157,7 +159,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
     },
     {
       id: 'certificates',
-      name: 'Certificates',
+      name: t('components.sidebar.Certificates'),
       href: '/certificates',
       icon: DocumentTextIcon,
       iconSolid: DocumentSolid,
@@ -165,7 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
     },
     {
       id: 'profile',
-      name: 'Profile',
+      name: t('components.sidebar.Profile'),
       href: '/profile',
       icon: UserIcon,
       iconSolid: UserSolid,
@@ -229,7 +231,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
               </div>
               <div>
                 <h1 className="text-white font-bold text-lg">LearnTwin</h1>
-                <p className="text-blue-100 text-xs">Learning Platform</p>
+                <p className="text-blue-100 text-xs">{t('components.sidebar.LearningPlatform')}</p>
               </div>
             </div>
           )}
@@ -323,7 +325,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
             <div className="mt-6 pt-4 border-t border-slate-200">
               <div className="px-3 mb-3">
                 <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  My Enrollment
+                  {t('components.sidebar.MyEnrollment')}
                 </h3>
               </div>
 
@@ -334,7 +336,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Loading...
+                    {t('components.sidebar.Loading')}
                   </div>
                 </div>
               ) : enrollments.length > 0 ? (
@@ -389,18 +391,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
                     to="/courses"
                     className="block px-3 py-2 text-center text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
                   >
-                    View All Courses →
+                    {t('components.sidebar.ViewAllCourses')} →
                   </Link>
                 </div>
               ) : (
                 <div className="px-3 py-4 text-center">
                   <BookOpenIcon className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                  <p className="text-xs text-slate-500 mb-2">No enrollments yet</p>
+                  <p className="text-xs text-slate-500 mb-2">{t('components.sidebar.NoEnrollmentsYet')}</p>
                   <Link
                     to="/courses"
                     className="inline-flex items-center px-3 py-1.5 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
-                    Browse Courses
+                    {t('components.sidebar.BrowseCourses')}
                   </Link>
                 </div>
               )}
@@ -418,13 +420,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
               bg-transparent hover:bg-slate-50 text-slate-700 hover:text-slate-900
               ${isOpen ? 'justify-start' : 'justify-center'}
             `}
-            title={!isOpen ? 'Settings' : undefined}
+            title={!isOpen ? t('components.sidebar.Settings') : undefined}
           >
             <CogIcon className={`
               w-5 h-5 text-slate-500 hover:text-slate-700 transition-colors
               ${isOpen ? 'mr-3' : ''}
             `} />
-            {isOpen && <span>Settings</span>}
+            {isOpen && <span>{t('components.sidebar.Settings')}</span>}
           </Link>
 
           <button
@@ -435,13 +437,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
               bg-transparent hover:bg-red-50 text-slate-700 hover:text-red-700
               ${isOpen ? 'justify-start' : 'justify-center'}
             `}
-            title={!isOpen ? 'Logout' : undefined}
+            title={!isOpen ? t('components.sidebar.Logout') : undefined}
           >
             <ArrowLeftOnRectangleIcon className={`
               w-5 h-5 text-slate-500 group-hover:text-red-600 transition-colors
               ${isOpen ? 'mr-3' : ''}
             `} />
-            {isOpen && <span>Logout</span>}
+            {isOpen && <span>{t('components.sidebar.Logout')}</span>}
           </button>
         </div>
 

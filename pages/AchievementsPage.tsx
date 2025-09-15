@@ -10,6 +10,7 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface AchievementDisplayData {
   id: string;
@@ -30,6 +31,7 @@ interface AchievementDisplayData {
 }
 
 const AchievementsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [achievements, setAchievements] = useState<AchievementDisplayData[]>([]);
   const [, setUserAchievements] = useState<ApiUserAchievement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,14 +64,14 @@ const AchievementsPage: React.FC = () => {
         if (achievements.length === 0 && allAchievements && Array.isArray(allAchievements)) {
           const displayData: AchievementDisplayData[] = allAchievements.map((achievement: any) => ({
             id: achievement.achievement_id,
-            title: achievement.title || 'Unknown Achievement',
+            title: achievement.title || t('pages.achievementsPage.UnknownAchievement'),
             description: achievement.description || '',
-            type: achievement.achievement_type || 'learning',
-            tier: achievement.tier || 'bronze',
-            category: achievement.category || 'general',
+            type: achievement.achievement_type || t('pages.achievementsPage.learning'),
+            tier: achievement.tier || t('pages.achievementsPage.bronze'),
+            category: achievement.category || t('pages.achievementsPage.general'),
             points: achievement.points_reward || 0,
-            icon: getTierIcon(achievement.tier || 'bronze'),
-            badgeColor: getTierColor(achievement.tier || 'bronze'),
+            icon: getTierIcon(achievement.tier || t('pages.achievementsPage.bronze')),
+            badgeColor: getTierColor(achievement.tier || t('pages.achievementsPage.bronze')),
             isUnlocked: false, // Not earned yet
             isCompleted: false,
             progress: 0,
@@ -86,7 +88,7 @@ const AchievementsPage: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to load achievements:', error);
+      console.error(`${t('pages.achievementsPage.FailedToLoadAchievements')}:`, error);
     }
   };
 
@@ -104,14 +106,14 @@ const AchievementsPage: React.FC = () => {
         // Convert to display format
         const displayData: AchievementDisplayData[] = userAchievements.map((ua: ApiUserAchievement) => ({
           id: ua.achievement_id,
-          title: ua.achievement?.title || 'Unknown Achievement',
+          title: ua.achievement?.title || t('pages.achievementsPage.UnknownAchievement'),
           description: ua.achievement?.description || '',
-          type: ua.achievement?.achievement_type || 'learning',
-          tier: ua.achievement?.tier || 'bronze',
-          category: ua.achievement?.category || 'general',
+          type: ua.achievement?.achievement_type || t('pages.achievementsPage.learning'),
+          tier: ua.achievement?.tier || t('pages.achievementsPage.bronze'),
+          category: ua.achievement?.category || t('pages.achievementsPage.general'),
           points: ua.achievement?.points_awarded || 0,
-          icon: ua.achievement?.icon_url || getTierIcon(ua.achievement?.tier || 'bronze'),
-          badgeColor: ua.achievement?.badge_color || getTierColor(ua.achievement?.tier || 'bronze'),
+          icon: ua.achievement?.icon_url || getTierIcon(ua.achievement?.tier || t('pages.achievementsPage.bronze')),
+          badgeColor: ua.achievement?.badge_color || getTierColor(ua.achievement?.tier || t('pages.achievementsPage.bronze')),
           isUnlocked: ua.progress_percentage > 0,
           isCompleted: ua.is_completed,
           progress: ua.progress_percentage,
@@ -126,7 +128,7 @@ const AchievementsPage: React.FC = () => {
         setAchievements(getPlaceholderAchievements());
       }
     } catch (error) {
-      console.error('Failed to load user achievements:', error);
+      console.error(`${t('pages.achievementsPage.FailedToLoadUserAchievements')}:`, error);
       // Show placeholder achievements on error
       setAchievements(getPlaceholderAchievements());
     } finally {
@@ -141,7 +143,7 @@ const AchievementsPage: React.FC = () => {
         setStats((response as any).stats);
       }
     } catch (error) {
-      console.error('Failed to load achievement stats:', error);
+      console.error(`${t('pages.achievementsPage.FailedToLoadAchievementsStats')}:`, error);
       // Calculate from local data
       const totalAchievements = achievements.length;
       const unlockedCount = achievements.filter(a => a.isUnlocked).length;
@@ -158,11 +160,11 @@ const AchievementsPage: React.FC = () => {
   const handleMintNFT = async (userAchievementId: string) => {
     try {
       await achievementService.mintAchievementNFT(userAchievementId);
-      toast.success('NFT minted successfully!');
+      toast.success(`${t('pages.achievementsPage.NFTMintedSuccessfully')}`);
       loadUserAchievements(); // Refresh data
     } catch (error) {
-      console.error('Failed to mint NFT:', error);
-      toast.error('Failed to mint NFT');
+      console.error(`${t('pages.achievementsPage.FailedToMintNFT')}:`, error);
+      toast.error(`${t('pages.achievementsPage.FailedToMintNFT')}`);
     }
   };
 
@@ -327,7 +329,7 @@ const AchievementsPage: React.FC = () => {
   });
 
   const categories = ['all', ...Array.from(new Set(achievements.map(a => a.category)))];
-  const tiers = ['all', 'bronze', 'silver', 'gold', 'platinum'];
+  const tiers = ['all', t('pages.achievementsPage.bronze'), t('pages.achievementsPage.Silver'), t('pages.achievementsPage.Gold'), t('pages.achievementsPage.Platinum')];
 
   if (loading) {
     return (
@@ -341,8 +343,8 @@ const AchievementsPage: React.FC = () => {
     <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Achievements</h1>
-        <p className="text-slate-600">Track your learning milestones and earn rewards</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">{t('pages.achievementsPage.Achievements')}</h1>
+        <p className="text-slate-600">{t('pages.achievementsPage.TrackYourLearningMileStones')}</p>
           </div>
 
           {/* Stats Overview */}
@@ -350,7 +352,7 @@ const AchievementsPage: React.FC = () => {
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-              <p className="text-blue-100 text-sm font-medium">Total Unlocked</p>
+              <p className="text-blue-100 text-sm font-medium">{t('pages.achievementsPage.TotalUnlocked')}</p>
               <p className="text-3xl font-bold">{stats.unlockedCount}</p>
               <p className="text-blue-100 text-sm">of {stats.totalAchievements}</p>
             </div>
@@ -361,7 +363,7 @@ const AchievementsPage: React.FC = () => {
         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm font-medium">Completion Rate</p>
+              <p className="text-green-100 text-sm font-medium">{t('pages.achievementsPage.CompletionRate')}</p>
               <p className="text-3xl font-bold">{Math.round(stats.completionRate)}%</p>
               </div>
             <ChartBarIcon className="w-12 h-12 text-green-200" />
@@ -371,7 +373,7 @@ const AchievementsPage: React.FC = () => {
         <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-              <p className="text-purple-100 text-sm font-medium">Total Points</p>
+              <p className="text-purple-100 text-sm font-medium">{t('pages.achievementsPage.TotalPoints')}</p>
               <p className="text-3xl font-bold">{stats.totalPoints}</p>
                 </div>
             <StarIcon className="w-12 h-12 text-purple-200" />
@@ -381,7 +383,7 @@ const AchievementsPage: React.FC = () => {
         <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-              <p className="text-orange-100 text-sm font-medium">NFTs Minted</p>
+              <p className="text-orange-100 text-sm font-medium">{t('pages.achievementsPage.NFTsMinted')}</p>
               <p className="text-3xl font-bold">{achievements.filter(a => a.nftMinted).length}</p>
                 </div>
             <FireIcon className="w-12 h-12 text-orange-200" />
@@ -402,7 +404,7 @@ const AchievementsPage: React.FC = () => {
                     : 'text-slate-600 hover:text-slate-800'
                 }`}
               >
-                {tab === 'all' ? 'All Achievements' : tab === 'unlocked' ? 'My Achievements' : 'Locked'}
+                {tab === 'all' ? t('pages.achievementsPage.AllAchievements') : tab === 'unlocked' ? t('pages.achievementsPage.MyAchievements') : t('pages.achievementsPage.Locked')}
               </button>
             ))}
           </div>
@@ -412,7 +414,7 @@ const AchievementsPage: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-8">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">{t('pages.achievementsPage.Category')}</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -420,14 +422,14 @@ const AchievementsPage: React.FC = () => {
             >
               {categories.map(category => (
                 <option key={category} value={category}>
-                  {category === 'all' ? 'All Categories' : category.charAt(0).toUpperCase() + category.slice(1)}
+                  {category === 'all' ? t('pages.achievementsPage.AllCategories') : category.charAt(0).toUpperCase() + category.slice(1)}
                 </option>
               ))}
             </select>
             </div>
 
           <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Tier</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">{t('pages.achievementsPage.Tier')}</label>
             <select
               value={selectedTier}
               onChange={(e) => setSelectedTier(e.target.value)}
@@ -435,7 +437,7 @@ const AchievementsPage: React.FC = () => {
             >
               {tiers.map(tier => (
                 <option key={tier} value={tier}>
-                  {tier === 'all' ? 'All Tiers' : tier.charAt(0).toUpperCase() + tier.slice(1)}
+                  {tier === 'all' ? t('pages.achievementsPage.AllTiers') : tier.charAt(0).toUpperCase() + tier.slice(1)}
                 </option>
               ))}
             </select>
@@ -508,7 +510,7 @@ const AchievementsPage: React.FC = () => {
               {achievement.isUnlocked && !achievement.isCompleted && (
                 <div className="mb-4">
                   <div className="flex justify-between text-xs text-slate-600 mb-1">
-                    <span>Progress</span>
+                    <span>{t('pages.achievementsPage.Progress')}</span>
                     <span>{achievement.progress}%</span>
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-2">
@@ -524,7 +526,7 @@ const AchievementsPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                 <div className="flex items-center text-yellow-600">
                   <StarIcon className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">{achievement.points} pts</span>
+                  <span className="text-sm font-medium">{achievement.points} {t('pages.achievementsPage.Points')}</span>
                   </div>
                 
                 {achievement.isCompleted && !achievement.nftMinted && (
@@ -532,13 +534,13 @@ const AchievementsPage: React.FC = () => {
                     onClick={() => handleMintNFT(achievement.id)}
                     className="btn-primary text-xs px-3 py-1"
                   >
-                    Mint NFT
+                    {t('pages.achievementsPage.MintNFT')}
                   </button>
                 )}
                 
                 {achievement.nftMinted && (
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                    NFT Minted ✨
+                    {t('pages.achievementsPage.NFTMinted')} ✨
                   </span>
                   )}
                 </div>
@@ -546,7 +548,7 @@ const AchievementsPage: React.FC = () => {
               {/* Unlock Date */}
               {achievement.unlockedAt && (
                 <p className="text-xs text-slate-500 mt-2">
-                  Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
+                  {t('pages.achievementsPage.Unlocked', {date: new Date(achievement.unlockedAt).toLocaleDateString()})}
                 </p>
                 )}
               </div>
@@ -558,11 +560,11 @@ const AchievementsPage: React.FC = () => {
         {filteredAchievements.length === 0 && (
           <div className="text-center py-12">
           <TrophyIcon className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 mb-2">No achievements found</h3>
+          <h3 className="text-lg font-medium text-slate-900 mb-2">{t('pages.achievementsPage.noAchievementsFound')}</h3>
           <p className="text-slate-600">
             {selectedCategory !== 'all' || selectedTier !== 'all' 
-              ? 'Try adjusting your filters to see more achievements'
-              : 'Start learning to unlock these amazing achievements! Complete courses, take quizzes, and explore to earn your first badges.'
+              ? t('pages.achievementsPage.tryAdjustingYourFiltersToSeeMoreAchievements')
+              : t('pages.achievementsPage.startLearningToUnlockTheseAmazingAchievements')
             }
           </p>
           </div>

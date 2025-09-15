@@ -17,6 +17,7 @@ import { apiService } from '../services/apiService';
 import { useAppContext } from '../contexts/AppContext';
 import { blockchainService } from '../services/blockchainService';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface Course {
   course_id: string;
@@ -44,6 +45,7 @@ interface Course {
 }
 
 const CourseOverviewPage: React.FC = () => {
+  const { t } = useTranslation();
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { learnerProfile, courses } = useAppContext();
@@ -78,17 +80,17 @@ const CourseOverviewPage: React.FC = () => {
           setCourse((response as any).course);
           setIsEnrolled((response as any).course.is_enrolled || false);
         } else {
-          toast.error('Course not found');
+          toast.error(t('pages.courseOverviewPage.courseNotFound'));
           navigate('/courses');
         }
       } catch (error) {
-        console.error('Error fetching course:', error);
-        toast.error('Failed to load course details');
+        console.error(`${t('pages.courseOverviewPage.errorFetchingCourse')}:`, error);
+        toast.error(t('pages.courseOverviewPage.failToLoadCourseDetails'));
         navigate('/courses');
       }
     } catch (error) {
-      console.error('Error loading course:', error);
-      toast.error('Failed to load course');
+      console.error(`${t('pages.courseOverviewPage.errorLoadingCourse')}:`, error);
+      toast.error(t('pages.courseOverviewPage.failToLoadCourse'));
       navigate('/courses');
     } finally {
       setLoading(false);
@@ -97,7 +99,7 @@ const CourseOverviewPage: React.FC = () => {
 
   const handleEnroll = async () => {
     if (!course || !learnerProfile) {
-      toast.error('Please log in to enroll in courses');
+      toast.error(t('pages.courseOverviewPage.pleaseLogInToEnroll'));
       navigate('/login');
       return;
     }
@@ -108,7 +110,7 @@ const CourseOverviewPage: React.FC = () => {
       // Check wallet connection for NFT minting
       const isConnected = await blockchainService.checkWalletConnection();
       if (!isConnected) {
-        toast.error('Please connect your MetaMask wallet to enable NFT minting for course completion.');
+        toast.error(t('pages.courseOverviewPage.pleaseConnectYourMetaMaskWallet'));
         return;
       }
 
@@ -116,7 +118,7 @@ const CourseOverviewPage: React.FC = () => {
       const response = await apiService.enrollInCourse(course.course_id || course.id);
       
       if (response && (response as any).success) {
-        toast.success(`Successfully enrolled in "${course.title}"!`);
+        toast.success(t('pages.courseOverviewPage.successFullyEnrolled', { courseTitle: course.title }));
         setIsEnrolled(true);
         
         // Navigate to course learning page after successful enrollment
@@ -124,11 +126,11 @@ const CourseOverviewPage: React.FC = () => {
           navigate(`/course/${course.course_id || course.id}/learn`);
         }, 1500);
       } else {
-        toast.error('Failed to enroll in course. Please try again.');
+        toast.error(t('pages.courseOverviewPage.failedToEnroll'));
       }
     } catch (error) {
-      console.error('Enrollment error:', error);
-      toast.error('Failed to enroll in course. Please try again.');
+      console.error(`${t('pages.courseOverviewPage.enrollmentError')}:`, error);
+      toast.error(t('pages.courseOverviewPage.failedToEnroll'));
     } finally {
       setEnrolling(false);
     }
@@ -140,7 +142,7 @@ const CourseOverviewPage: React.FC = () => {
     if (isEnrolled) {
       navigate(`/course/${course.course_id || course.id}/learn`);
     } else {
-      toast.error('Please enroll in the course first to start learning');
+      toast.error(t('pages.courseOverviewPage.pleaseEnrollInTheCourseFirst'));
     }
   };
 
@@ -149,8 +151,8 @@ const CourseOverviewPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Loading Course...</h2>
-          <p className="text-gray-600">Please wait while we fetch the course details.</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('pages.courseOverviewPage.loadingCourse')}</h2>
+          <p className="text-gray-600">{t('pages.courseOverviewPage.pleaseWaitWhileWeFetchTheCourseDetails')}</p>
         </div>
       </div>
     );
@@ -161,13 +163,13 @@ const CourseOverviewPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="bg-white/70 backdrop-blur-sm shadow-xl rounded-3xl p-8 text-center max-w-md mx-4">
           <div className="text-6xl mb-4">📚</div>
-          <h1 className="text-2xl font-bold text-gray-700 mb-4">Course Not Found</h1>
-          <p className="text-gray-600 mb-6">The course you're looking for doesn't exist or has been removed.</p>
+          <h1 className="text-2xl font-bold text-gray-700 mb-4">{t('pages.courseOverviewPage.courseNotFound')}</h1>
+          <p className="text-gray-600 mb-6">{t('pages.courseOverviewPage.theCourseYouAreLookingForDoesNotExistOrHasBeenRemoved')}</p>
           <button
             onClick={() => navigate('/courses')}
             className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
           >
-            Browse Courses
+            {t('pages.courseOverviewPage.browseCourses')}
           </button>
         </div>
       </div>
@@ -206,7 +208,7 @@ const CourseOverviewPage: React.FC = () => {
           className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors mb-6"
         >
           <ArrowLeftIcon className="h-5 w-5" />
-          <span>Back to Courses</span>
+          <span>{t('pages.courseOverviewPage.backToCourses')}</span>
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -223,7 +225,7 @@ const CourseOverviewPage: React.FC = () => {
                     {isEnrolled && (
                       <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700 flex items-center">
                         <CheckCircleIcon className="h-4 w-4 mr-1" />
-                        Enrolled
+                        {t('pages.courseOverviewPage.enrolled')}
                       </span>
                     )}
                   </div>
@@ -252,22 +254,22 @@ const CourseOverviewPage: React.FC = () => {
                 <div className="text-center p-4 bg-white/50 rounded-xl">
                   <ClockIcon className="h-8 w-8 text-blue-500 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-gray-800">{estimatedHours}h</div>
-                  <div className="text-sm text-gray-600">Duration</div>
+                  <div className="text-sm text-gray-600">{t('pages.courseOverviewPage.duration')}</div>
                 </div>
                 <div className="text-center p-4 bg-white/50 rounded-xl">
                   <AcademicCapIcon className="h-8 w-8 text-green-500 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-gray-800">{moduleCount}</div>
-                  <div className="text-sm text-gray-600">Modules</div>
+                  <div className="text-sm text-gray-600">{t('pages.courseOverviewPage.modules')}</div>
                 </div>
                 <div className="text-center p-4 bg-white/50 rounded-xl">
                   <UserGroupIcon className="h-8 w-8 text-purple-500 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-gray-800">{course.enrollment_count || 0}</div>
-                  <div className="text-sm text-gray-600">Students</div>
+                  <div className="text-sm text-gray-600">{t('pages.courseOverviewPage.students')}</div>
                 </div>
                 <div className="text-center p-4 bg-white/50 rounded-xl">
                   <StarIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-gray-800">{course.rating || 0}</div>
-                  <div className="text-sm text-gray-600">Rating</div>
+                  <div className="text-sm text-gray-600">{t('pages.courseOverviewPage.rating')}</div>
                 </div>
               </div>
             </div>
@@ -276,7 +278,7 @@ const CourseOverviewPage: React.FC = () => {
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
               <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                 <BookOpenIcon className="h-7 w-7 text-blue-500 mr-3" />
-                What You'll Learn
+                {t('pages.courseOverviewPage.whatYouWillLearn')}
               </h2>
               
               {course.metadata?.learning_objectives && course.metadata.learning_objectives.length > 0 ? (
@@ -289,7 +291,7 @@ const CourseOverviewPage: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-gray-600">Learning objectives will be available after enrollment.</p>
+                <p className="text-gray-600">{t('pages.courseOverviewPage.learningObjectives')}</p>
               )}
             </div>
 
@@ -298,7 +300,7 @@ const CourseOverviewPage: React.FC = () => {
               <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                   <SparklesIcon className="h-7 w-7 text-purple-500 mr-3" />
-                  Skills You'll Gain
+                  {t('pages.courseOverviewPage.skillsYouWillGain')}
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {course.metadata.skills_taught.map((skill, index) => (
@@ -318,7 +320,7 @@ const CourseOverviewPage: React.FC = () => {
               <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
                   <AcademicCapIcon className="h-7 w-7 text-orange-500 mr-3" />
-                  Prerequisites
+                  {t('pages.courseOverviewPage.prerequisites')}
                 </h2>
                 <ul className="space-y-2">
                   {course.metadata.prerequisites.map((prereq, index) => (
@@ -348,7 +350,7 @@ const CourseOverviewPage: React.FC = () => {
                   </span>
                   <span className="flex items-center">
                     <AcademicCapIcon className="h-4 w-4 mr-1" />
-                    {moduleCount} modules
+                    {t('pages.courseOverviewPage.modulesLower', { count: moduleCount })}
                   </span>
                 </div>
               </div>
@@ -359,7 +361,7 @@ const CourseOverviewPage: React.FC = () => {
                   className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
                 >
                   <PlayIcon className="h-5 w-5" />
-                  <span>Start Learning</span>
+                  <span>{t('pages.courseOverviewPage.startLearning')}</span>
                 </button>
               ) : (
                 <button
@@ -370,12 +372,12 @@ const CourseOverviewPage: React.FC = () => {
                   {enrolling ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Enrolling...</span>
+                      <span>{t('pages.courseOverviewPage.enrolling')}</span>
                     </>
                   ) : (
                     <>
                       <CheckCircleIcon className="h-5 w-5" />
-                      <span>Enroll Now</span>
+                      <span>{t('pages.courseOverviewPage.enrollNow')}</span>
                     </>
                   )}
                 </button>
@@ -384,8 +386,8 @@ const CourseOverviewPage: React.FC = () => {
               <div className="mt-4 text-center">
                 <p className="text-sm text-gray-600">
                   {isEnrolled 
-                    ? "You're enrolled! Start learning to earn NFTs and achievements."
-                    : "Enroll now to start your learning journey and earn NFTs!"
+                    ? t('pages.courseOverviewPage.youAreEnrolled')
+                    : t('pages.courseOverviewPage.enrollNowToStartYourLearningJourneyAndEarnNFTs')
                   }
                 </p>
               </div>
@@ -395,7 +397,7 @@ const CourseOverviewPage: React.FC = () => {
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
               <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
                 <UserIcon className="h-5 w-5 text-blue-500 mr-2" />
-                Instructor
+                {t('pages.courseOverviewPage.instructor')}
               </h3>
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -403,7 +405,7 @@ const CourseOverviewPage: React.FC = () => {
                 </div>
                 <div>
                   <div className="font-semibold text-gray-800">{course.instructor_name}</div>
-                  <div className="text-sm text-gray-600">Course Instructor</div>
+                  <div className="text-sm text-gray-600">{t('pages.courseOverviewPage.courseInstructor')}</div>
                 </div>
               </div>
             </div>
@@ -413,7 +415,7 @@ const CourseOverviewPage: React.FC = () => {
               <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/20">
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
                   <TagIcon className="h-5 w-5 text-purple-500 mr-2" />
-                  Tags
+                  {t('pages.courseOverviewPage.tags')}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {course.tags.map((tag, index) => (
