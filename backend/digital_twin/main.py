@@ -29,7 +29,7 @@ from digital_twin.api.ipfs_api import router as ipfs_router
 from digital_twin.api.zkp_api import router as zkp_router
 from digital_twin.api.gemini_api import router as gemini_router
 from digital_twin.api.user_api import router as user_router
-
+from digital_twin.api.rag_api import router as rag_router
 # Import configuration and services
 from .config.config import config
 from .config.database import connect_to_mongo, close_mongo_connection
@@ -137,7 +137,7 @@ app.include_router(ipfs_router, prefix="/api/v1", tags=["IPFS"])
 app.include_router(zkp_router, prefix="/api/v1", tags=["Zero-Knowledge Proofs"])
 app.include_router(gemini_router, prefix="/api/v1", tags=["AI/Gemini"])
 app.include_router(user_router, prefix="/api/v1", tags=["User Management"])
-
+app.include_router(rag_router, prefix="/api/v1", tags=["RAG"])
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
