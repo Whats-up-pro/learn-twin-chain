@@ -6,6 +6,10 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from typing import Optional
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from ..models.user import User, UserProfile
 from ..models.user_settings import UserSettings
@@ -18,6 +22,7 @@ from ..models.permission import Role, Permission, UserRoleAssignment
 from ..models.quiz_achievement import Quiz, QuizAttempt, Achievement, UserAchievement
 from ..models.discussion import Discussion, Comment, DiscussionLike, CommentLike
 from ..models.video_settings import VideoLearningSettings, VideoSession
+from ..models.video_content import VideoContent, VideoUploadSession
 from ..models.subscription import UserSubscription, PaymentTransaction, SubscriptionFeature, SubscriptionPlanConfig
 
 logger = logging.getLogger(__name__)
@@ -76,6 +81,8 @@ async def connect_to_mongo():
                 CommentLike,
                 VideoLearningSettings,
                 VideoSession,
+                VideoContent,
+                VideoUploadSession,
                 UserSubscription,
                 PaymentTransaction,
                 SubscriptionFeature,
@@ -167,6 +174,21 @@ async def create_indexes():
         await VideoSession.create_index("course_id")
         await VideoSession.create_index("lesson_id")
         await VideoSession.create_index("started_at")
+        
+        # Video Content indexes
+        await VideoContent.create_index("video_id", unique=True)
+        await VideoContent.create_index("lesson_id")
+        await VideoContent.create_index("course_id")
+        await VideoContent.create_index("processing_status.status")
+        await VideoContent.create_index("uploaded_at")
+        await VideoContent.create_index([("course_id", 1), ("lesson_id", 1)])
+        
+        # Video Upload Session indexes
+        await VideoUploadSession.create_index("session_id", unique=True)
+        await VideoUploadSession.create_index("user_id")
+        await VideoUploadSession.create_index("lesson_id")
+        await VideoUploadSession.create_index("status")
+        await VideoUploadSession.create_index("expires_at")
         
         # Subscription indexes
         await UserSubscription.create_index("user_id")

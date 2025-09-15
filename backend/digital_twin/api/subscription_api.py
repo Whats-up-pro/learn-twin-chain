@@ -4,6 +4,7 @@ Subscription API endpoints
 import logging
 from typing import Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query, Body
+import os
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 
@@ -14,7 +15,7 @@ from ..models.subscription import (
     SubscriptionPlan, PaymentMethod, SubscriptionStatus, 
     PaymentStatus
 )
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, get_optional_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/subscription", tags=["subscription"])
@@ -32,6 +33,10 @@ class PaymentWebhookRequest(BaseModel):
     payment_method: PaymentMethod = Field(..., description="Payment method")
     transaction_id: Optional[str] = Field(None, description="Transaction ID")
     gateway_data: Dict[str, Any] = Field(..., description="Gateway webhook data")
+
+class PaymentConfirmRequest(BaseModel):
+    transaction_id: str = Field(..., description="Transaction ID")
+    payment_method: PaymentMethod = Field(..., description="Payment method")
 
 class SubscriptionUpdateRequest(BaseModel):
     plan: Optional[SubscriptionPlan] = Field(None, description="New plan")
@@ -150,7 +155,10 @@ async def create_subscription(
             "user_id": current_user.did
         }
         
-        return_url = f"/subscription/payment/success?transaction_id={transaction.transaction_id}"
+        # Build absolute return URL for Stripe (must be a valid absolute URL)
+        frontend_base = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+        return_path = f"/subscription/payment/success?transaction_id={transaction.transaction_id}"
+        return_url = f"{frontend_base}{return_path}"
         
         payment_result = await payment_service.create_payment_request(
             transaction_id=transaction.transaction_id,
@@ -170,6 +178,12 @@ async def create_subscription(
             status=PaymentStatus.PENDING,
             gateway_response=payment_result
         )
+        # Persist gateway transaction id for later verification if provided
+        if payment_result.get("gateway_transaction_id"):
+            existing = await subscription_service.get_payment_transaction(transaction.transaction_id)
+            if existing:
+                existing.gateway_transaction_id = payment_result.get("gateway_transaction_id")
+                await existing.save()
         
         return {
             "success": True,
@@ -253,6 +267,60 @@ async def handle_payment_webhook(
             "success": True,
             "message": "Payment processed successfully"
         }
+    except Exception as e:
+        logger.error(f"Payment webhook handling failed: {e}")
+        raise HTTPException(status_code=500, detail="Payment webhook handling failed")
+
+@router.post("/payment/vnpay/ipn")
+async def vnpay_ipn(
+    gateway_data: Dict[str, Any] = Body(..., description="VNPAY IPN params"),
+    current_user: Optional[User] = Depends(get_optional_user)
+):
+    """Dedicated IPN endpoint for VNPAY."""
+    try:
+        webhook_result = await payment_service.handle_payment_webhook(
+            payment_method=PaymentMethod.VNPAY_QR,
+            webhook_data=gateway_data
+        )
+        if not webhook_result.get("success"):
+            return {"RspCode": "99", "Message": "IPN not processed"}
+
+        transaction_id = webhook_result.get("transaction_id")
+        gateway_transaction_id = webhook_result.get("gateway_transaction_id")
+        if not transaction_id:
+            return {"RspCode": "01", "Message": "Transaction not found"}
+
+        await subscription_service.update_payment_status(
+            transaction_id=transaction_id,
+            status=PaymentStatus.COMPLETED,
+            gateway_response=gateway_data
+        )
+
+        # Create subscription based on transaction description
+        transaction = await subscription_service.get_payment_transaction(transaction_id)
+        if transaction:
+            description_parts = transaction.description.split(" - ")
+            if len(description_parts) >= 2:
+                plan_name = description_parts[0]
+                billing_cycle = description_parts[1].split(" ")[0]
+                plan = None
+                if "Basic" in plan_name:
+                    plan = SubscriptionPlan.BASIC
+                elif "Premium" in plan_name:
+                    plan = SubscriptionPlan.PREMIUM
+                if plan:
+                    await subscription_service.create_subscription(
+                        user_id=transaction.user_id,
+                        plan=plan,
+                        billing_cycle=billing_cycle,
+                        payment_method=transaction.payment_method,
+                        payment_reference=gateway_transaction_id
+                    )
+
+        return {"RspCode": "00", "Message": "Confirm Success"}
+    except Exception as e:
+        logger.error(f"VNPAY IPN failed: {e}")
+        return {"RspCode": "99", "Message": "Unknown error"}
         
     except Exception as e:
         logger.error(f"Payment webhook handling failed: {e}")
@@ -292,6 +360,76 @@ async def get_payment_status(
     except Exception as e:
         logger.error(f"Failed to get payment status: {e}")
         raise HTTPException(status_code=500, detail="Failed to get payment status")
+
+@router.post("/payment/confirm")
+async def confirm_payment(
+    request: PaymentConfirmRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Confirm payment after frontend success redirect (fallback when webhook not available)."""
+    try:
+        # Ensure transaction exists and belongs to user
+        transaction = await subscription_service.get_payment_transaction(request.transaction_id)
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        if transaction.user_id != current_user.did:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Verify with gateway (for Stripe we must use Checkout Session or PaymentIntent id)
+        gateway_response: Dict[str, Any] = {}
+        if request.payment_method == PaymentMethod.CREDIT_CARD:
+            # Use stored gateway_transaction_id (Stripe Checkout Session id) if available
+            if transaction.gateway_transaction_id:
+                gateway_response = {"gateway_transaction_id": transaction.gateway_transaction_id}
+
+        verify_result = await payment_service.verify_payment(
+            transaction_id=request.transaction_id,
+            payment_method=request.payment_method,
+            gateway_response=gateway_response
+        )
+        if not verify_result.get("success"):
+            return {"success": False, "error": verify_result.get("error", "Verification failed")}
+
+        status = verify_result.get("status")
+        if status != "completed":
+            return {"success": False, "error": "Payment not completed"}
+
+        # Update payment status
+        await subscription_service.update_payment_status(
+            transaction_id=request.transaction_id,
+            status=PaymentStatus.COMPLETED,
+            gateway_response=verify_result
+        )
+
+        # Create subscription from transaction description
+        description_parts = transaction.description.split(" - ")
+        if len(description_parts) >= 2:
+            plan_name = description_parts[0]
+            billing_cycle = description_parts[1].split(" ")[0]
+
+            plan = None
+            if "Basic" in plan_name:
+                plan = SubscriptionPlan.BASIC
+            elif "Premium" in plan_name:
+                plan = SubscriptionPlan.PREMIUM
+
+            if plan:
+                created = await subscription_service.create_subscription(
+                    user_id=transaction.user_id,
+                    plan=plan,
+                    billing_cycle=billing_cycle,
+                    payment_method=transaction.payment_method,
+                    payment_reference=str(verify_result.get("gateway_data", {}).get("id") or verify_result.get("gateway_transaction_id") or "")
+                )
+                if created:
+                    return {"success": True, "message": "Subscription created", "subscription_id": str(created.id)}
+
+        return {"success": True, "message": "Payment confirmed"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Payment confirm failed: {e}")
+        raise HTTPException(status_code=500, detail="Payment confirm failed")
 
 @router.post("/cancel")
 async def cancel_subscription(current_user: User = Depends(get_current_user)):

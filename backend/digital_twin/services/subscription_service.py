@@ -393,7 +393,7 @@ class SubscriptionService:
                 "status": subscription.status,
                 "features": plan_config.features if plan_config else [],
                 "limits": plan_config.limits if plan_config else {},
-                "days_remaining": subscription.days_remaining(),
+                "days_remaining": int(subscription.days_remaining()),
                 "billing_cycle": subscription.billing_cycle,
                 "price": subscription.price,
                 "start_date": subscription.start_date,

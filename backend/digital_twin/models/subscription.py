@@ -16,8 +16,7 @@ class SubscriptionPlan(str, Enum):
 class PaymentMethod(str, Enum):
     """Available payment methods"""
     CREDIT_CARD = "credit_card"
-    ZALO_PAY = "zalo_pay"
-    MOMO = "momo"
+    VNPAY_QR = "vnpay_qr"
 
 class SubscriptionStatus(str, Enum):
     """Subscription status"""
@@ -78,15 +77,24 @@ class UserSubscription(Document):
     def is_active(self) -> bool:
         """Check if subscription is active and not expired"""
         now = datetime.now(timezone.utc)
-        return (self.status == SubscriptionStatus.ACTIVE and 
-                self.end_date > now)
+        end_dt = self.end_date
+        # Normalize naive datetime to UTC to avoid offset-naive vs aware comparison
+        if end_dt.tzinfo is None:
+            end_dt = end_dt.replace(tzinfo=timezone.utc)
+        return (self.status == SubscriptionStatus.ACTIVE and end_dt > now)
     
     def days_remaining(self) -> int:
         """Get days remaining in subscription"""
-        if not self.is_active():
+        try:
+            if not self.is_active():
+                return 0
+            now = datetime.now(timezone.utc)
+            end_dt = self.end_date
+            if end_dt.tzinfo is None:
+                end_dt = end_dt.replace(tzinfo=timezone.utc)
+            delta = end_dt - now
+        except Exception:
             return 0
-        now = datetime.now(timezone.utc)
-        delta = self.end_date - now
         return max(0, delta.days)
     
     def update_timestamp(self):

@@ -67,18 +67,67 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
     
     setIsLoadingEnrollments(true);
     try {
-        const response = await apiService.getUserEnrollments() as any;
-        console.log('✅ Sidebar enrollments from users collection:', response);
-        
-        if (response.success && response.enrollments) {
-        // Filter only active enrollments
-        const activeEnrollments = response.enrollments.filter(
-          (item: any) => item.enrollment.status === 'active'
-        );
-        setEnrollments(activeEnrollments.slice(0, 5)); // Show max 5 courses
-      } else {
-        setEnrollments([]);
-      }
+        // Load enrollments and progress, then merge by course_id
+        const [enrollResp, progressResp] = await Promise.all([
+          apiService.getUserEnrollments() as any,
+          apiService.getMyProgress() as any
+        ]);
+
+        console.log('✅ Sidebar enrollments from users collection:', enrollResp);
+
+        if (enrollResp?.success && enrollResp?.enrollments) {
+          // Build progress map by course_id
+          const progressMap: Record<string, number> = {};
+          const progressItems: any[] = progressResp?.progress || [];
+          if (Array.isArray(progressItems)) {
+            progressItems.forEach((p: any) => {
+              const cid = p?.course_id || p?.course?.course_id || p?.courseId;
+              if (!cid) return;
+              const percentFromFields = p?.overall_progress ?? p?.completion_percentage;
+              const computedPercent = (p?.total_lessons && p?.total_lessons > 0)
+                ? ((p?.completed_lessons || 0) / p.total_lessons) * 100
+                : 0;
+              const percent = Math.round(
+                typeof percentFromFields === 'number' ? percentFromFields : computedPercent
+              );
+              if (!Number.isNaN(percent)) {
+                progressMap[cid] = Math.min(Math.max(percent, 0), 100);
+              }
+            });
+          }
+
+          // Filter only active enrollments and merge progress when available
+          const activeEnrollments = enrollResp.enrollments
+            .filter((item: any) => item?.enrollment?.status === 'active')
+            .map((item: any) => {
+              const cid = item?.course?.course_id || item?.enrollment?.course_id;
+              const enrollmentPercent = Math.round(item?.enrollment?.completion_percentage || 0);
+              const progressPercent = cid && progressMap[cid] !== undefined
+                ? progressMap[cid]
+                : undefined;
+              // Be conservative: avoid showing 100% unless both sources agree.
+              let resolvedPercent = enrollmentPercent;
+              if (typeof progressPercent === 'number') {
+                if (progressPercent === 100 || enrollmentPercent === 100) {
+                  resolvedPercent = Math.min(progressPercent, enrollmentPercent || 100);
+                } else if (progressPercent >= 0) {
+                  // Prefer the lower of the two to prevent optimistic over-reporting
+                  resolvedPercent = Math.min(progressPercent, enrollmentPercent);
+                }
+              }
+              return {
+                ...item,
+                enrollment: {
+                  ...item.enrollment,
+                  completion_percentage: resolvedPercent
+                }
+              } as EnrollmentData;
+            });
+
+          setEnrollments(activeEnrollments.slice(0, 5)); // Show max 5 courses
+        } else {
+          setEnrollments([]);
+        }
     } catch (error) {
       console.error('Failed to load enrollments from users collection:', error);
       setEnrollments([]);
@@ -105,14 +154,37 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
 
   // Listen for course progress updates from other components
   useEffect(() => {
-    const handleProgressUpdate = () => {
+    const handleProgressUpdate = (evt: Event) => {
+      try {
+        const anyEvt = evt as CustomEvent;
+        const courseId = anyEvt?.detail?.courseId as string | undefined;
+        const progress = anyEvt?.detail?.progress as number | undefined;
+        if (courseId && typeof progress === 'number') {
+          // Immediately apply to matching enrollment for instant UI sync
+          setEnrollments(prev => prev.map(item => {
+            const cid = item?.course?.course_id || item?.enrollment?.course_id;
+            if (cid === courseId) {
+              return {
+                ...item,
+                enrollment: {
+                  ...item.enrollment,
+                  completion_percentage: Math.min(Math.max(Math.round(progress), 0), 100)
+                }
+              } as EnrollmentData;
+            }
+            return item;
+          }));
+        }
+      } catch (e) {
+        // no-op
+      }
       if (learnerProfile?.did && !isLoadingEnrollments) {
-        setTimeout(fetchEnrollments, 1000); // Delay to allow backend to update
+        setTimeout(fetchEnrollments, 800); // Small delay to allow backend to persist
       }
     };
     
-    window.addEventListener('courseProgressUpdated', handleProgressUpdate);
-    return () => window.removeEventListener('courseProgressUpdated', handleProgressUpdate);
+    window.addEventListener('courseProgressUpdated', handleProgressUpdate as EventListener);
+    return () => window.removeEventListener('courseProgressUpdated', handleProgressUpdate as EventListener);
   }, [learnerProfile?.did, isLoadingEnrollments]);
 
   const sidebarItems: SidebarItem[] = [

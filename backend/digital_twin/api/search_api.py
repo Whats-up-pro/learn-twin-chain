@@ -56,18 +56,21 @@ async def unified_search(
             courses = await Course.find(course_filter).to_list()
             
             for course in courses:
-                if (search_query in course.title.lower() or 
-                    search_query in course.description.lower() or
-                    any(search_query in tag.lower() for tag in course.metadata.tags)):
+                tags = getattr(course.metadata, "tags", []) or []
+                description = getattr(course, "description", "") or ""
+                title = getattr(course, "title", "") or ""
+                if (search_query in title.lower() or 
+                    search_query in description.lower() or
+                    any(search_query in (tag or "").lower() for tag in tags)):
                     
                     all_results.append(SearchResult(
                         id=course.course_id,
                         type="course",
                         title=course.title,
                         description=course.description,
-                        tags=course.metadata.tags,
-                        difficulty_level=course.metadata.difficulty_level,
-                        duration_minutes=course.metadata.estimated_hours * 60,
+                        tags=tags,
+                        difficulty_level=getattr(course.metadata, "difficulty_level", None),
+                        duration_minutes=int(getattr(course.metadata, "estimated_hours", 0) or 0) * 60,
                         url=f"/course/{course.course_id}",
                         metadata={
                             "institution": course.institution,
@@ -86,9 +89,10 @@ async def unified_search(
             modules = await Module.find(module_filter).to_list()
             
             for module in modules:
-                if (search_query in module.title.lower() or 
-                    search_query in module.description.lower() or
-                    any(search_query in tag.lower() for tag in module.tags)):
+                learning_tags = getattr(module, "learning_objectives", []) or []
+                if (search_query in (module.title or "").lower() or 
+                    search_query in (module.description or "").lower() or
+                    any(search_query in (tag or "").lower() for tag in learning_tags)):
                     
                     # Get course info for context
                     course = await Course.find_one({"course_id": module.course_id})
@@ -101,8 +105,8 @@ async def unified_search(
                         description=module.description,
                         course_id=module.course_id,
                         course_name=course_name,
-                        tags=module.tags,
-                        difficulty_level=module.difficulty_level,
+                        tags=learning_tags,
+                        difficulty_level=None,
                         duration_minutes=module.estimated_duration,
                         url=f"/course/{module.course_id}/module/{module.module_id}",
                         metadata={
@@ -121,9 +125,10 @@ async def unified_search(
             lessons = await Lesson.find(lesson_filter).to_list()
             
             for lesson in lessons:
-                if (search_query in lesson.title.lower() or 
-                    search_query in lesson.description.lower() or
-                    any(search_query in keyword.lower() for keyword in lesson.keywords)):
+                keywords = getattr(lesson, "keywords", []) or []
+                if (search_query in (lesson.title or "").lower() or 
+                    search_query in (lesson.description or "").lower() or
+                    any(search_query in (keyword or "").lower() for keyword in keywords)):
                     
                     # Get course and module info for context
                     course = await Course.find_one({"course_id": lesson.course_id})
@@ -141,7 +146,7 @@ async def unified_search(
                         course_name=course_name,
                         module_id=lesson.module_id,
                         module_name=module_name,
-                        tags=lesson.keywords,
+                        tags=keywords,
                         difficulty_level=lesson.difficulty_level,
                         duration_minutes=lesson.duration_minutes,
                         url=f"/course/{lesson.course_id}/lesson/{lesson.lesson_id}",
