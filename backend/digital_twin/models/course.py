@@ -267,8 +267,9 @@ class Lesson(Document):
     
     # Content management
     content_type: str = Field(..., description="Content type: video, text, interactive, quiz, assignment")
-    content_url: Optional[str] = Field(default=None, description="Content URL (e.g., YouTube link)")
+    content_url: Optional[str] = Field(default=None, description="Content URL (e.g., YouTube link) - DEPRECATED: Use video_content_id instead")
     content_cid: Optional[str] = Field(default=None, description="IPFS CID for content")
+    video_content_id: Optional[str] = Field(default=None, description="Video content ID for uploaded videos")
     
     # Structure and timing
     duration_minutes: int = Field(default=30, description="Estimated lesson duration in minutes")

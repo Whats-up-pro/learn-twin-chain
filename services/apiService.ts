@@ -431,6 +431,15 @@ export class ApiService {
     return this.makeRequest(`/video-sessions/?${queryParams.toString()}`);
   }
 
+  async getVideoStreamingUrl(videoId: string, quality?: string) {
+    const qp = quality ? `?quality=${encodeURIComponent(quality)}` : '';
+    return this.makeRequest(`/videos/stream/${encodeURIComponent(videoId)}${qp}`);
+  }
+
+  async getLessonVideos(lessonId: string) {
+    return this.makeRequest(`/videos/lesson/${encodeURIComponent(lessonId)}`);
+  }
+
   async deleteVideoSession(sessionId: string) {
     return this.makeRequest(`/video-sessions/${sessionId}`, {
       method: 'DELETE',

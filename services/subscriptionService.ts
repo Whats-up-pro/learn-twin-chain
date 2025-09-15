@@ -43,7 +43,7 @@ export interface PaymentTransaction {
   id: string;
   amount: number;
   currency: string;
-  payment_method: 'credit_card' | 'zalo_pay' | 'momo';
+  payment_method: 'credit_card' | 'vnpay_qr';
   status: 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled';
   description: string;
   created_at: string;
@@ -66,7 +66,7 @@ export interface SubscriptionHistory {
 export interface CreateSubscriptionRequest {
   plan: 'basic' | 'premium';
   billing_cycle: 'monthly' | 'yearly';
-  payment_method: 'credit_card' | 'zalo_pay' | 'momo';
+  payment_method: 'credit_card' | 'vnpay_qr';
 }
 
 export interface CreateSubscriptionResponse {
@@ -81,6 +81,18 @@ export interface CreateSubscriptionResponse {
 export interface PaymentStatusResponse {
   success: boolean;
   transaction: PaymentTransaction;
+  error?: string;
+}
+
+export interface PaymentConfirmRequest {
+  transaction_id: string;
+  payment_method: 'credit_card' | 'vnpay_qr';
+}
+
+export interface PaymentConfirmResponse {
+  success: boolean;
+  message?: string;
+  subscription_id?: string;
   error?: string;
 }
 
@@ -166,6 +178,35 @@ class SubscriptionService {
   }
 
   /**
+   * Confirm payment after success redirect (fallback when webhook delayed)
+   */
+  async confirmPayment(req: PaymentConfirmRequest): Promise<PaymentConfirmResponse> {
+    try {
+      const response = await apiService.post<PaymentConfirmResponse>('/subscription/payment/confirm', req);
+      return response;
+    } catch (error) {
+      console.error('Failed to confirm payment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send payment gateway payload to backend webhook for immediate processing
+   */
+  async sendGatewayWebhook(payment_method: 'vnpay_qr' | 'credit_card', gateway_data: Record<string, any>) {
+    try {
+      const response = await apiService.post<{ success: boolean; message?: string; error?: string }>(
+        '/subscription/payment/webhook',
+        { payment_method, gateway_data }
+      );
+      return response;
+    } catch (error) {
+      console.error('Failed to send gateway webhook:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Cancel user's current subscription
    */
   async cancelSubscription(): Promise<{ success: boolean; message: string }> {
@@ -246,7 +287,7 @@ class SubscriptionService {
   /**
    * Get payment method display info
    */
-  getPaymentMethodInfo(method: 'credit_card' | 'zalo_pay' | 'momo') {
+  getPaymentMethodInfo(method: 'credit_card' | 'vnpay_qr') {
     const methods = {
       credit_card: {
         name: 'Credit Card',
@@ -254,17 +295,11 @@ class SubscriptionService {
         logo: '/images/payment/credit-card.svg',
         description: 'Pay with Visa, Mastercard, or other major credit cards'
       },
-      zalo_pay: {
-        name: 'ZaloPay',
-        icon: '🔵',
-        logo: 'https://s3.thoainguyentek.com/2021/11/zalopay-logo.png',
-        description: 'Pay securely with ZaloPay wallet'
-      },
-      momo: {
-        name: 'MoMo',
-        icon: '🌸',
-        logo: 'https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png',
-        description: 'Pay with MoMo e-wallet'
+      vnpay_qr: {
+        name: 'VNPAY QR',
+        icon: '🔲',
+        logo: 'https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-VNPAY-QR-1.png',
+        description: 'Scan VNPAY QR to pay securely'
       }
     };
     return methods[method];

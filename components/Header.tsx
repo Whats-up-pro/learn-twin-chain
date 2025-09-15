@@ -279,6 +279,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                       <SparklesIcon className="h-4 w-4 mr-2" />
                       Upgrade Plan
                     </Link>
+
+                    <Link
+                      to="/payments"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
+                               transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      {/* simple credit card emoji to avoid adding a new icon import */}
+                      <span className="h-4 w-4 mr-2">💳</span>
+                      Payment History
+                    </Link>
                     
                     <button
                       onClick={() => {

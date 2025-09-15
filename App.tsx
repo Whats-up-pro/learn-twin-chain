@@ -25,6 +25,8 @@ import CoursesPage from './pages/CoursesPage';
 import SettingsPage from './pages/SettingsPage';
 import WelcomePage from './pages/WelcomePage';
 import SubscriptionPage from './pages/SubscriptionPage';
+import PaymentHistoryPage from './pages/PaymentHistoryPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
 import { UserRole } from './types';
@@ -304,6 +306,12 @@ const AppContent: React.FC = () => {
           } />
           <Route path="/subscription" element={
             isLoggedIn ? <SubscriptionPage /> : <Navigate to="/login" replace />
+          } />
+          <Route path="/subscription/payment/success" element={
+            isLoggedIn ? <PaymentSuccessPage /> : <Navigate to="/login" replace />
+          } />
+          <Route path="/payments" element={
+            isLoggedIn ? <PaymentHistoryPage /> : <Navigate to="/login" replace />
           } />
           <Route path="/welcome" element={
             isLoggedIn ? <Navigate to={role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard"} replace /> : <WelcomePage />

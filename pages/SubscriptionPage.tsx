@@ -52,7 +52,7 @@ const SubscriptionPage: React.FC = () => {
   const [currentSubscription, setCurrentSubscription] = useState<UserSubscription | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'premium'>('basic');
   const [selectedBilling, setSelectedBilling] = useState<'monthly' | 'yearly'>('monthly');
-  const [selectedPayment, setSelectedPayment] = useState<'credit_card' | 'zalo_pay' | 'momo'>('credit_card');
+  const [selectedPayment, setSelectedPayment] = useState<'credit_card' | 'vnpay_qr'>('credit_card');
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -142,31 +142,31 @@ const SubscriptionPage: React.FC = () => {
         <div className="absolute top-40 left-1/2 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mb-8 animate-bounce">
-            <RocketLaunchIcon className="w-10 h-10 text-white" />
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mb-4">
+            <RocketLaunchIcon className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-6">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
             Chọn Gói Học Tập
           </h1>
-          <p className="text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed mb-8">
+          <p className="text-base text-gray-700 max-w-2xl mx-auto leading-relaxed mb-4">
             Nâng cao kỹ năng blockchain và Web3 với các gói học tập được thiết kế đặc biệt cho từng cấp độ
           </p>
           
           {/* Trust indicators */}
-          <div className="flex items-center justify-center space-x-8 text-sm text-gray-600">
+          <div className="flex items-center justify-center space-x-6 text-xs text-gray-600">
             <div className="flex items-center">
-              <ShieldCheckIcon className="w-5 h-5 text-green-500 mr-2" />
+              <ShieldCheckIcon className="w-4 h-4 text-green-500 mr-1.5" />
               Bảo mật tuyệt đối
             </div>
             <div className="flex items-center">
-              <BoltIcon className="w-5 h-5 text-blue-500 mr-2" />
+              <BoltIcon className="w-4 h-4 text-blue-500 mr-1.5" />
               Hỗ trợ 24/7
             </div>
             <div className="flex items-center">
-              <HeartIcon className="w-5 h-5 text-red-500 mr-2" />
+              <HeartIcon className="w-4 h-4 text-red-500 mr-1.5" />
               Bảo đảm hoàn tiền
             </div>
           </div>
@@ -174,26 +174,26 @@ const SubscriptionPage: React.FC = () => {
 
         {/* Current Subscription Status */}
         {currentSubscription?.has_subscription && (
-          <div className="max-w-4xl mx-auto mb-12">
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 backdrop-blur-sm border border-green-200 rounded-2xl p-6 shadow-lg">
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 backdrop-blur-sm border border-green-200 rounded-xl p-4 shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mr-4">
-                    <CheckIcon className="w-6 h-6 text-white" />
+                  <div className="w-9 h-9 bg-green-500 rounded-full flex items-center justify-center mr-3">
+                    <CheckIcon className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-800">
+                    <h3 className="text-lg font-semibold text-gray-800">
                       Gói hiện tại: {currentSubscription.plan_name}
                     </h3>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 text-sm">
                       {currentSubscription.days_remaining} ngày còn lại • 
                       Gia hạn: {new Date(currentSubscription.end_date).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-green-600 font-medium">Đang hoạt động</span>
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-green-600 text-sm font-medium">Đang hoạt động</span>
                 </div>
               </div>
             </div>
@@ -201,13 +201,13 @@ const SubscriptionPage: React.FC = () => {
         )}
 
         {/* Billing Toggle */}
-        <div className="flex justify-center mb-12">
-          <div className="bg-white backdrop-blur-sm rounded-2xl p-2 flex border border-blue-200 shadow-lg">
+        <div className="flex justify-center mb-6">
+          <div className="bg-white backdrop-blur-sm rounded-xl p-1.5 flex border border-blue-200 shadow">
             <button
               onClick={() => setSelectedBilling('monthly')}
-              className={`px-8 py-3 rounded-xl font-medium transition-all duration-300 ${
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
                 selectedBilling === 'monthly'
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg transform scale-105'
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow'
                   : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
@@ -215,14 +215,14 @@ const SubscriptionPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSelectedBilling('yearly')}
-              className={`px-8 py-3 rounded-xl font-medium transition-all duration-300 relative ${
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all duration-300 relative ${
                 selectedBilling === 'yearly'
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg transform scale-105'
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow'
                   : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
               Hàng năm
-              <span className="absolute -top-3 -right-3 bg-gradient-to-r from-green-400 to-blue-500 text-white text-xs px-3 py-1 rounded-full font-bold animate-pulse">
+              <span className="absolute -top-2 -right-2 bg-gradient-to-r from-green-400 to-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                 <GiftIcon className="w-3 h-3 inline mr-1" />
                 Tiết kiệm 20%
               </span>
@@ -231,7 +231,7 @@ const SubscriptionPage: React.FC = () => {
         </div>
 
         {/* Plans */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto mb-8">
           {plans.map((plan) => {
             const isPopular = plan.is_popular;
             const isSelected = selectedPlan === plan.plan;
@@ -260,8 +260,8 @@ const SubscriptionPage: React.FC = () => {
             return (
               <div
                 key={plan.plan}
-                className={`relative group transition-all duration-500 transform hover:scale-105 ${
-                  isPopular ? 'lg:-mt-8' : ''
+                className={`relative group transition-all duration-300 ${
+                  isPopular ? 'lg:-mt-4' : ''
                 }`}
               >
                 {isPopular && (
@@ -274,9 +274,9 @@ const SubscriptionPage: React.FC = () => {
                 )}
 
                 <div
-                  className={`relative bg-white rounded-3xl border-2 ${colors.border} transition-all duration-300 ${
-                    isSelected ? 'ring-4 ring-blue-400/50 shadow-2xl' : 'hover:shadow-xl shadow-lg'
-                  } ${isCurrentPlan ? 'opacity-75' : ''}`}
+                  className={`relative bg-white rounded-2xl border ${colors.border} transition-all duration-300 ${
+                    isSelected ? 'ring-2 ring-blue-300/60 shadow-xl' : 'hover:shadow-md shadow'
+                  } ${isCurrentPlan ? 'opacity-80' : ''}`}
                 >
                   {/* Plan Header */}
                   <div className="p-8 pb-6">
@@ -387,7 +387,7 @@ const SubscriptionPage: React.FC = () => {
         <div className="max-w-4xl mx-auto mb-8">
           <h3 className="text-2xl font-bold text-gray-800 text-center mb-8">Chọn phương thức thanh toán</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {(['credit_card', 'zalo_pay', 'momo'] as const).map((method) => {
+            {(['credit_card', 'vnpay_qr'] as const).map((method) => {
               const methodInfo = subscriptionService.getPaymentMethodInfo(method);
               const isSelected = selectedPayment === method;
 
