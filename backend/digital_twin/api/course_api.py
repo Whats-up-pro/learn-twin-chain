@@ -8,14 +8,16 @@ import logging
 from datetime import datetime, timezone
 
 from ..services.course_service import CourseService
+from ..services.course_analytics_service import CourseAnalyticsService
 from ..models.user import User
 from ..dependencies import get_current_user, require_permission, require_teacher, get_optional_user
-from ..models.course import Course, Module, Enrollment, ModuleProgress
+from ..models.course import Course, Module, Enrollment, ModuleProgress, CourseRating
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 course_service = CourseService()
+analytics_service = CourseAnalyticsService()
 
 # Pydantic models
 class CourseCreateRequest(BaseModel):
@@ -53,6 +55,10 @@ class ModuleProgressUpdate(BaseModel):
     time_spent: Optional[int] = None
     assessment_score: Optional[float] = None
     assessment_id: Optional[str] = None
+
+class CourseRatingRequest(BaseModel):
+    rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5")
+    review: Optional[str] = Field(None, max_length=1000, description="Optional review text")
 
 # Course endpoints
 @router.post("/", dependencies=[Depends(require_permission("create_course"))])
@@ -652,3 +658,157 @@ async def get_my_progress(
         return {
             "progress": []
         }
+
+# Course Analytics and Rating endpoints
+@router.get("/{course_id}/analytics")
+async def get_course_analytics(
+    course_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get comprehensive course analytics"""
+    try:
+        # Check if user has permission to view analytics
+        course = await Course.find_one({"course_id": course_id})
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        # Only course creator or admin can view analytics
+        if course.created_by != current_user.did:
+            if not await require_permission(current_user, "view_course_analytics"):
+                raise HTTPException(status_code=403, detail="Not authorized to view course analytics")
+        
+        analytics = await analytics_service.get_course_statistics(course_id)
+        return {"analytics": analytics}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get course analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve course analytics")
+
+@router.post("/{course_id}/rate")
+async def rate_course(
+    course_id: str,
+    request: CourseRatingRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Rate a course"""
+    try:
+        result = await analytics_service.add_course_rating(
+            course_id=course_id,
+            user_id=current_user.did,
+            rating=request.rating,
+            review=request.review
+        )
+        return {"message": "Rating submitted successfully", "rating": result}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to rate course: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit rating")
+
+@router.get("/{course_id}/ratings")
+async def get_course_ratings(
+    course_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(get_optional_user)
+):
+    """Get course ratings with pagination"""
+    try:
+        ratings = await analytics_service.get_course_ratings(course_id, skip, limit)
+        return ratings
+        
+    except Exception as e:
+        logger.error(f"Failed to get course ratings: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve ratings")
+
+@router.get("/popular")
+async def get_popular_courses(
+    limit: int = Query(10, ge=1, le=50),
+    current_user: User = Depends(get_optional_user)
+):
+    """Get most popular courses"""
+    try:
+        courses = await analytics_service.get_popular_courses(limit)
+        return {"courses": courses}
+        
+    except Exception as e:
+        logger.error(f"Failed to get popular courses: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve popular courses")
+
+@router.get("/highly-rated")
+async def get_highly_rated_courses(
+    limit: int = Query(10, ge=1, le=50),
+    current_user: User = Depends(get_optional_user)
+):
+    """Get highly rated courses"""
+    try:
+        courses = await analytics_service.get_highly_rated_courses(limit)
+        return {"courses": courses}
+        
+    except Exception as e:
+        logger.error(f"Failed to get highly rated courses: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve highly rated courses")
+
+@router.post("/{course_id}/update-analytics")
+async def update_course_analytics(
+    course_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Manually update course analytics (admin only)"""
+    try:
+        # Check if user has permission
+        if not await require_permission(current_user, "update_course_analytics"):
+            raise HTTPException(status_code=403, detail="Not authorized to update analytics")
+        
+        analytics = await analytics_service.update_course_analytics(course_id)
+        return {"message": "Analytics updated successfully", "analytics": analytics}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update course analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update analytics")
+
+@router.post("/update-all-analytics")
+async def update_all_course_analytics(
+    current_user: User = Depends(get_current_user)
+):
+    """Update analytics for all courses (admin only)"""
+    try:
+        # Check if user has permission
+        if not await require_permission(current_user, "update_course_analytics"):
+            raise HTTPException(status_code=403, detail="Not authorized to update analytics")
+        
+        # Get all courses
+        courses = await Course.find({}).to_list()
+        updated_courses = []
+        
+        for course in courses:
+            try:
+                analytics = await analytics_service.update_course_analytics(course.course_id)
+                updated_courses.append({
+                    "course_id": course.course_id,
+                    "title": course.title,
+                    "analytics": analytics
+                })
+            except Exception as e:
+                logger.error(f"Failed to update analytics for course {course.course_id}: {e}")
+                updated_courses.append({
+                    "course_id": course.course_id,
+                    "title": course.title,
+                    "error": str(e)
+                })
+        
+        return {
+            "message": f"Analytics update completed for {len(updated_courses)} courses",
+            "updated_courses": updated_courses
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update all course analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update analytics")

@@ -5,13 +5,15 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { UserRole } from '../types';
 import SearchBar from './SearchBar';
 import MetaMaskStatus from './MetaMaskStatus';
+import SubscriptionStatus from './SubscriptionStatus';
 import { 
   BellIcon, 
   UserCircleIcon,
   Bars3Icon,
   CogIcon,
   ArrowLeftOnRectangleIcon,
-  XMarkIcon
+  XMarkIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline';
 import { AcademicCapIcon } from '@heroicons/react/24/solid';
 import { useTranslation } from '../src/hooks/useTranslation';
@@ -79,14 +81,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
             </Link>
           </div>
 
-          {/* Center - Search Bar and MetaMask */}
-          <div className="flex-1 max-w-3xl mx-4 hidden md:flex items-center space-x-3">
+          {/* Center - Search Bar, Subscription Status and MetaMask */}
+          <div className="flex-1 max-w-4xl mx-4 hidden md:flex items-center space-x-3">
             <div className="flex-1">
               <SearchBar 
                 placeholder={t('components.header.searchPlaceholder')}
                 className="w-full"
               />
             </div>
+            <SubscriptionStatus showUpgrade={false} />
             <MetaMaskStatus />
           </div>
 
@@ -267,6 +270,27 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                     >
                       <CogIcon className="h-4 w-4 mr-2" />
                       {t('components.header.settings')}
+                    </Link>
+                    
+                    <Link
+                      to="/subscription"
+                      className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 
+                               transition-colors border-t border-gray-200 mt-1 pt-2"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      <SparklesIcon className="h-4 w-4 mr-2" />
+                      Upgrade Plan
+                    </Link>
+
+                    <Link
+                      to="/payments"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
+                               transition-colors"
+                      onClick={() => setShowUserMenu(false)}
+                    >
+                      {/* simple credit card emoji to avoid adding a new icon import */}
+                      <span className="h-4 w-4 mr-2">💳</span>
+                      Payment History
                     </Link>
                     
                     <button

@@ -7,7 +7,6 @@ import Header from './components/Header';
 // import SessionTimeoutPopup from './components/SessionTimeoutPopup';
 import DashboardPage from './pages/DashboardPage';
 import ModulePage from './pages/ModulePage';
-import VideoLearningPage from './pages/VideoLearningPage';
 import CourseLearnPage from './pages/CourseLearnPage';
 import AchievementsPage from './pages/AchievementsPage';
 import NFTManagementPage from './pages/NFTManagementPage';
@@ -174,11 +173,6 @@ const AppContent: React.FC = () => {
           <Route path="/course/:courseId/learn" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
               <CourseLearnPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/course/:courseId/video" element={
-            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
-              <VideoLearningPage />
             </ProtectedRoute>
           } />
           <Route path="/achievements" element={

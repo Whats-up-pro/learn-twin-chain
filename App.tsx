@@ -8,7 +8,6 @@ import MetaMaskConnectionNotification from './components/MetaMaskConnectionNotif
 import ErrorBoundary from './components/ErrorBoundary';
 import DashboardPage from './pages/DashboardPage';
 import ModulePage from './pages/ModulePage';
-import VideoLearningPage from './pages/VideoLearningPage';
 import CourseLearnPage from './pages/CourseLearnPage';
 import CourseOverviewPage from './pages/CourseOverviewPage';
 import AchievementsPage from './pages/AchievementsPage';
@@ -25,6 +24,9 @@ import SearchPage from './pages/SearchPage';
 import CoursesPage from './pages/CoursesPage';
 import SettingsPage from './pages/SettingsPage';
 import WelcomePage from './pages/WelcomePage';
+import SubscriptionPage from './pages/SubscriptionPage';
+import PaymentHistoryPage from './pages/PaymentHistoryPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
 import { UserRole } from './types';
@@ -274,11 +276,6 @@ const AppContent: React.FC = () => {
               <CourseLearnPage />
             </ProtectedRoute>
           } />
-          <Route path="/course/:courseId/video" element={
-            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
-              <VideoLearningPage />
-            </ProtectedRoute>
-          } />
           <Route path="/achievements" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
               <AchievementsPage />
@@ -307,6 +304,15 @@ const AppContent: React.FC = () => {
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
               <SettingsPage />
             </ProtectedRoute>
+          } />
+          <Route path="/subscription" element={
+            isLoggedIn ? <SubscriptionPage /> : <Navigate to="/login" replace />
+          } />
+          <Route path="/subscription/payment/success" element={
+            isLoggedIn ? <PaymentSuccessPage /> : <Navigate to="/login" replace />
+          } />
+          <Route path="/payments" element={
+            isLoggedIn ? <PaymentHistoryPage /> : <Navigate to="/login" replace />
           } />
           <Route path="/welcome" element={
             isLoggedIn ? <Navigate to={role === UserRole.TEACHER ? "/teacher" : role === UserRole.EMPLOYER ? "/employer" : "/dashboard"} replace /> : <WelcomePage />

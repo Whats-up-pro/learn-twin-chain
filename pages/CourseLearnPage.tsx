@@ -2,16 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { courseService } from '../services/courseService';
 import { quizService } from '../services/quizService';
+import { videoSettingsService, VideoSession } from '../services/videoSettingsService';
+import { discussionService } from '../services/discussionService';
+import DiscussionPanel from '../components/DiscussionPanel';
+import VideoSettingsPanel from '../components/VideoSettingsPanel';
 import { ApiCourse, ApiModule } from '../types';
-import { 
-  isYouTubeUrl, 
-  formatVideoTime,
-  createYouTubePlayer,
-  getYouTubeVideoId
-} from '../utils/videoUtils';
+import VideoPlayer from '../components/VideoPlayer';
+import { apiService } from '../services/apiService';
 import { 
   PlayIcon, 
-  PauseIcon,
   ClockIcon,
   BookOpenIcon,
   AcademicCapIcon,
@@ -31,7 +30,9 @@ interface Lesson {
   title: string;
   description: string;
   duration: string;
+  duration_minutes?: number;
   video_url?: string;
+  video_content_id?: string;
   completed: boolean;
   type: 'video' | 'text' | 'quiz' | 'assignment';
 }
@@ -76,15 +77,20 @@ const CourseLearnPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState('0:00');
-  const [duration, setDuration] = useState('0:00');
-  const [youtubePlayer, setYoutubePlayer] = useState<any>(null);
+  // Removed legacy YouTube player state
   const [isCompletingLesson, setIsCompletingLesson] = useState(false);
   const [completedQuizzes, setCompletedQuizzes] = useState<Set<string>>(new Set());
   
   // Quiz state
   const [showQuiz, setShowQuiz] = useState(false);
   const [currentQuiz, setCurrentQuiz] = useState<ModuleQuiz | null>(null);
+  
+  // Discussion and Video Settings state
+  const [showDiscussionPanel, setShowDiscussionPanel] = useState(false);
+  const [showVideoSettingsPanel, setShowVideoSettingsPanel] = useState(false);
+  const [discussionCount, setDiscussionCount] = useState(0);
+  const [videoSession, setVideoSession] = useState<VideoSession | null>(null);
+  const [userVideoSettings, setUserVideoSettings] = useState<any | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string>>({});
   const [quizTimeLeft, setQuizTimeLeft] = useState<number>(0);
@@ -92,6 +98,9 @@ const CourseLearnPage: React.FC = () => {
   const [quizScore, setQuizScore] = useState<number>(0);
   const [quizResults, setQuizResults] = useState<any>(null);
   const [quizCorrectAnswers, setQuizCorrectAnswers] = useState<Record<string, string>>({});
+  const [streamingUrl, setStreamingUrl] = useState<string>('');
+  const [qualities, setQualities] = useState<any[]>([]);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>(undefined);
 
   // Load course data from API
   useEffect(() => {
@@ -143,7 +152,9 @@ const CourseLearnPage: React.FC = () => {
                         title: apiLesson.title,
                         description: apiLesson.description,
                         duration: `${apiLesson.duration_minutes} MIN`,
+                        duration_minutes: apiLesson.duration_minutes,
                         video_url: apiLesson.content_url,
+                        video_content_id: (apiLesson as any).video_content_id,
                         completed: isCompleted,
                         type: apiLesson.content_type as 'video' | 'text' | 'quiz' | 'assignment'
                       });
@@ -279,6 +290,151 @@ const CourseLearnPage: React.FC = () => {
 
     loadCourse();
   }, [courseId]);
+
+  // Fetch streaming info for S3-backed videos
+  useEffect(() => {
+    const fetchStreaming = async () => {
+      try {
+        if (currentLesson?.type === 'video' && (currentLesson as any).video_content_id) {
+          const videoId = (currentLesson as any).video_content_id as string;
+          try {
+            const res = (await apiService.getVideoStreamingUrl(videoId)) as {
+              streaming_url: string;
+              qualities?: any[];
+              thumbnail_url?: string;
+            };
+            setStreamingUrl(res.streaming_url);
+            setQualities(res.qualities || []);
+            setThumbnailUrl(res.thumbnail_url);
+            return;
+          } catch (err) {
+            // If the stored video_content_id doesn't resolve (404), fall back to lesson videos
+            const list = (await apiService.getLessonVideos(currentLesson.id)) as any;
+            const first = list?.videos?.[0];
+            if (first?.video_id) {
+              setCurrentLesson(prev => prev ? ({ ...prev, video_content_id: first.video_id } as any) : prev);
+              const res = (await apiService.getVideoStreamingUrl(first.video_id)) as {
+                streaming_url: string;
+                qualities?: any[];
+                thumbnail_url?: string;
+              };
+              setStreamingUrl(res.streaming_url);
+              setQualities(res.qualities || []);
+              setThumbnailUrl(res.thumbnail_url || first.thumbnail_url);
+              return;
+            }
+            throw err;
+          }
+        } else if (currentLesson?.type === 'video' && !((currentLesson as any).video_content_id)) {
+          // Fallback: query lesson videos and use the first one
+          const list = (await apiService.getLessonVideos(currentLesson.id)) as any;
+          const first = list?.videos?.[0];
+          if (first?.video_id) {
+            // Update current lesson with discovered video_content_id
+            setCurrentLesson(prev => prev ? ({ ...prev, video_content_id: first.video_id } as any) : prev);
+            const res = (await apiService.getVideoStreamingUrl(first.video_id)) as {
+              streaming_url: string;
+              qualities?: any[];
+              thumbnail_url?: string;
+            };
+            setStreamingUrl(res.streaming_url);
+            setQualities(res.qualities || []);
+            setThumbnailUrl(res.thumbnail_url || first.thumbnail_url);
+          } else {
+            setStreamingUrl('');
+            setQualities([]);
+            setThumbnailUrl(undefined);
+          }
+        } else {
+          setStreamingUrl('');
+          setQualities([]);
+          setThumbnailUrl(undefined);
+        }
+      } catch (e) {
+        console.error('Failed to fetch streaming URL', e);
+        // Final fallback: derive S3 URL from YouTube ID if possible
+        try {
+          let youtubeId: string | null = null;
+          const vcid = (currentLesson as any)?.video_content_id as string | undefined;
+          if (vcid && vcid.startsWith('youtube_')) {
+            const after = vcid.slice('youtube_'.length);
+            youtubeId = after.split('_course_')[0];
+          }
+          if (!youtubeId && currentLesson?.video_url) {
+            const url = currentLesson.video_url;
+            if (url.includes('watch?v=')) youtubeId = new URL(url).searchParams.get('v');
+            else if (url.includes('youtu.be/')) youtubeId = url.split('youtu.be/')[1]?.split('?')[0] || null;
+          }
+          if (youtubeId) {
+            const derived = `https://learntwinchain.s3.ap-southeast-1.amazonaws.com/videos/${youtubeId}.mp4`;
+            setStreamingUrl(derived);
+            setQualities([]);
+            setThumbnailUrl(`https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`);
+          }
+        } catch {}
+      }
+    };
+    fetchStreaming();
+  }, [currentLesson]);
+
+  // Load video settings and discussion count
+  useEffect(() => {
+    const loadVideoSettings = async () => {
+      try {
+        const vs = await videoSettingsService.getVideoSettings();
+        setUserVideoSettings(vs);
+      } catch (error) {
+        console.warn('Failed to load video settings:', error);
+      }
+    };
+
+    loadVideoSettings();
+  }, []);
+
+  // Load discussion count for current lesson
+  useEffect(() => {
+    const loadDiscussionCount = async () => {
+      if (!courseId || !currentLesson) return;
+      
+      try {
+        const discussions = await discussionService.getDiscussions({
+          course_id: courseId,
+          lesson_id: currentLesson.id,
+          limit: 1
+        });
+        setDiscussionCount(discussions.total || 0);
+      } catch (error) {
+        console.warn('Failed to load discussion count:', error);
+        setDiscussionCount(0);
+      }
+    };
+
+    loadDiscussionCount();
+  }, [courseId, currentLesson]);
+
+  // Create video session when lesson starts
+  useEffect(() => {
+    const createVideoSession = async () => {
+      if (!courseId || !currentLesson || !currentModule) return;
+      
+      try {
+        const session = await videoSettingsService.createVideoSession({
+          course_id: courseId,
+          module_id: currentModule.id,
+          lesson_id: currentLesson.id,
+          video_url: currentLesson.video_url || '',
+          video_duration: parseInt(currentLesson.duration) || 0
+        });
+        setVideoSession(session);
+      } catch (error) {
+        console.warn('Failed to create video session:', error);
+      }
+    };
+
+    if (currentLesson && currentLesson.type === 'video') {
+      createVideoSession();
+    }
+  }, [courseId, currentLesson, currentModule]);
 
   // Quiz timer effect
   useEffect(() => {
@@ -518,21 +674,10 @@ const CourseLearnPage: React.FC = () => {
       return;
     }
 
-    // Stop current video and clear any timers
-    if (youtubePlayer) {
-      try {
-        youtubePlayer.pauseVideo();
-        youtubePlayer.destroy();
-      } catch (error) {
-        console.warn(`${t('pages.courseLearnPage.failYoutube')}`, error);
-      }
-      setYoutubePlayer(null);
-    }
-
     // Reset all video states immediately
     setIsPlaying(false);
-    setCurrentTime('0:00');
-    setDuration('0:00');
+    // setCurrentTime('0:00'); // Removed
+    // setDuration('0:00'); // Removed
 
     // Update lesson and module
     setCurrentModule(module);
@@ -540,118 +685,7 @@ const CourseLearnPage: React.FC = () => {
   };
 
 
-  // Store interval ref to clear it when needed
-  const [progressInterval, setProgressInterval] = useState<NodeJS.Timeout | null>(null);
-
-  // Initialize YouTube player when lesson changes
-  useEffect(() => {
-    const initializePlayer = async () => {
-      if (!currentLesson?.video_url || !isYouTubeUrl(currentLesson.video_url)) {
-        return;
-      }
-
-      const videoId = getYouTubeVideoId(currentLesson.video_url);
-      if (!videoId) return;
-
-      try {
-        // Clear any existing interval
-        if (progressInterval) {
-          clearInterval(progressInterval);
-          setProgressInterval(null);
-        }
-
-        // Clean up existing player
-        if (youtubePlayer) {
-          try {
-            youtubePlayer.destroy();
-          } catch (error) {
-            console.warn(`${t('pages.courseLearnPage.failedToDestroyPlayer')}`, error);
-          }
-        }
-
-        // Reset states for new video
-        setCurrentTime('0:00');
-        setDuration('0:00');
-        setIsPlaying(false);
-
-        // Wait a bit for the iframe to be ready
-        setTimeout(async () => {
-          const playerId = `youtube-player-${videoId}`;
-          const playerElement = document.getElementById(playerId);
-          
-          if (playerElement) {
-            const player = await createYouTubePlayer(
-              playerId,
-              videoId,
-              (event: any) => {
-                // Player ready
-                const totalDuration = event.target.getDuration();
-                setDuration(formatVideoTime(totalDuration));
-                setCurrentTime('0:00'); // Ensure we start at 0:00
-                
-                // Start time tracking with a clean interval
-                const newInterval = setInterval(() => {
-                  if (player && player.getCurrentTime) {
-                    try {
-                      const current = player.getCurrentTime();
-                      setCurrentTime(formatVideoTime(current));
-                    } catch (error) {
-                      // Player might be destroyed, clear interval
-                      clearInterval(newInterval);
-                    }
-                  }
-                }, 1000);
-                
-                setProgressInterval(newInterval);
-              },
-              (event: any) => {
-                // State change handler
-                const playerState = event.data;
-                const YT = (window as any).YT;
-                
-                if (playerState === YT.PlayerState.PLAYING) {
-                  setIsPlaying(true);
-                } else if (playerState === YT.PlayerState.PAUSED || playerState === YT.PlayerState.ENDED) {
-                  setIsPlaying(false);
-                }
-              }
-            );
-
-            setYoutubePlayer(player);
-          }
-        }, 500);
-        
-      } catch (error) {
-        console.error(`${t('pages.courseLearnPage.failedToInitializePlayer')}`, error);
-      }
-    };
-
-    if (currentLesson?.video_url && isYouTubeUrl(currentLesson.video_url)) {
-      initializePlayer();
-    }
-    
-    // Cleanup function
-    return () => {
-      if (progressInterval) {
-        clearInterval(progressInterval);
-      }
-    };
-  }, [currentLesson?.video_url]);
-
-  // Handle play/pause
-  const handlePlayPause = () => {
-    if (!youtubePlayer) return;
-
-    try {
-      if (isPlaying) {
-        youtubePlayer.pauseVideo();
-      } else {
-        youtubePlayer.playVideo();
-      }
-    } catch (error) {
-      console.error(`${t('pages.courseLearnPage.errorControllingVideoPlayback')}`, error);
-    }
-  };
+  // Removed legacy YouTube effects and controls
 
   // Function to sync course progress to global state/dashboard
   const syncCourseProgress = async (courseData: Course) => {
@@ -681,14 +715,7 @@ const CourseLearnPage: React.FC = () => {
       setIsCompletingLesson(true); // Start loading
       
       try {
-        // Stop current video before completing
-        if (youtubePlayer) {
-          try {
-            youtubePlayer.pauseVideo();
-          } catch (error) {
-            console.warn(`${t('pages.courseLearnPage.failedToPauseYoutube')}`, error);
-          }
-        }
+        // Reset playback state when completing
         setIsPlaying(false);
 
         // Update lesson progress via API
@@ -699,6 +726,16 @@ const CourseLearnPage: React.FC = () => {
             lesson: currentLesson.title
           })}`
         });
+
+        // Complete video session if it exists
+        if (videoSession) {
+          try {
+            await videoSettingsService.completeVideoSession(videoSession.session_id);
+            setVideoSession(null);
+          } catch (error) {
+            console.warn('Failed to complete video session:', error);
+          }
+        }
         
         // Update local state
         const updatedLesson = { ...currentLesson, completed: true };
@@ -733,8 +770,13 @@ const CourseLearnPage: React.FC = () => {
           // 🔄 Sync progress to dashboard
           await syncCourseProgress(updatedCourse);
           
-          // Notify other components (like sidebar) about progress update
-          window.dispatchEvent(new CustomEvent('courseProgressUpdated'));
+          // Notify other components (like sidebar) about progress update with details
+          window.dispatchEvent(new CustomEvent('courseProgressUpdated', {
+            detail: {
+              courseId: updatedCourse.id,
+              progress: Math.round(updatedCourse.progress)
+            }
+          }));
         }
         
         toast.success(t('pages.courseLearnPage.lessionCompleted'));
@@ -1018,53 +1060,57 @@ const CourseLearnPage: React.FC = () => {
           
           <div className="flex items-center space-x-2">
             <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">
-              📺 {t('pages.courseLearnPage.discussion')}
+              💬 {discussionCount} DISCUSSIONS
             </span>
-            <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-              <ChatBubbleLeftIcon className="w-5 h-5 text-slate-600" />
+            <button 
+              onClick={() => setShowDiscussionPanel(!showDiscussionPanel)}
+              className={`p-2 rounded-lg transition-colors ${
+                showDiscussionPanel ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'
+              }`}
+            >
+              <ChatBubbleLeftIcon className="w-5 h-5" />
             </button>
-            <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-              <Cog6ToothIcon className="w-5 h-5 text-slate-600" />
+            <button 
+              onClick={() => setShowVideoSettingsPanel(!showVideoSettingsPanel)}
+              className={`p-2 rounded-lg transition-colors ${
+                showVideoSettingsPanel ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-600'
+              }`}
+            >
+              <Cog6ToothIcon className="w-5 h-5" />
             </button>
           </div>
         </div>
         
         {/* Video/Content Area */}
         <div className="flex-1 bg-black flex items-center justify-center relative">
-          {currentLesson?.type === 'video' && currentLesson.video_url ? (
+          {currentLesson?.type === 'video' ? (
             <div className="w-full h-full relative">
-              {isYouTubeUrl(currentLesson.video_url) ? (
-                <div className="w-full h-full">
-                  <div 
-                    id={`youtube-player-${getYouTubeVideoId(currentLesson.video_url)}`}
-                    className="w-full h-full"
-                  />
-                </div>
-              ) : (
-                <video
-                  className="w-full h-full"
-                  controls
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onTimeUpdate={(e) => {
-                    const video = e.target as HTMLVideoElement;
-                    setCurrentTime(formatVideoTime(video.currentTime));
-                    if (video.duration) {
-                      setDuration(formatVideoTime(video.duration));
-                    }
-                  }}
-                >
-                  <source src={currentLesson.video_url} />
-                  {t('pages.courseLearnPage.yourBrowserDoesNotSupportTheVideoTag')}
-                </video>
-              )}
+              <VideoPlayer
+                streamingUrl={
+                  streamingUrl || (
+                    currentLesson.video_url && /youtube|youtu\.be/i.test(currentLesson.video_url)
+                      ? ''
+                      : (currentLesson.video_url || '')
+                  )
+                }
+                thumbnailUrl={thumbnailUrl}
+                qualities={qualities}
+                title={currentLesson.title}
+                duration={0}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                className="w-full h-full"
+                initialVolume={userVideoSettings?.volume}
+                preferredQuality={userVideoSettings?.preferred_quality}
+                captionsEnabled={userVideoSettings?.captions_enabled}
+                captionLanguage={userVideoSettings?.caption_language}
+                lockPlaybackRate={true}
+              />
             </div>
           ) : (
             <div className="text-center text-white">
               <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                {currentLesson?.type === 'video' ? (
-                  <PlayIcon className="w-10 h-10" />
-                ) : currentLesson?.type === 'quiz' ? (
+                {currentLesson?.type === 'quiz' ? (
                   <BookOpenIcon className="w-10 h-10" />
                 ) : (
                   <ClockIcon className="w-10 h-10" />
@@ -1072,85 +1118,51 @@ const CourseLearnPage: React.FC = () => {
               </div>
               <h3 className="text-lg font-medium mb-2">{currentLesson?.title}</h3>
               <p className="text-white text-opacity-75">{currentLesson?.description}</p>
-              {currentLesson?.type === 'video' && !currentLesson.video_url && (
-                <p className="text-sm text-red-400 mt-2">{t('pages.courseLearnPage.videoURLNotAvailable')}</p>
-              )}
             </div>
           )}
           
-          {/* Video Controls */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-6">
-            <div className="flex items-center justify-between text-white">
-              <div className="flex items-center space-x-4">
-                {currentLesson?.type === 'video' && currentLesson.video_url && (
-                  <>
-                    <button 
-                      onClick={handlePlayPause}
-                      className="p-3 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full transition-colors"
-                      disabled={!youtubePlayer && isYouTubeUrl(currentLesson.video_url)}
-                    >
-                      {isPlaying ? (
-                        <PauseIcon className="w-6 h-6" />
-                      ) : (
-                        <PlayIcon className="w-6 h-6" />
-                      )}
-                    </button>
-                    
-                    <div className="text-sm">
-                      <span>{currentTime}</span>
-                      <span className="text-white text-opacity-60 mx-2">/</span>
-                      <span>{duration}</span>
-                    </div>
-                  </>
+          
+        </div>
+
+        {/* Action Bar under Video (inside main content) */}
+        <div className="bg-white border-t border-slate-200 p-4 flex items-center justify-start">
+          <div className="flex items-center space-x-3">
+            {!currentLesson?.completed && (
+              <button
+                onClick={handleCompleteLesson}
+                disabled={isCompletingLesson}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
+                  isCompletingLesson
+                    ? 'bg-blue-500 cursor-not-allowed opacity-80'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {isCompletingLesson && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 )}
-                
-                {currentLesson?.type !== 'video' && (
-                  <div className="flex items-center space-x-2 text-white text-opacity-75">
-                    <ClockIcon className="w-5 h-5" />
-                    <span>{currentLesson?.duration || '0 MIN'}</span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                {!currentLesson?.completed && (
-                  <button
-                    onClick={handleCompleteLesson}
-                    disabled={isCompletingLesson}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
-                      isCompletingLesson
-                        ? 'bg-blue-500 cursor-not-allowed opacity-80'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                  >
-                    {isCompletingLesson && (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    )}
-                    <span>{isCompletingLesson ? t('pages.courseLearnPage.Completing') : t('pages.courseLearnPage.completeAndContinue')}</span>
-                  </button>
-                )}
-                
-                {getNextLesson() && (
-                  <button
-                    onClick={() => {
-                      const next = getNextLesson();
-                      if (next && isLessonAccessible(next.module, next.lesson)) {
-                        handleLessonSelect(next.module, next.lesson);
-                      }
-                    }}
-                    className={`flex items-center transition-colors ${
-                      getNextLesson() && isLessonAccessible(getNextLesson()!.module, getNextLesson()!.lesson)
-                        ? 'text-white hover:text-blue-300'
-                        : 'text-white/50 cursor-not-allowed'
-                    }`}
-                    disabled={getNextLesson() ? !isLessonAccessible(getNextLesson()!.module, getNextLesson()!.lesson) : true}
-                  >
-                    <ArrowRightIcon className="w-5 h-5 mr-1" />
-                    {t('pages.courseLearnPage.next')}
-                  </button>
-                )}
-              </div>
-            </div>
+                <span>{isCompletingLesson ? 'COMPLETING...' : 'COMPLETE & CONTINUE'}</span>
+              </button>
+            )}
+
+            {getNextLesson() && currentLesson && (
+              <button
+                onClick={() => {
+                  const next = getNextLesson();
+                  if (next && isLessonAccessible(next.module, next.lesson)) {
+                    handleLessonSelect(next.module, next.lesson);
+                  }
+                }}
+                className={`flex items-center transition-colors ${
+                  getNextLesson() && isLessonAccessible(getNextLesson()!.module, getNextLesson()!.lesson)
+                    ? 'text-slate-900 hover:text-blue-600'
+                    : 'text-slate-400 cursor-not-allowed'
+                }`}
+                disabled={getNextLesson() ? !isLessonAccessible(getNextLesson()!.module, getNextLesson()!.lesson) : true}
+              >
+                <ArrowRightIcon className="w-5 h-5 mr-1" />
+                Next
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1361,6 +1373,25 @@ const CourseLearnPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Discussion Panel */}
+      {showDiscussionPanel && courseId && currentModule && currentLesson && (
+        <DiscussionPanel
+          courseId={courseId}
+          moduleId={currentModule.id}
+          lessonId={currentLesson.id}
+          isOpen={showDiscussionPanel}
+          onClose={() => setShowDiscussionPanel(false)}
+        />
+      )}
+
+      {/* Video Settings Panel */}
+      {showVideoSettingsPanel && (
+        <VideoSettingsPanel
+          isOpen={showVideoSettingsPanel}
+          onClose={() => setShowVideoSettingsPanel(false)}
+        />
       )}
     </div>
   );

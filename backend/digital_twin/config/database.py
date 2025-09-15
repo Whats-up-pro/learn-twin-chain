@@ -6,6 +6,10 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from typing import Optional
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from ..models.user import User, UserProfile
 from ..models.user_settings import UserSettings
@@ -16,6 +20,10 @@ from ..models.session import UserSession, RefreshToken
 from ..models.wallet import WalletLink, SIWENonce
 from ..models.permission import Role, Permission, UserRoleAssignment
 from ..models.quiz_achievement import Quiz, QuizAttempt, Achievement, UserAchievement
+from ..models.discussion import Discussion, Comment, DiscussionLike, CommentLike
+from ..models.video_settings import VideoLearningSettings, VideoSession
+from ..models.video_content import VideoContent, VideoUploadSession
+from ..models.subscription import UserSubscription, PaymentTransaction, SubscriptionFeature, SubscriptionPlanConfig
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +74,19 @@ async def connect_to_mongo():
                 SIWENonce,
                 Role,
                 Permission,
-                UserRoleAssignment
+                UserRoleAssignment,
+                Discussion,
+                Comment,
+                DiscussionLike,
+                CommentLike,
+                VideoLearningSettings,
+                VideoSession,
+                VideoContent,
+                VideoUploadSession,
+                UserSubscription,
+                PaymentTransaction,
+                SubscriptionFeature,
+                SubscriptionPlanConfig
             ]
         )
         
@@ -126,6 +146,69 @@ async def create_indexes():
         # Permission indexes
         await Role.create_index("name", unique=True)
         await Permission.create_index("name", unique=True)
+        
+        # Discussion indexes
+        await Discussion.create_index("discussion_id", unique=True)
+        await Discussion.create_index("course_id")
+        await Discussion.create_index("module_id")
+        await Discussion.create_index("lesson_id")
+        await Discussion.create_index("author_id")
+        await Discussion.create_index("status")
+        await Discussion.create_index("last_activity_at")
+        
+        # Comment indexes
+        await Comment.create_index("comment_id", unique=True)
+        await Comment.create_index("discussion_id")
+        await Comment.create_index("author_id")
+        await Comment.create_index("status")
+        await Comment.create_index("created_at")
+        
+        # Discussion/Comment Like indexes
+        await DiscussionLike.create_index([("discussion_id", 1), ("user_id", 1)], unique=True)
+        await CommentLike.create_index([("comment_id", 1), ("user_id", 1)], unique=True)
+        
+        # Video Settings indexes
+        await VideoLearningSettings.create_index("user_id", unique=True)
+        await VideoSession.create_index("session_id", unique=True)
+        await VideoSession.create_index("user_id")
+        await VideoSession.create_index("course_id")
+        await VideoSession.create_index("lesson_id")
+        await VideoSession.create_index("started_at")
+        
+        # Video Content indexes
+        await VideoContent.create_index("video_id", unique=True)
+        await VideoContent.create_index("lesson_id")
+        await VideoContent.create_index("course_id")
+        await VideoContent.create_index("processing_status.status")
+        await VideoContent.create_index("uploaded_at")
+        await VideoContent.create_index([("course_id", 1), ("lesson_id", 1)])
+        
+        # Video Upload Session indexes
+        await VideoUploadSession.create_index("session_id", unique=True)
+        await VideoUploadSession.create_index("user_id")
+        await VideoUploadSession.create_index("lesson_id")
+        await VideoUploadSession.create_index("status")
+        await VideoUploadSession.create_index("expires_at")
+        
+        # Subscription indexes
+        await UserSubscription.create_index("user_id")
+        await UserSubscription.create_index("plan")
+        await UserSubscription.create_index("status")
+        await UserSubscription.create_index("end_date")
+        
+        # Payment transaction indexes
+        await PaymentTransaction.create_index("transaction_id", unique=True)
+        await PaymentTransaction.create_index("user_id")
+        await PaymentTransaction.create_index("status")
+        await PaymentTransaction.create_index("created_at")
+        
+        # Subscription plan indexes
+        await SubscriptionPlanConfig.create_index("plan", unique=True)
+        await SubscriptionPlanConfig.create_index("is_active")
+        
+        # Subscription feature indexes
+        await SubscriptionFeature.create_index("plan")
+        await SubscriptionFeature.create_index("feature_name")
         
         logger.info("Database indexes created successfully")
         

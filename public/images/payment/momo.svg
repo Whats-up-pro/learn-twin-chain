@@ -1,0 +1,8 @@
+<svg width="40" height="24" viewBox="0 0 40 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="40" height="24" rx="4" fill="#D82D8B"/>
+  <circle cx="10" cy="12" r="5" fill="white"/>
+  <path d="M6 8 C8 6 12 6 14 8 C12 10 8 10 6 8 Z" fill="#D82D8B"/>
+  <path d="M6 16 C8 14 12 14 14 16 C12 18 8 18 6 16 Z" fill="#D82D8B"/>
+  <circle cx="10" cy="12" r="2" fill="#D82D8B"/>
+  <text x="26" y="16" font-family="Arial" font-size="6" fill="white" font-weight="bold">MoMo</text>
+</svg>
