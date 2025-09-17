@@ -12,6 +12,8 @@ import CourseLearnPage from './pages/CourseLearnPage';
 import CourseOverviewPage from './pages/CourseOverviewPage';
 import AchievementsPage from './pages/AchievementsPage';
 import NFTManagementPage from './pages/NFTManagementPage';
+import CertificatesPage from './pages/CertificatesPage';
+import RankingPage from './pages/RankingPage';
 import AiTutorPage from './pages/AiTutorPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage.tsx';
@@ -29,8 +31,11 @@ import PaymentHistoryPage from './pages/PaymentHistoryPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import { Toaster } from 'react-hot-toast';
 import { useAppContext } from './contexts/AppContext';
+import { NotificationProvider, useNotifications } from './contexts/NotificationContext';
 import { UserRole } from './types';
 import sessionMonitor from './services/sessionMonitorService';
+import { achievementService } from './services/achievementService';
+import { notificationService } from './services/notificationService';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: UserRole[] }> = ({ children, allowedRoles }) => {
   const { role } = useAppContext();
@@ -42,6 +47,56 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: UserRo
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
+};
+
+// Component to handle achievement notifications
+const AchievementNotificationHandler: React.FC = () => {
+  const { learnerProfile } = useAppContext();
+  const { addNotification } = useNotifications();
+
+  useEffect(() => {
+    if (!learnerProfile?.did) return;
+
+    // Check for recent achievements every 30 seconds
+    const checkAchievements = async () => {
+      try {
+        const response = await achievementService.getRecentAchievements(1); // Last 1 minute
+        if (response && (response as any).recent_achievements) {
+          (response as any).recent_achievements.forEach((achievement: any) => {
+            // Only show if not already shown (check timestamp)
+            const lastShown = localStorage.getItem(`achievement_shown_${achievement.achievement_id}`);
+            const earnedAt = new Date(achievement.earned_at).getTime();
+            const lastShownTime = lastShown ? parseInt(lastShown) : 0;
+            
+            if (earnedAt > lastShownTime) {
+              notificationService.showAchievementNotification(achievement.title);
+              addNotification({
+                type: 'achievement',
+                title: `🏆 Achievement Unlocked!`,
+                message: achievement.description || `You've earned: ${achievement.title}`,
+                icon: '🏆'
+              });
+              
+              // Mark as shown
+              localStorage.setItem(`achievement_shown_${achievement.achievement_id}`, earnedAt.toString());
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to check for recent achievements:', error);
+      }
+    };
+
+    // Initial check
+    checkAchievements();
+    
+    // Set up interval
+    const interval = setInterval(checkAchievements, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [learnerProfile?.did, addNotification]);
+
+  return null; // This component doesn't render anything
 };
 
 const AppContent: React.FC = () => {
@@ -225,6 +280,9 @@ const AppContent: React.FC = () => {
           }}
         />
         
+        {/* Achievement Notification Handler */}
+        <AchievementNotificationHandler />
+        
         {/* Main content */}
         <main className={`
           flex-1 transition-all duration-300
@@ -283,6 +341,16 @@ const AppContent: React.FC = () => {
           <Route path="/nfts" element={
             <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
               <NFTManagementPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/certificates" element={
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <CertificatesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/ranking" element={
+            <ProtectedRoute allowedRoles={[UserRole.LEARNER]}>
+              <RankingPage />
             </ProtectedRoute>
           } />
           <Route path="/tutor" element={
@@ -347,7 +415,9 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => (
   <BrowserRouter>
-    <AppContent />
+    <NotificationProvider>
+      <AppContent />
+    </NotificationProvider>
   </BrowserRouter>
 );
 

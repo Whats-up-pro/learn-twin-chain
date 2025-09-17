@@ -238,6 +238,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, className = '' }) =
       color: 'blue'
     },
     {
+      id: 'ranking',
+      name: 'Ranking',
+      href: '/ranking',
+      icon: TrophyIcon,
+      iconSolid: TrophySolid,
+      color: 'amber'
+    },
+    {
       id: 'profile',
       name: 'Profile',
       href: '/profile',

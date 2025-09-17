@@ -199,6 +199,15 @@ class AchievementService {
     }
   }
 
+  async getRecentAchievements(minutes: number = 5) {
+    try {
+      return await makeAuthenticatedRequest(`${API_BASE}/achievements/my/recent?minutes=${minutes}`);
+    } catch (error) {
+      console.error('Error getting recent achievements:', error);
+      throw error;
+    }
+  }
+
   async unlockAchievement(achievementId: string, evidenceData?: Record<string, any>) {
     try {
       return await makeAuthenticatedRequest(`${API_BASE}/achievements/${achievementId}/unlock`, {

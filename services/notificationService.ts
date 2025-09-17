@@ -147,6 +147,24 @@ class NotificationService {
     });
   }
 
+  // Show certificate earned notification
+  showCertificateNotification(certificateTitle: string, certificateType: string): void {
+    this.showNotification('Certificate Earned!', {
+      body: `Congratulations! You've earned a ${certificateType}: ${certificateTitle}`,
+      tag: 'certificate-earned',
+      requireInteraction: true,
+    });
+  }
+
+  // Show course completion notification
+  showCourseCompletionNotification(courseTitle: string): void {
+    this.showNotification('Course Completed!', {
+      body: `Congratulations! You've completed "${courseTitle}" and earned a certificate!`,
+      tag: 'course-completion',
+      requireInteraction: true,
+    });
+  }
+
   // Check if notifications are supported
   isSupported(): boolean {
     return 'Notification' in window;
