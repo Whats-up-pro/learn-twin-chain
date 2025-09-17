@@ -1005,7 +1005,11 @@
       "Description": "Description",
       "Method": "Méthode",
       "Amount": "Montant",
-      "Status": "Statut"
+      "Status": "Statut",
+      "SelectThisPlan": "Sélectionner Cette Offre",
+        "SSL256BitSecurity": "Sécurité SSL 256-bit",
+        "RefundIn30Days": "Remboursement sous 30 jours",
+        "CancelAnytime": "Annuler à tout moment"
     }
 }
   

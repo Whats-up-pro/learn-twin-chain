@@ -1005,6 +1005,10 @@
       "Description": "Mô tả",
       "Method": "Phương thức",
       "Amount": "Số tiền",
-      "Status": "Trạng thái"
+      "Status": "Trạng thái",
+      "SelectThisPlan": "Chọn Gói Này",
+      "SSL256BitSecurity": "Bảo mật SSL 256-bit",
+      "RefundIn30Days": "Hoàn tiền trong 30 ngày",
+      "CancelAnytime": "Hủy bất kỳ lúc nào"
     }
 }

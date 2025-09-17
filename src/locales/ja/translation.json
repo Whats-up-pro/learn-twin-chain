@@ -1005,7 +1005,11 @@
       "Description": "説明",
       "Method": "方法",
       "Amount": "金額",
-      "Status": "ステータス"
+      "Status": "ステータス",
+      "SelectThisPlan": "このプランを選択",
+        "SSL256BitSecurity": "SSL 256-bit セキュリティ",
+        "RefundIn30Days": "30日間返金保証",
+        "CancelAnytime": "いつでもキャンセル可能"
     }
 }
   

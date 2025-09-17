@@ -1007,6 +1007,10 @@
       "Description": "Descripción",
       "Method": "Método",
       "Amount": "Cantidad",
-      "Status": "Estado"
+      "Status": "Estado",
+      "SelectThisPlan": "Seleccionar Este Plan",
+    "SSL256BitSecurity": "Seguridad SSL 256-bit",
+    "RefundIn30Days": "Reembolso en 30 días",
+    "CancelAnytime": "Cancelar en cualquier momento"
     }
 }
