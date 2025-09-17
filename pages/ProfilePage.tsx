@@ -12,8 +12,10 @@ import {
 import { UserRole } from '../types';
 import toast from 'react-hot-toast';
 import StudentZKPSection from '../components/StudentZKPSection';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 const ProfilePage: React.FC = () => {
+  const { t } = useTranslation();
   const { learnerProfile, digitalTwin, role } = useAppContext();
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
@@ -35,8 +37,8 @@ const ProfilePage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="bg-white/70 backdrop-blur-sm shadow-xl rounded-3xl p-8 text-center max-w-md mx-4">
           <div className="text-6xl mb-4">👤</div>
-          <h1 className="text-2xl font-bold text-gray-700 mb-4">Profile Not Found</h1>
-          <p className="text-gray-600">Please log in to view your profile.</p>
+          <h1 className="text-2xl font-bold text-gray-700 mb-4">{t('pages.profilePage.profileNotFound')}</h1>
+          <p className="text-gray-600">{t('pages.profilePage.pleaseLogInToViewYourProfile')}</p>
         </div>
       </div>
     );
@@ -136,14 +138,14 @@ const ProfilePage: React.FC = () => {
             
             {/* Role indicator */}
             <div className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-white/20 backdrop-blur-sm">
-              {isStudent ? '🎓 Student' : isTeacher ? '👨‍🏫 Teacher' : isEmployer ? '💼 Employer' : '❓ Unknown Role'}
+              {isStudent ? '🎓 ' + t('pages.profilePage.Student') : isTeacher ? '👨‍🏫 ' + t('pages.profilePage.Teacher') : isEmployer ? '💼 ' + t('pages.profilePage.Employer') : '❓ ' + t('pages.profilePage.Unknown Role')}
             </div>
             
             {digitalTwin && (
               <div className="mt-4 text-blue-100 text-sm">
-                <span>Version: {digitalTwin.version || '1.0'}</span>
+                <span>{t('pages.profilePage.Version')} {digitalTwin.version || '1.0'}</span>
                 <span className="mx-2">•</span>
-                <span>Updated: {new Date(digitalTwin.lastUpdated || Date.now()).toLocaleDateString()}</span>
+                <span>{t('pages.profilePage.Update')} {new Date(digitalTwin.lastUpdated || Date.now()).toLocaleDateString()}</span>
               </div>
             )}
           </div>
@@ -153,7 +155,7 @@ const ProfilePage: React.FC = () => {
         <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
             <CogIcon className="h-7 w-7 text-blue-500 mr-3" />
-            Profile & Data Management
+            {t('pages.profilePage.Profile & Data Management')}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -172,8 +174,8 @@ const ProfilePage: React.FC = () => {
                   <UserIcon className="h-8 w-8" />
                 </div>
                 <div className="text-left">
-                  <div className="text-xl font-bold">Update Learning Style</div>
-                  <div className="text-sm opacity-90">Customize your preferences</div>
+                  <div className="text-xl font-bold">{t('pages.profilePage.UpdateLearningStyle')}</div>
+                  <div className="text-sm opacity-90">{t('pages.profilePage.CustomizeYourPreferences')}</div>
                 </div>
               </div>
             </button>
@@ -193,8 +195,8 @@ const ProfilePage: React.FC = () => {
                   <ShieldCheckIcon className="h-8 w-8" />
                 </div>
                 <div className="text-left">
-                  <div className="text-xl font-bold">Verify Twin Data</div>
-                  <div className="text-sm opacity-90">Check data authenticity</div>
+                  <div className="text-xl font-bold">{t('pages.profilePage.VerifyTwinData')}</div>
+                  <div className="text-sm opacity-90">{t('pages.profilePage.CheckDataAuthenticity')}</div>
                 </div>
               </div>
             </button>
@@ -207,7 +209,7 @@ const ProfilePage: React.FC = () => {
                 return;
               }
               if (completedModules < 1) {
-                toast.error('You need to complete at least 1 module to share your profile!');
+                toast.error(t('pages.profilePage.YouNeedToComplete'));
                 return;
               }
               handleShareProfile();
@@ -225,8 +227,8 @@ const ProfilePage: React.FC = () => {
                 <ShareIcon className="h-8 w-8" />
               </div>
               <div className="text-center">
-                <div className="text-xl font-bold">Share Profile</div>
-                <div className="text-sm opacity-90">Generate shareable credentials</div>
+                <div className="text-xl font-bold">{t('pages.profilePage.ShareProfile')}</div>
+                <div className="text-sm opacity-90">{t('pages.profilePage.GenerateShareableCredentials')}</div>
               </div>
             </div>
           </button>
@@ -239,9 +241,9 @@ const ProfilePage: React.FC = () => {
                   <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-yellow-800">Student-Only Features</h3>
+                  <h3 className="text-lg font-semibold text-yellow-800">{t('pages.profilePage.StudentOnlyFeatures')}</h3>
                   <p className="text-yellow-700 mt-2">
-                    The profile management features above are only available for students. Teachers and employers have access to different functionality through their respective dashboards.
+                    {t('pages.profilePage.TheProfileManagementFeatures')}
                   </p>
                 </div>
               </div>
@@ -279,17 +281,17 @@ const ProfilePage: React.FC = () => {
               }
             `
           }} />
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Update Learning Style</h3>
+          <h3 className="text-xl font-bold text-gray-800 mb-4">{t('pages.profilePage.UpdateLearningStyle')}</h3>
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Customize your learning preferences to improve your educational experience.
+              {t('pages.profilePage.CustomizeYourPreferencesToImprove')}
             </p>
             
             {/* Learning Pace */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Learning Pace</label>
+              <label className="block text-sm font-medium text-gray-700">{t('pages.profilePage.LearningPace')}</label>
               <div className="grid grid-cols-3 gap-2">
-                {['slow', 'adaptive', 'fast'].map((pace) => (
+                {[t('pages.profilePage.slow'), t('pages.profilePage.adaptive'), t('pages.profilePage.fast')].map((pace) => (
                   <button
                     key={pace}
                     onClick={() => handlePreferenceChange('pace', pace)}
@@ -307,9 +309,9 @@ const ProfilePage: React.FC = () => {
 
             {/* Content Type */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Content Type</label>
+              <label className="block text-sm font-medium text-gray-700">{t('pages.profilePage.Content Type')}</label>
               <div className="grid grid-cols-2 gap-2">
-                {['visual', 'mixed', 'textual', 'interactive'].map((type) => (
+                {[t('pages.profilePage.visual'), t('pages.profilePage.mixed'), t('pages.profilePage.textual'), t('pages.profilePage.interactive')].map((type) => (
                   <button
                     key={type}
                     onClick={() => handlePreferenceChange('contentType', type)}
@@ -327,9 +329,9 @@ const ProfilePage: React.FC = () => {
 
             {/* Difficulty Level */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Difficulty Level</label>
+              <label className="block text-sm font-medium text-gray-700">{t('pages.profilePage.Difficulty Level')}</label>
               <div className="grid grid-cols-3 gap-2">
-                {['easy', 'auto-adjust', 'challenging'].map((level) => (
+                {[t('pages.profilePage.easy'), t('pages.profilePage.auto-adjust'), t('pages.profilePage.challenging')].map((level) => (
                   <button
                     key={level}
                     onClick={() => handlePreferenceChange('difficultyLevel', level)}
@@ -347,9 +349,9 @@ const ProfilePage: React.FC = () => {
 
             {/* Preferred Time */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Study Time</label>
+              <label className="block text-sm font-medium text-gray-700">{t('pages.profilePage.Study Time')}</label>
               <div className="grid grid-cols-2 gap-2">
-                {['morning', 'afternoon', 'evening', 'night'].map((time) => (
+                {[t('pages.profilePage.morning'), t('pages.profilePage.afternoon'), t('pages.profilePage.evening'), t('pages.profilePage.night')].map((time) => (
                   <button
                     key={time}
                     onClick={() => handlePreferenceChange('preferredTime', time)}
@@ -367,7 +369,7 @@ const ProfilePage: React.FC = () => {
 
             {/* Study Duration */}
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Session Duration</label>
+              <label className="block text-sm font-medium text-gray-700">{t('pages.profilePage.Session Duration')}</label>
               <div className="grid grid-cols-3 gap-2">
                 {['15min', '30min', '45min', '60min', '90min', '120min'].map((duration) => (
                   <button
@@ -390,13 +392,13 @@ const ProfilePage: React.FC = () => {
                 onClick={() => setIsUpdateModalOpen(false)} 
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors text-sm"
               >
-                Cancel
+                {t('pages.profilePage.Cancel')}
               </button>
               <button 
                 onClick={handleSimulatedUpdate} 
                 className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl text-sm"
               >
-                Update
+                {t('pages.profilePage.Update2')}
               </button>
             </div>
           </div>
@@ -406,27 +408,27 @@ const ProfilePage: React.FC = () => {
       {/* Modal for Verification */}
       <div className={`fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 ${isVerificationModalOpen ? '' : 'hidden'}`}>
         <div className="bg-white rounded-3xl p-8 w-full max-w-md mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">Digital Twin Verification</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">{t('pages.profilePage.DigitalTwinVerification')}</h3>
           <div className="space-y-6">
             <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-2xl">
               <CheckCircleIcon className="h-8 w-8 text-green-600" />
               <div>
-                <div className="font-semibold text-green-800">Verification Successful</div>
-                <div className="text-sm text-green-600">Your data is authentic and verified</div>
+                <div className="font-semibold text-green-800">{t('pages.profilePage.VerificationSuccessful')}</div>
+                <div className="text-sm text-green-600">{t('pages.profilePage.YourDataIsAuthenticAndVerified')}</div>
               </div>
             </div>
             
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <span className="text-gray-600">Data Integrity</span>
-                <span className="text-green-600 font-semibold">✓ Verified</span>
+                <span className="text-gray-600">{t('pages.profilePage.DataIntegrity')}</span>
+                <span className="text-green-600 font-semibold">✓ {t('pages.profilePage.Verified')}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <span className="text-gray-600">Blockchain Status</span>
-                <span className="text-green-600 font-semibold">✓ Confirmed</span>
+                <span className="text-gray-600">{t('pages.profilePage.BlockchainStatus')}</span>
+                <span className="text-green-600 font-semibold">✓ {t('pages.profilePage.Confirmed')}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                <span className="text-gray-600">Last Verified</span>
+                <span className="text-gray-600">{t('pages.profilePage.LastVerified')}</span>
                 <span className="text-gray-800 font-semibold">{new Date().toLocaleDateString()}</span>
               </div>
             </div>
@@ -435,7 +437,7 @@ const ProfilePage: React.FC = () => {
               onClick={() => setIsVerificationModalOpen(false)} 
               className="w-full py-3 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl"
             >
-              Close
+              {t('pages.profilePage.Close')}
             </button>
           </div>
         </div>

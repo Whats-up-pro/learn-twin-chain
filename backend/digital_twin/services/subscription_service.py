@@ -149,6 +149,9 @@ class SubscriptionService:
             subscription = await self.get_user_subscription(user_id)
             
             if not subscription or not subscription.is_active():
+                # Check free tier access
+                if feature == "ai_queries":
+                    return True  # Allow limited free access
                 return False
             
             plan_config = await SubscriptionPlanConfig.find_one(
@@ -160,10 +163,113 @@ class SubscriptionService:
             
             # Check feature limits
             limits = plan_config.limits
+            
+            # Special handling for AI queries
+            if feature == "ai_queries":
+                max_queries = limits.get("max_ai_queries_per_day", 0)
+                if max_queries == -1:  # Unlimited
+                    return True
+                elif max_queries > 0:  # Limited but available
+                    return True
+                else:  # No access
+                    return False
+            
             return limits.get(feature, False)
             
         except Exception as e:
             logger.error(f"Failed to check feature access: {e}")
+            return False
+    
+    async def check_ai_query_limit(self, user_id: str) -> Dict[str, Any]:
+        """Check if user can make an AI query and return limit info"""
+        try:
+            from .redis_service import RedisService
+            redis_service = RedisService()
+            
+            subscription = await self.get_user_subscription(user_id)
+            
+            # Determine daily limit
+            if not subscription or not subscription.is_active():
+                daily_limit = 5  # Free tier limit
+                plan_name = "Free"
+            else:
+                plan_config = await self.get_plan_config(subscription.plan)
+                if plan_config:
+                    daily_limit = plan_config.limits.get("max_ai_queries_per_day", 0)
+                    plan_name = plan_config.name
+                else:
+                    daily_limit = 0
+                    plan_name = "Unknown"
+            
+            # Check if unlimited
+            if daily_limit == -1:
+                return {
+                    "can_query": True,
+                    "daily_limit": -1,
+                    "queries_used": 0,
+                    "queries_remaining": -1,
+                    "plan_name": plan_name,
+                    "unlimited": True
+                }
+            
+            # Check current usage
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            usage_key = f"ai_queries:{user_id}:{today}"
+            
+            try:
+                client = await redis_service.get_client()
+                queries_used = await client.get(usage_key)
+                queries_used = int(queries_used) if queries_used else 0
+            except Exception as e:
+                logger.warning(f"Failed to get AI query usage from Redis: {e}")
+                queries_used = 0
+            
+            can_query = queries_used < daily_limit
+            queries_remaining = max(0, daily_limit - queries_used)
+            
+            return {
+                "can_query": can_query,
+                "daily_limit": daily_limit,
+                "queries_used": queries_used,
+                "queries_remaining": queries_remaining,
+                "plan_name": plan_name,
+                "unlimited": False
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to check AI query limit: {e}")
+            return {
+                "can_query": False,
+                "daily_limit": 0,
+                "queries_used": 0,
+                "queries_remaining": 0,
+                "plan_name": "Error",
+                "unlimited": False
+            }
+    
+    async def increment_ai_query_usage(self, user_id: str) -> bool:
+        """Increment AI query usage for the day"""
+        try:
+            from .redis_service import RedisService
+            redis_service = RedisService()
+            
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            usage_key = f"ai_queries:{user_id}:{today}"
+            
+            client = await redis_service.get_client()
+            
+            # Increment counter
+            await client.incr(usage_key)
+            
+            # Set expiration to end of day
+            tomorrow = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            seconds_until_midnight = int((tomorrow - datetime.now(timezone.utc)).total_seconds())
+            await client.expire(usage_key, seconds_until_midnight)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to increment AI query usage: {e}")
             return False
     
     async def get_plan_config(self, plan: SubscriptionPlan) -> Optional[SubscriptionPlanConfig]:
@@ -375,16 +481,54 @@ class SubscriptionService:
             subscription = await self.get_user_subscription(user_id)
             
             if not subscription:
+                # Free tier limits
+                free_limits = {
+                    "max_courses": 5,
+                    "max_ai_queries_per_day": 5,  # Limited free access
+                    "video_quality": "480p",
+                    "nft_tier": "none",
+                    "mentoring_sessions": 0,
+                    "lab_access": False,
+                    "early_access": False,
+                    "advanced_features": False,
+                    "ai_queries": True,  # Allow limited AI access
+                    "advanced_ai_tutor": False,
+                    "4k_video": False,
+                    "mentoring_sessions": False,
+                    "lab_access": False,
+                    "early_access": False
+                }
                 return {
                     "has_subscription": False,
                     "plan": None,
                     "status": None,
-                    "features": {},
-                    "limits": {},
+                    "features": ["Basic AI tutor access", "Limited course access"],
+                    "limits": free_limits,
                     "days_remaining": 0
                 }
             
             plan_config = await self.get_plan_config(subscription.plan)
+            limits = plan_config.limits if plan_config else {}
+            
+            # Add computed features based on limits
+            computed_limits = limits.copy()
+            
+            # Add ai_queries feature based on max_ai_queries_per_day
+            if "max_ai_queries_per_day" in limits:
+                max_queries = limits["max_ai_queries_per_day"]
+                if max_queries == -1:  # Unlimited
+                    computed_limits["ai_queries"] = True
+                elif max_queries > 0:  # Limited but available
+                    computed_limits["ai_queries"] = True
+                else:  # No access
+                    computed_limits["ai_queries"] = False
+            
+            # Add other computed features
+            computed_limits["advanced_ai_tutor"] = limits.get("advanced_features", False)
+            computed_limits["4k_video"] = limits.get("video_quality") == "4K"
+            computed_limits["mentoring_sessions"] = limits.get("mentoring_sessions", 0) > 0
+            computed_limits["lab_access"] = limits.get("lab_access", False)
+            computed_limits["early_access"] = limits.get("early_access", False)
             
             return {
                 "has_subscription": True,
@@ -392,7 +536,7 @@ class SubscriptionService:
                 "plan_name": plan_config.name if plan_config else subscription.plan,
                 "status": subscription.status,
                 "features": plan_config.features if plan_config else [],
-                "limits": plan_config.limits if plan_config else {},
+                "limits": computed_limits,
                 "days_remaining": int(subscription.days_remaining()),
                 "billing_cycle": subscription.billing_cycle,
                 "price": subscription.price,

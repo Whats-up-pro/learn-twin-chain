@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAppContext } from '../contexts/AppContext';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface BannerSlide {
   id: string;
@@ -29,6 +30,8 @@ interface BannerSlide {
 }
 
 const AutoSlidingBanner: React.FC = () => {
+  const { t } = useTranslation();
+  
   try {
     const navigate = useNavigate();
     const { courses, achievements, enrollments } = useAppContext();
@@ -41,7 +44,7 @@ const AutoSlidingBanner: React.FC = () => {
     const safeEnrollments = enrollments || [];
 
   // Generate banner slides based on available data
-  const generateBannerSlides = (): BannerSlide[] => {
+    const generateBannerSlides = (): BannerSlide[] => {
     const slides: BannerSlide[] = [];
 
     // Course promotion slides
@@ -57,11 +60,11 @@ const AutoSlidingBanner: React.FC = () => {
         id: `course-${course.course_id}`,
         type: 'course',
         title: course.title,
-        subtitle: isEnrolled ? `Continue Learning (${Math.round(progress)}% complete)` : 'New Course Available',
+        subtitle: isEnrolled ? `${t('components.autoSlidingBanner.continueLearning')} (${Math.round(progress)}% complete)` : t('components.autoSlidingBanner.newCourseAvailable'),
         description: course.description,
         imageUrl: course.thumbnail_url || `https://images.unsplash.com/photo-${1516321318423 + index}?w=800&h=400&fit=crop`,
         gradient: isEnrolled ? 'from-blue-600 to-purple-600' : 'from-green-500 to-teal-600',
-        actionText: isEnrolled ? 'Continue Learning' : 'Enroll Now',
+        actionText: isEnrolled ? t('components.autoSlidingBanner.continueLearning') : t('components.autoSlidingBanner.enrollNow'),
         actionUrl: isEnrolled ? `/course/${course.course_id}/learn` : `/course/${course.course_id}`,
         courseId: course.course_id,
         featured: !isEnrolled
@@ -75,12 +78,12 @@ const AutoSlidingBanner: React.FC = () => {
         slides.push({
           id: `achievement-${achievement.id || index}`,
           type: 'achievement',
-          title: achievement.title || achievement.achievement?.title || 'New Achievement Unlocked!',
-          subtitle: 'Congratulations on your progress',
+          title: achievement.title || achievement.achievement?.title || t('components.autoSlidingBanner.newAchievementUnlocked'),
+          subtitle: t('components.autoSlidingBanner.congratulationsOnYourProgress'),
           description: achievement.description || achievement.achievement?.description || 'Keep up the great work and unlock more achievements!',
           icon: '🏆',
           gradient: 'from-yellow-500 to-orange-600',
-          actionText: 'View Achievements',
+          actionText: t('components.autoSlidingBanner.viewAchievements'),
           actionUrl: '/achievements',
           achievementId: achievement.id
         });
@@ -128,7 +131,7 @@ const AutoSlidingBanner: React.FC = () => {
         description: slogan.description,
         icon: slogan.icon,
         gradient: slogan.gradient,
-        actionText: 'Start Learning',
+        actionText: t('components.autoSlidingBanner.startLearning'),
         actionUrl: '/courses'
       });
     });
@@ -180,9 +183,9 @@ const AutoSlidingBanner: React.FC = () => {
           toast.success(`Exploring ${slide.title} 🎯`);
         }
       } else if (slide.type === 'achievement') {
-        toast.success('Viewing your achievements 🏆');
+        toast.success(`${t('components.autoSlidingBanner.viewachievements')} 🏆`);
       } else {
-        toast.success('Starting your learning journey 🚀');
+        toast.success(`${t('components.autoSlidingBanner.startingYourLearningJourney')} 🚀`);
       }
     }
   };
@@ -192,8 +195,8 @@ const AutoSlidingBanner: React.FC = () => {
     return (
       <div className="relative w-full h-96 rounded-3xl overflow-hidden shadow-2xl mb-8 bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center">
         <div className="text-white text-center">
-          <h2 className="text-2xl font-bold mb-2">Welcome to Your Learning Journey</h2>
-          <p className="text-lg opacity-90">Loading your personalized content...</p>
+          <h2 className="text-2xl font-bold mb-2">{t('components.autoSlidingBanner.welcomeToLearningJourney')}</h2>
+          <p className="text-lg opacity-90">{t('components.autoSlidingBanner.loadingPersonalizedContent')}</p>
         </div>
       </div>
     );
@@ -341,7 +344,7 @@ const AutoSlidingBanner: React.FC = () => {
           <div className="absolute top-3 right-3 z-10">
             <div className="flex items-center space-x-1 px-2 py-1 bg-black/20 backdrop-blur-sm rounded-full text-white text-xs">
               <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
-              <span>Auto</span>
+              <span>{t('components.autoSlidingBanner.auto')}</span>
             </div>
           </div>
         )}
@@ -353,8 +356,8 @@ const AutoSlidingBanner: React.FC = () => {
     return (
       <div className="relative w-full h-96 rounded-3xl overflow-hidden shadow-2xl mb-8 bg-gradient-to-r from-red-500 to-pink-600 flex items-center justify-center">
         <div className="text-white text-center">
-          <h2 className="text-2xl font-bold mb-2">Banner Loading Error</h2>
-          <p className="text-lg opacity-90">Please refresh the page to try again.</p>
+          <h2 className="text-2xl font-bold mb-2">{t('components.autoSlidingBanner.bannerLoadingError')}</h2>
+          <p className="text-lg opacity-90">{t('components.autoSlidingBanner.refreshPageToTryAgain')}</p>
         </div>
       </div>
     );

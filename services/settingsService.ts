@@ -3,6 +3,7 @@
  */
 
 const API_BASE = 'http://localhost:8000/api/v1';
+import i18n from '../src/i18n';
 
 export interface UserSettings {
   language: string;
@@ -271,6 +272,9 @@ class SettingsService {
     
     // Store in localStorage for persistence
     localStorage.setItem('preferredLanguage', language);
+    
+    // Change i18n language
+    i18n.changeLanguage(language);
     
     // Dispatch custom event for language change
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language } }));

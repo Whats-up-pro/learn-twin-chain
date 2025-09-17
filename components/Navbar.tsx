@@ -4,6 +4,7 @@ import { APP_NAME } from '../constants';
 import { useAppContext } from '../contexts/AppContext';
 import { blockchainService } from '../services/blockchainService';
 import { UserRole } from '../types';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -16,7 +17,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isLoggedIn = Boolean(learnerProfile && learnerProfile.did);
-
+  const { t } = useTranslation();
   const avatarUrl = learnerProfile && learnerProfile.avatarUrl && learnerProfile.avatarUrl.trim() !== ''
     ? learnerProfile.avatarUrl
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(learnerProfile?.name || 'User')}&background=0ea5e9&color=fff&size=40`;
@@ -77,8 +78,8 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             {/* Student navigation */}
             {role === UserRole.LEARNER && isLoggedIn && (
               <div className="ml-8 flex items-center space-x-2">
-                <Link to="/dashboard" className={navLinkClasses('/dashboard')}>Dashboard</Link>
-                <Link to="/tutor" className={navLinkClasses('/tutor')}>AI Tutor</Link>
+                <Link to="/dashboard" className={navLinkClasses('/dashboard')}>{t('components.navbar.Dashboard')}</Link>
+                <Link to="/tutor" className={navLinkClasses('/tutor')}>{t('components.navbar.AI Tutor')}</Link>
               </div>
             )}
           </div>
@@ -88,7 +89,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                 {/* Wallet status / connect */}
                 <div className="hidden md:flex items-center mr-3">
                   {checkingWallet ? (
-                    <span className="text-xs text-blue-100">Checking wallet...</span>
+                    <span className="text-xs text-blue-100">{t('components.navbar.CheckingWallet')}</span>
                   ) : walletAddress ? (
                     <span className="px-2 py-1 text-xs bg-emerald-600/20 text-emerald-100 rounded">
                       {walletAddress.substring(0, 6)}...{walletAddress.substring(walletAddress.length - 4)}
@@ -98,7 +99,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                       onClick={handleConnectWallet}
                       className="px-2 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 transition"
                     >
-                      Connect Wallet
+                      {t('components.navbar.ConnectWallet')}
                     </button>
                   )}
                 </div>
@@ -118,7 +119,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   onClick={handleLogout}
                   className="ml-4 px-3 py-1 bg-blue-700 text-white rounded hover:bg-blue-800 transition text-sm"
                 >
-                  Logout
+                  {t('components.navbar.Logout')}
                 </button>
               </>
             ) : (
@@ -128,7 +129,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   alt="Guest"
                   className="h-8 w-8 rounded-full mr-2 border-2 border-blue-500"
                 />
-                <span className="hidden sm:inline text-sm">Guest</span>
+                <span className="hidden sm:inline text-sm">{t('components.navbar.Guest')}</span>
               </div>
             )}
           </div>

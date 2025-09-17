@@ -4,8 +4,10 @@ import { Course, LearnerProgress, ApiCourse } from '../types';
 import { courseService } from '../services/courseService';
 import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 const TeacherDashboardPage: React.FC = () => {
+  const { t } = useTranslation();
   const [courses, setCourses] = useState<Course[]>([]);
   const [learnerProgress, setLearnerProgress] = useState<LearnerProgress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,9 +168,9 @@ const TeacherDashboardPage: React.FC = () => {
   };
 
   const handleDeleteCourse = (courseId: string) => {
-    if (window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+    if (window.confirm(t('pages.teacherDashboardPage.AreYouSure'))) {
       setCourses(prev => prev.filter(course => course.id !== courseId));
-      toast.success('Course deleted successfully');
+      toast.success(t('pages.teacherDashboardPage.CoureseDeletedSuccessfully'));
     }
   };
 
@@ -178,7 +180,7 @@ const TeacherDashboardPage: React.FC = () => {
         ? { ...course, isPublished: !course.isPublished }
         : course
     ));
-    toast.success('Course publication status updated');
+    toast.success(t('pages.teacherDashboardPage.CoursePublication'));
   };
 
   const handleSubmitCourse = async (e: React.FormEvent) => {
@@ -201,7 +203,7 @@ const TeacherDashboardPage: React.FC = () => {
               ? updatedCourse 
               : course
           ));
-          toast.success('Course updated successfully');
+          toast.success(t('pages.teacherDashboardPage.CourseUpdatedSuccessfully'));
         }
       } else {
         // Create new course
@@ -228,7 +230,7 @@ const TeacherDashboardPage: React.FC = () => {
         if (response && response.course) {
           const newCourse = convertApiCourseToLegacy(response.course);
           setCourses(prev => [newCourse, ...prev]);
-          toast.success('Course created successfully');
+          toast.success(t('pages.teacherDashboardPage.CourseCreatedSuccessfully'));
         }
       }
 
@@ -261,7 +263,7 @@ const TeacherDashboardPage: React.FC = () => {
   const handleSubmitFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackTarget || !feedbackContent.trim()) {
-      toast.error('Please enter feedback content');
+      toast.error(t('pages.teacherDashboardPage.PleaseEnterFeedbackContent'));
       return;
     }
 
@@ -282,17 +284,17 @@ const TeacherDashboardPage: React.FC = () => {
       });
 
       if (response.ok) {
-        toast.success('Feedback sent successfully!');
+        toast.success(t('pages.teacherDashboardPage.FeedbackSentSuccessfully'));
         setShowFeedbackModal(false);
         setFeedbackContent('');
         setFeedbackTarget(null);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.detail || 'Failed to send feedback');
+        toast.error(errorData.detail || t('pages.teacherDashboardPage.FailedToSendFeedBack'));
       }
     } catch (error) {
-      console.error('Error sending feedback:', error);
-      toast.error('Failed to send feedback. Please try again.');
+      console.error(t('pages.teacherDashboardPage.ErrorSendingFeedback'), error);
+      toast.error(t('pages.teacherDashboardPage.FailedToSendFeedBackPleaseTryAgain'));
     }
   };
 
@@ -301,7 +303,7 @@ const TeacherDashboardPage: React.FC = () => {
     // Lấy từ digital twin profile hoặc fallback
     return student.learnerName || 
            (student.digitalTwin as any)?.profile?.full_name || 
-           'Unknown Student';
+           t('pages.teacherDashboardPage.UnknownStudent');
   };
 
   // Helper function to get student institution
@@ -382,13 +384,13 @@ const TeacherDashboardPage: React.FC = () => {
       const diffInHours = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60));
       
       if (diffInHours < 24) {
-        return `${diffInHours} hours ago`;
+        return t('pages.teacherDashboardPage.HoursAgo', { value: diffInHours });
       } else {
         const diffInDays = Math.floor(diffInHours / 24);
-        return `${diffInDays} days ago`;
+        return t('pages.teacherDashboardPage.DaysAgo', { value: diffInDays });
       }
     }
-    return 'No recent activity';
+    return t('pages.teacherDashboardPage.noRecentActivity');
   };
 
   // Hàm lấy danh sách học sinh/DT từ API thật
@@ -404,7 +406,7 @@ const TeacherDashboardPage: React.FC = () => {
         // Transform data to match LearnerProgress interface
         const transformedStudents: LearnerProgress[] = students.map((student: any) => ({
           learnerId: student.twin_id || student.did,
-          learnerName: student.profile?.full_name || 'Unknown Student',
+          learnerName: student.profile?.full_name || t('pages.teacherDashboardPage.UnknownStudent'),
           avatarUrl: '', // API không trả về avatarUrl
           digitalTwin: {
             learnerDid: student.twin_id || student.did,
@@ -439,14 +441,14 @@ const TeacherDashboardPage: React.FC = () => {
         }));
         
         setLearnerProgress(transformedStudents);
-        console.log('Transformed students:', transformedStudents);
+        console.log(t('pages.teacherDashboardPage.transformedStudents'), transformedStudents);
       } else {
-        console.error('Failed to fetch students');
+        console.error(t('pages.teacherDashboardPage.FailedToFetchStudents'));
         // Fallback to demo data
         setLearnerProgress([]);
       }
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.error(t('pages.teacherDashboardPage.ErrorFetchingStudents'), error);
       // Fallback to demo data
       setLearnerProgress([]);
     } finally {
@@ -468,23 +470,23 @@ const TeacherDashboardPage: React.FC = () => {
           if (coursesResponse && coursesResponse.courses) {
             const convertedCourses = coursesResponse.courses.map(convertApiCourseToLegacy);
             setCourses(convertedCourses);
-            console.log('Loaded courses from API:', convertedCourses);
+            console.log(t('pages.teacherDashboardPage.LoadedCoursesFromAPI'), convertedCourses);
           } else {
             // Fallback to demo data
             setCourses(demoCourses);
-            console.log('Using demo courses data');
+            console.log(t('pages.teacherDashboardPage.UsingDemoCoursesData'));
           }
         } catch (error) {
-          console.error('Error loading courses from API:', error);
+          console.error(t('pages.teacherDashboardPage.ErrorLoadingCoursesFromAPI'), error);
           setCourses(demoCourses);
-          toast.error('Failed to load courses. Using demo data.');
+          toast.error(t('pages.teacherDashboardPage.FailedToLoadCoursesUsingDemoData'));
         }
 
         // Load learner progress
         await fetchStudents();
       } catch (error) {
-        console.error('Error loading data:', error);
-        toast.error('Failed to load dashboard data');
+        console.error(t('pages.teacherDashboardPage.ErrorLoadingData'), error);
+        toast.error(t('pages.teacherDashboardPage.FailedToLoadDashboardData'));
       } finally {
         setLoading(false);
       }
@@ -499,10 +501,10 @@ const TeacherDashboardPage: React.FC = () => {
     try {
       const res = await fetch('http://localhost:8000/api/v1/sync-users-twins', { method: 'POST' });
       if (!res.ok) throw new Error('Sync failed');
-      toast.success('Data synchronized successfully!');
+      toast.success(t('pages.teacherDashboardPage.DataSynchronizedSuccessfully'));
       await fetchStudents();
     } catch (err) {
-      toast.error('Data synchronization failed!');
+      toast.error(t('pages.teacherDashboardPage.DataSynchronizationFailed'));
     } finally {
       setSyncing(false);
     }
@@ -511,7 +513,7 @@ const TeacherDashboardPage: React.FC = () => {
   if (loading) return (
     <div className="flex justify-center items-center h-64">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      <span className="ml-2 text-gray-600">Loading...</span>
+      <span className="ml-2 text-gray-600">{t('pages.teacherDashboardPage.Loading')}</span>
     </div>
   );
 
@@ -523,8 +525,8 @@ const TeacherDashboardPage: React.FC = () => {
         <div className="px-8 py-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div className="mb-4 md:mb-0">
-              <h1 className="text-3xl font-bold text-white mb-2">Teacher Dashboard</h1>
-              <p className="text-sky-100">Monitor your students' progress and manage courses</p>
+              <h1 className="text-3xl font-bold text-white mb-2">{t('pages.teacherDashboardPage.teacherDashboard')}</h1>
+              <p className="text-sky-100">{t('pages.teacherDashboardPage.MonitorYourStudents')}</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <button
@@ -533,14 +535,14 @@ const TeacherDashboardPage: React.FC = () => {
                 disabled={syncing}
               >
                 <ArrowPathIcon className={`w-5 h-5 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing...' : 'Sync Data'}
+                {syncing ? t('pages.teacherDashboardPage.Syncing') : t('pages.teacherDashboardPage.SyncData')}
               </button>
               <button
                 onClick={handleCreateCourse}
                 className="bg-white text-sky-600 hover:bg-gray-50 px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center"
               >
                 <PlusIcon className="w-5 h-5 mr-2" />
-                Create Course
+                {t('pages.teacherDashboardPage.CreateCourse')}
               </button>
             </div>
           </div>
@@ -553,7 +555,7 @@ const TeacherDashboardPage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Students</p>
+              <p className="text-sm font-medium text-gray-600">{t('pages.teacherDashboardPage.TotalStudents')}</p>
               <p className="text-3xl font-bold text-gray-900">{totalLearners}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -562,7 +564,7 @@ const TeacherDashboardPage: React.FC = () => {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <span className="text-green-600 font-medium">+12%</span>
-            <span className="text-gray-500 ml-1">from last month</span>
+            <span className="text-gray-500 ml-1">{t('pages.teacherDashboardPage.FromLastMonth')}</span>
           </div>
         </div>
 
@@ -570,7 +572,7 @@ const TeacherDashboardPage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Learners</p>
+              <p className="text-sm font-medium text-gray-600">{t('pages.teacherDashboardPage.ActiveLearners')}</p>
               <p className="text-3xl font-bold text-gray-900">{activeLearners}</p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -579,7 +581,7 @@ const TeacherDashboardPage: React.FC = () => {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <span className="text-green-600 font-medium">+5%</span>
-            <span className="text-gray-500 ml-1">from last week</span>
+            <span className="text-gray-500 ml-1">{t('pages.teacherDashboardPage.FromLastWeek')}</span>
           </div>
         </div>
 
@@ -587,7 +589,7 @@ const TeacherDashboardPage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Courses</p>
+              <p className="text-sm font-medium text-gray-600">{t('pages.teacherDashboardPage.ActiveCourses')}</p>
               <p className="text-3xl font-bold text-gray-900">{totalCourses}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -596,7 +598,7 @@ const TeacherDashboardPage: React.FC = () => {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <span className="text-green-600 font-medium">+3</span>
-            <span className="text-gray-500 ml-1">new this month</span>
+            <span className="text-gray-500 ml-1">{t('pages.teacherDashboardPage.NewThisMonth')}</span>
           </div>
         </div>
 
@@ -604,7 +606,7 @@ const TeacherDashboardPage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Avg. Completion</p>
+              <p className="text-sm font-medium text-gray-600">{t('pages.teacherDashboardPage.Avg')}</p>
               <p className="text-3xl font-bold text-gray-900">78%</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
@@ -613,7 +615,7 @@ const TeacherDashboardPage: React.FC = () => {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <span className="text-green-600 font-medium">+8%</span>
-            <span className="text-gray-500 ml-1">this week</span>
+            <span className="text-gray-500 ml-1">{t('pages.teacherDashboardPage.ThisWeek')}</span>
           </div>
         </div>
       </div>
@@ -623,9 +625,9 @@ const TeacherDashboardPage: React.FC = () => {
         <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 border-b border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 flex items-center">
             <BookOpenIcon className="w-6 h-6 mr-3 text-emerald-600" />
-            My Courses
+            {t('pages.teacherDashboardPage.MyCourses')}
           </h2>
-          <p className="text-sm text-gray-600 mt-1">Manage and monitor your course offerings</p>
+          <p className="text-sm text-gray-600 mt-1">{t('pages.teacherDashboardPage.ManageAndMonitor')}</p>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -649,11 +651,11 @@ const TeacherDashboardPage: React.FC = () => {
                 
                 <div className="space-y-3 mb-4">
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700">Enrolled Learners</span>
+                    <span className="text-sm font-medium text-gray-700">{t('pages.teacherDashboardPage.EnrolledLearners')}</span>
                     <span className="text-lg font-bold text-gray-900">{course.enrolledLearners}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm font-medium text-gray-700">Created</span>
+                    <span className="text-sm font-medium text-gray-700">{t('pages.teacherDashboardPage.Created')}</span>
                     <span className="text-sm font-semibold text-gray-900">{new Date(course.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -664,7 +666,7 @@ const TeacherDashboardPage: React.FC = () => {
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
                   >
                     <PencilIcon className="w-4 h-4 mr-1" />
-                    Edit
+                    {t('pages.teacherDashboardPage.Edit')}
                   </button>
                   <button 
                     onClick={() => handleTogglePublish(course.id)}
@@ -674,14 +676,14 @@ const TeacherDashboardPage: React.FC = () => {
                         : 'bg-blue-600 hover:bg-blue-700 text-white'
                     }`}
                   >
-                    {course.isPublished ? 'Unpublish' : 'Publish'}
+                    {course.isPublished ? t('pages.teacherDashboardPage.Unpublish') : t('pages.teacherDashboardPage.Publish')}
                   </button>
                   <button 
                     onClick={() => handleDeleteCourse(course.id)}
                     className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
                   >
                     <TrashIcon className="w-4 h-4 mr-1" />
-                    Delete
+                    {t('pages.teacherDashboardPage.Delete')}
                   </button>
                 </div>
               </div>
@@ -693,13 +695,13 @@ const TeacherDashboardPage: React.FC = () => {
       {/* Learner Progress */}
       <div className="bg-white rounded-lg shadow-md">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">My Students</h2>
+          <h2 className="text-xl font-semibold text-gray-900">{t('pages.teacherDashboardPage.MyStudents')}</h2>
         </div>
         <div className="p-6">
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Loading students...</p>
+              <p className="mt-2 text-gray-600">{t('pages.teacherDashboardPage.LoadingStudents')}</p>
             </div>
           ) : studentLearners.length > 0 ? (
             <>
@@ -748,7 +750,7 @@ const TeacherDashboardPage: React.FC = () => {
                         {/* Progress Section */}
                         <div>
                           <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-semibold text-gray-700">Overall Progress</span>
+                            <span className="text-sm font-semibold text-gray-700">{t('pages.teacherDashboardPage.OverallProgress')}</span>
                             <span className="text-lg font-bold text-sky-600">
                               {Math.round(progressPercentage * 100)}%
                             </span>
@@ -767,18 +769,18 @@ const TeacherDashboardPage: React.FC = () => {
                         {/* Student Info */}
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div className="bg-gray-50 rounded-lg p-3">
-                            <div className="text-gray-500 text-xs font-medium mb-1">Program</div>
+                            <div className="text-gray-500 text-xs font-medium mb-1">{t('pages.teacherDashboardPage.Program')}</div>
                             <div className="font-semibold text-gray-900 truncate">{getStudentProgram(learner)}</div>
                           </div>
                           <div className="bg-gray-50 rounded-lg p-3">
-                            <div className="text-gray-500 text-xs font-medium mb-1">Learning Style</div>
+                            <div className="text-gray-500 text-xs font-medium mb-1">{t('pages.teacherDashboardPage.LearningStyle')}</div>
                             <div className="font-semibold text-gray-900 truncate">{getStudentLearningStyle(learner)}</div>
                           </div>
                         </div>
 
                         {/* Skills Section */}
                         <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Top Skills</h4>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">{t('pages.teacherDashboardPage.TopSkills')}</h4>
                           <div className="flex flex-wrap gap-1">
                             {getStudentSkills(learner).slice(0, 3).map((skill, index) => (
                               <span 
@@ -793,7 +795,7 @@ const TeacherDashboardPage: React.FC = () => {
 
                         {/* Current Modules */}
                         <div>
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Current Modules</h4>
+                          <h4 className="text-sm font-semibold text-gray-700 mb-2">{t('pages.teacherDashboardPage.CurrentModules')}</h4>
                           <div className="space-y-1">
                             {getCurrentModules(learner).slice(0, 2).map((module: string, index: number) => (
                               <div key={index} className="flex items-center p-2 bg-blue-50 rounded-lg">
@@ -807,7 +809,7 @@ const TeacherDashboardPage: React.FC = () => {
                         {/* Last Activity */}
                         <div className="pt-2 border-t border-gray-100">
                           <div className="flex items-center justify-between text-xs text-gray-500">
-                            <span>Last Activity</span>
+                            <span>{t('pages.teacherDashboardPage.LastActivity')}</span>
                             <span className="font-medium">{getStudentLastActivity(learner)}</span>
                           </div>
                         </div>
@@ -821,7 +823,7 @@ const TeacherDashboardPage: React.FC = () => {
                             className="flex-1 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center"
                           >
                             <EyeIcon className="w-4 h-4 mr-1" />
-                            View Details
+                            {t('pages.teacherDashboardPage.ViewDetails')}
                           </button>
                           <button 
                             onClick={() => handleOpenFeedback(learner)}
@@ -830,7 +832,7 @@ const TeacherDashboardPage: React.FC = () => {
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
                             </svg>
-                            Feedback
+                            {t('pages.teacherDashboardPage.Feedback')}
                           </button>
                         </div>
                       </div>
@@ -846,7 +848,7 @@ const TeacherDashboardPage: React.FC = () => {
                     disabled={currentPage === 1}
                     className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Previous
+                    {t('pages.teacherDashboardPage.Previous')}
                   </button>
                   
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
@@ -868,7 +870,7 @@ const TeacherDashboardPage: React.FC = () => {
                     disabled={currentPage === totalPages}
                     className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Next
+                    {t('pages.teacherDashboardPage.Next')}
                   </button>
                 </div>
               )}
@@ -878,9 +880,9 @@ const TeacherDashboardPage: React.FC = () => {
               <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <UserGroupIcon className="w-12 h-12 text-gray-400" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">No Students Found</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">{t('pages.teacherDashboardPage.NoStudentsFound')}</h3>
               <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                There are no students enrolled in your courses yet. Try syncing data or creating new courses.
+                {t('pages.teacherDashboardPage.ThereAreNoStudents')}
               </p>
               <div className="flex justify-center space-x-4">
                 <button
@@ -888,14 +890,14 @@ const TeacherDashboardPage: React.FC = () => {
                   className="bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
                 >
                   <ArrowPathIcon className="w-5 h-5 mr-2" />
-                  Sync Data
+                  {t('pages.teacherDashboardPage.SyncData')}
                 </button>
                 <button
                   onClick={handleCreateCourse}
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center"
                 >
                   <PlusIcon className="w-5 h-5 mr-2" />
-                  Create Course
+                  {t('pages.teacherDashboardPage.CreateCourse')}
                 </button>
               </div>
             </div>
@@ -908,9 +910,9 @@ const TeacherDashboardPage: React.FC = () => {
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 border-b border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 flex items-center">
             <ChartBarIcon className="w-6 h-6 mr-3 text-green-600" />
-            Popular Modules
+            {t('pages.teacherDashboardPage.PopularModules')}
           </h2>
-          <p className="text-sm text-gray-600 mt-1">Most completed modules by your students</p>
+          <p className="text-sm text-gray-600 mt-1">{t('pages.teacherDashboardPage.MostCompletedModules')}</p>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -921,7 +923,7 @@ const TeacherDashboardPage: React.FC = () => {
                     <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{mod.title}</h3>
                     <div className="flex items-center text-sm text-gray-500">
                       <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                      <span>Active Module</span>
+                      <span>{t('pages.teacherDashboardPage.ActiveModule')}</span>
                     </div>
                   </div>
                   <div className="ml-4">
@@ -934,7 +936,7 @@ const TeacherDashboardPage: React.FC = () => {
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-semibold text-gray-700">Completion Rate</span>
+                      <span className="text-sm font-semibold text-gray-700">{t('pages.teacherDashboardPage.CompletionRate')}</span>
                       <span className="text-lg font-bold text-green-600">
                         {Math.round(mod.completionRate * 100)}%
                       </span>
@@ -951,7 +953,7 @@ const TeacherDashboardPage: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                    <span className="text-xs text-gray-500">Students enrolled</span>
+                    <span className="text-xs text-gray-500">{t('pages.teacherDashboardPage.StudentsEnrolled')}</span>
                     <span className="text-sm font-semibold text-gray-900">
                       {Math.floor(mod.completionRate * 50) + 15}
                     </span>
@@ -966,10 +968,10 @@ const TeacherDashboardPage: React.FC = () => {
       {/* Course Creation/Editing Modal */}
       <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${showCourseModal ? '' : 'hidden'}`}>
         <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4" onClick={(e) => e.stopPropagation()}>
-          <h3 className="text-lg font-semibold mb-4">Create New Course</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('pages.teacherDashboardPage.CreateNewCourse')}</h3>
           <form onSubmit={handleSubmitCourse} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Course Title *</label>
+              <label className="block text-sm font-medium text-gray-700">{t('pages.teacherDashboardPage.CourseTitle')} *</label>
               <input 
                 type="text" 
                 required
@@ -979,7 +981,7 @@ const TeacherDashboardPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Description *</label>
+              <label className="block text-sm font-medium text-gray-700">{t('pages.teacherDashboardPage.Description')} *</label>
               <textarea 
                 required
                 value={courseForm.description}
@@ -989,7 +991,7 @@ const TeacherDashboardPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Category</label>
+              <label className="block text-sm font-medium text-gray-700">{t('pages.teacherDashboardPage.Category')}</label>
               <select 
                 value={courseForm.category}
                 onChange={(e) => setCourseForm(prev => ({ ...prev, category: e.target.value }))}
@@ -1008,7 +1010,7 @@ const TeacherDashboardPage: React.FC = () => {
                 onClick={() => setShowCourseModal(false)}
                 className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
               >
-                Cancel
+                {t('pages.teacherDashboardPage.Cancel')}
               </button>
               <button
                 type="submit"
@@ -1054,18 +1056,18 @@ const TeacherDashboardPage: React.FC = () => {
                   <h3 className="text-3xl font-bold text-gray-900 mb-3">{getStudentDisplayName(selectedLearner)}</h3>
                   <p className="text-xl text-gray-600 mb-2">ID: {selectedLearner.learnerId}</p>
                   <div className="flex items-center space-x-6 text-base text-gray-500">
-                    <span>Institution: {getStudentInstitution(selectedLearner)}</span>
+                    <span>{t('pages.teacherDashboardPage.Institution')}: {getStudentInstitution(selectedLearner)}</span>
                     <span>•</span>
-                    <span>Program: {getStudentProgram(selectedLearner)}</span>
+                    <span>{t('pages.teacherDashboardPage.Program')}: {getStudentProgram(selectedLearner)}</span>
                     <span>•</span>
-                    <span>Birth Year: {getStudentBirthYear(selectedLearner)}</span>
+                    <span>{t('pages.teacherDashboardPage.BirthYear')}: {getStudentBirthYear(selectedLearner)}</span>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-4xl font-bold text-blue-600">
                     {Math.round(getStudentProgress(selectedLearner) * 100)}%
                   </div>
-                  <div className="text-lg text-gray-500">Overall Progress</div>
+                  <div className="text-lg text-gray-500">{t('pages.teacherDashboardPage.OverallProgress')}</div>
                 </div>
               </div>
               
@@ -1077,23 +1079,23 @@ const TeacherDashboardPage: React.FC = () => {
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <UserIcon className="w-5 h-5 mr-2 text-blue-600" />
-                      Profile Information
+                      {t('pages.teacherDashboardPage.profileInformation')}
                     </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600 font-medium">Institution</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.Institution')}</span>
                         <span className="font-semibold">{getStudentInstitution(selectedLearner)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600 font-medium">Program</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.Program')}</span>
                         <span className="font-semibold">{getStudentProgram(selectedLearner)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600 font-medium">Birth Year</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.BirthYear')}</span>
                         <span className="font-semibold">{getStudentBirthYear(selectedLearner)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-600 font-medium">Enrollment Date</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.EnrollmentDate')}</span>
                         <span className="font-semibold">{getStudentEnrollmentDate(selectedLearner)}</span>
                       </div>
                     </div>
@@ -1103,19 +1105,19 @@ const TeacherDashboardPage: React.FC = () => {
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <AcademicCapIcon className="w-5 h-5 mr-2 text-green-600" />
-                      Learning Information
+                      {t('pages.teacherDashboardPage.LearningInformation')}
                     </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600 font-medium">Learning Style</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.LearningStyle')}</span>
                         <span className="font-semibold">{getStudentLearningStyle(selectedLearner)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600 font-medium">Last Activity</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.LastActivity')}</span>
                         <span className="font-semibold">{getStudentLastActivity(selectedLearner)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-600 font-medium">Completed Modules</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.CompletedModules')}</span>
                         <span className="font-semibold">{selectedLearner.courseProgress.completedModules}</span>
                       </div>
                     </div>
@@ -1128,7 +1130,7 @@ const TeacherDashboardPage: React.FC = () => {
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <CodeBracketIcon className="w-5 h-5 mr-2 text-purple-600" />
-                      Programming Skills
+                      {t('pages.teacherDashboardPage.ProgrammingSkills')}
                     </h4>
                     <div className="flex flex-wrap gap-3">
                       {getStudentSkills(selectedLearner).map((skill: string, index: number) => (
@@ -1146,7 +1148,7 @@ const TeacherDashboardPage: React.FC = () => {
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <HeartIcon className="w-5 h-5 mr-2 text-pink-600" />
-                      Soft Skills
+                      {t('pages.teacherDashboardPage.SoftSkills')}
                     </h4>
                     <div className="flex flex-wrap gap-3">
                       {getStudentSoftSkills(selectedLearner).map((skill: string, index: number) => (
@@ -1164,7 +1166,7 @@ const TeacherDashboardPage: React.FC = () => {
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <BookOpenIcon className="w-5 h-5 mr-2 text-indigo-600" />
-                      Current Modules
+                      {t('pages.teacherDashboardPage.CurrentModules')}
                     </h4>
                     <div className="space-y-3">
                       {getCurrentModules(selectedLearner).map((module: string, index: number) => (
@@ -1183,7 +1185,7 @@ const TeacherDashboardPage: React.FC = () => {
                     <div className="bg-gray-50 rounded-lg p-6">
                       <h4 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
                         <ChartBarIcon className="w-5 h-5 mr-2 text-orange-600" />
-                        Module Progress Details
+                        {t('pages.teacherDashboardPage.ModuleProgressDetails')}
                       </h4>
                       <div className="space-y-4">
                         {Object.entries((selectedLearner.digitalTwin as any).learning_state.progress).map(([module, progress]: [string, any]) => (
@@ -1208,19 +1210,19 @@ const TeacherDashboardPage: React.FC = () => {
                   <div className="bg-gray-50 rounded-lg p-6">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                       <InformationCircleIcon className="w-5 h-5 mr-2 text-teal-600" />
-                      Additional Information
+                      {t('pages.teacherDashboardPage.AdditionalInformation')}
                     </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600 font-medium">Total Modules</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.TotalModules')}</span>
                         <span className="font-semibold">{selectedLearner.courseProgress.totalModules}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span className="text-gray-600 font-medium">Average Score</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.AverageScore')}</span>
                         <span className="font-semibold">{Math.round(selectedLearner.courseProgress.averageScore)}%</span>
                       </div>
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-600 font-medium">Last Updated</span>
+                        <span className="text-gray-600 font-medium">{t('pages.teacherDashboardPage.LastUpdated')}</span>
                         <span className="font-semibold">{new Date(selectedLearner.digitalTwin.lastUpdated).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -1234,13 +1236,13 @@ const TeacherDashboardPage: React.FC = () => {
                   onClick={() => handleOpenFeedback(selectedLearner)}
                   className="flex-1 bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 font-medium transition-colors text-lg"
                 >
-                  Send Feedback
+                  {t('pages.teacherDashboardPage.SendFeedback')}
                 </button>
                 <button
                   onClick={() => setShowLearnerModal(false)}
                   className="flex-1 bg-gray-300 text-gray-700 px-8 py-4 rounded-lg hover:bg-gray-400 font-medium transition-colors text-lg"
                 >
-                  Close
+                  {t('pages.teacherDashboardPage.Close')}
                 </button>
               </div>
             </div>
@@ -1251,7 +1253,7 @@ const TeacherDashboardPage: React.FC = () => {
       {/* Feedback Modal */}
       <Modal isOpen={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} title="Feedback">
         <form onSubmit={handleSubmitFeedback} className="space-y-4 p-4">
-          <h2 className="text-xl font-bold mb-2">Send Feedback to {feedbackTarget?.learnerName}</h2>
+          <h2 className="text-xl font-bold mb-2">{t('pages.teacherDashboardPage.SendFeedbackTo', {studentName: feedbackTarget?.learnerName})}</h2>
           <textarea
             className="w-full border rounded p-2"
             rows={4}
@@ -1261,8 +1263,8 @@ const TeacherDashboardPage: React.FC = () => {
             required
           />
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowFeedbackModal(false)} className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Send</button>
+            <button type="button" onClick={() => setShowFeedbackModal(false)} className="px-4 py-2 bg-gray-300 rounded">{t('pages.teacherDashboardPage.Cancel')}</button>
+            <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">{t('pages.teacherDashboardPage.Send')}</button>
           </div>
         </form>
       </Modal>

@@ -9,7 +9,8 @@ import {
   TrophyIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline';
-import { searchService, SearchResult } from '../services/searchService';
+import { apiService } from '../services/apiService';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 // Using SearchResult from searchService
 
@@ -21,9 +22,10 @@ interface SearchBarProps {
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
   className = '', 
-  placeholder = 'Search courses, modules, lessons, quizzes, achievements...',
+  placeholder = t('components.searchBar.searchPlaceholder'),
   onSearch 
 }) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [searchType, setSearchType] = useState<'all' | 'course' | 'module' | 'lesson' | 'quiz' | 'achievement'>('all');
@@ -218,7 +220,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           {isLoading ? (
             <div className="p-4 text-center text-gray-500">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-2 text-sm">Searching...</p>
+              <p className="mt-2 text-sm">{t('components.searchBar.Searching...')}</p>
             </div>
           ) : results.length > 0 ? (
             <div className="py-2">
@@ -278,8 +280,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
             </div>
           ) : (
             <div className="p-4 text-center text-gray-500">
-              <p className="text-sm">No results found for "{query}"</p>
-              <p className="text-xs mt-1">Try different keywords or search type</p>
+              <p className="text-sm">{t('components.searchBar.noResultsFound', {query: query})}</p>
+              <p className="text-xs mt-1">{t('components.searchBar.TryDifferentKeywordsOrSearchType')}</p>
             </div>
           )}
         </div>

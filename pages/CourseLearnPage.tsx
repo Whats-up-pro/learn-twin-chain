@@ -6,9 +6,15 @@ import { videoSettingsService, VideoSession } from '../services/videoSettingsSer
 import { discussionService } from '../services/discussionService';
 import DiscussionPanel from '../components/DiscussionPanel';
 import VideoSettingsPanel from '../components/VideoSettingsPanel';
+import CourseCompletionPopup from '../components/CourseCompletionPopup';
+import NFTMintingTicketPopup from '../components/NFTMintingTicketPopup';
 import { ApiCourse, ApiModule } from '../types';
 import VideoPlayer from '../components/VideoPlayer';
 import { apiService } from '../services/apiService';
+import { achievementService } from '../services/achievementService';
+import { notificationService } from '../services/notificationService';
+import { useNotifications } from '../contexts/NotificationContext';
+import { useAppContext } from '../contexts/AppContext';
 import { 
   PlayIcon, 
   ClockIcon,
@@ -23,6 +29,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface Lesson {
   id: string;
@@ -66,15 +73,18 @@ interface Course {
 }
 
 const CourseLearnPage: React.FC = () => {
+  const { t } = useTranslation();
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
+  const { mintNftForModule } = useAppContext();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [, setIsPlaying] = useState(false);
   // Removed legacy YouTube player state
   const [isCompletingLesson, setIsCompletingLesson] = useState(false);
   const [completedQuizzes, setCompletedQuizzes] = useState<Set<string>>(new Set());
@@ -99,6 +109,15 @@ const CourseLearnPage: React.FC = () => {
   const [streamingUrl, setStreamingUrl] = useState<string>('');
   const [qualities, setQualities] = useState<any[]>([]);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>(undefined);
+  const [showCourseCompletionPopup, setShowCourseCompletionPopup] = useState(false);
+  const [showNFTMintingPopup, setShowNFTMintingPopup] = useState(false);
+  const [nftMintingData, setNftMintingData] = useState<{
+    moduleTitle: string;
+    courseTitle: string;
+    status: 'minting' | 'minted' | 'failed';
+    tokenId?: string;
+    transactionHash?: string;
+  } | null>(null);
 
   // Load course data from API
   useEffect(() => {
@@ -142,7 +161,7 @@ const CourseLearnPage: React.FC = () => {
                           isCompleted = true;
                         }
                       } catch (error) {
-                        console.warn(`Failed to load progress for lesson ${apiLesson.lesson_id}:`, error);
+                        console.warn(`${t('pages.courseLearnPage.failedToLoadProgress')} ${apiLesson.lesson_id}:`, error);
                       }
                       
                       lessons.push({
@@ -160,15 +179,19 @@ const CourseLearnPage: React.FC = () => {
                   }
 
                   // Load quizzes for this module
-                  console.log(`🔍 Fetching quizzes for module: ${apiModule.module_id} (${apiModule.title})`);
+                  console.log(`🔍 ${t('pages.courseLearnPage.fetchingQuizzes')} ${apiModule.module_id} (${apiModule.title})`);
                   let moduleQuizzes: ModuleQuiz[] = [];
                   try {
                     const quizResponse = await quizService.getModuleQuizzes(apiModule.module_id) as any;
-                    console.log(`📝 Quiz response for module ${apiModule.module_id}:`, quizResponse);
-                    console.log(`📝 Number of quizzes found: ${quizResponse?.quizzes?.length || 0}`);
+                    console.log(`📝 ${t('pages.courseLearnPage.quizResponse')} ${apiModule.module_id}:`, quizResponse);
+                    console.log(`📝 ${t('pages.courseLearnPage.numberOfQuizzesFound')} ${quizResponse?.quizzes?.length || 0}`);
                     
                     if (quizResponse?.quizzes?.length > 0) {
-                      console.log(`✅ Found ${quizResponse.quizzes.length} quiz(es) for module ${apiModule.module_id}`);
+                      const message = t("quiz.foundQuizzes", {
+                        count: quizResponse.quizzes.length,
+                        moduleId: apiModule.module_id
+                      });
+                      console.log(message);
                       moduleQuizzes = quizResponse.quizzes.map((quiz: any) => ({
                         quiz_id: quiz.quiz_id,
                         title: quiz.title,
@@ -179,11 +202,12 @@ const CourseLearnPage: React.FC = () => {
                         max_attempts: quiz.max_attempts
                       }));
                     } else {
-                      console.log(`❌ No quizzes found for module ${apiModule.module_id}`);
+                      console.log(`❌ ${t('pages.courseLearnPage.noQuizzesFound')} ${apiModule.module_id}`);
                     }
                   } catch (error) {
-                    console.error(`❌ Failed to load quizzes for module ${apiModule.module_id}:`, error);
+                    console.error(`❌${t('pages.courseLearnPage.failToLoadQuizzes')} ${apiModule.module_id}:`, error);
                   }
+                  
                   
                   // Calculate module progress based on completed lessons
                   const completedCount = lessons.filter(l => l.completed).length;
@@ -198,7 +222,7 @@ const CourseLearnPage: React.FC = () => {
                     quizzes: moduleQuizzes
                   };
                 } catch (error) {
-                  console.error(`Failed to load lessons for module ${apiModule.module_id}:`, error);
+                  console.error(`${t('pages.courseLearnPage.failToLoadLessons')} ${apiModule.module_id}:`, error);
                   return {
                     id: apiModule.module_id,
                     title: apiModule.title,
@@ -243,8 +267,8 @@ const CourseLearnPage: React.FC = () => {
           throw new Error('Course not found');
         }
       } catch (error) {
-        console.error('Failed to load course:', error);
-        toast.error('Failed to load course');
+        console.error(`${t('pages.courseLearnPage.failToLoadCourse')}: `, error);
+        toast.error(t('pages.courseLearnPage.failToLoadCourse'));
         
         // Fallback to demo data
         const mockCourse: Course = {
@@ -257,14 +281,14 @@ const CourseLearnPage: React.FC = () => {
           modules: [
             {
               id: 'welcome',
-              title: 'Welcome',
-              description: 'Introduction to the course',
+              title: t('pages.courseLearnPage.welcome'),
+              description: t('pages.courseLearnPage.introductionToTheCourse'),
               progress: 100,
               lessons: [
                 {
                   id: 'welcome-1',
-                  title: 'A message from your instructor',
-                  description: 'Welcome message and course overview',
+                  title: t('pages.courseLearnPage.welcomeLessons'),
+                  description: t('pages.courseLearnPage.welcomeMessage'),
                   duration: '1 MIN',
                   video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
                   completed: false,
@@ -456,19 +480,58 @@ const CourseLearnPage: React.FC = () => {
     try {
       const completedQuizIds = new Set<string>();
       
+      // First try to load from localStorage as fallback
+      try {
+        const storedQuizzes = localStorage.getItem(`completed_quizzes_${courseData.id}`);
+        if (storedQuizzes) {
+          const storedIds = JSON.parse(storedQuizzes);
+          storedIds.forEach((id: string) => completedQuizIds.add(id));
+          console.log('Loaded completed quizzes from localStorage:', storedIds);
+        }
+      } catch (error) {
+        console.warn('Failed to load from localStorage:', error);
+      }
+      
       // Get all quiz attempts for this user
       const attemptsResponse = await quizService.getQuizAttempts(courseData.id) as any;
+      console.log('Quiz attempts response:', attemptsResponse);
+      
       if (attemptsResponse && attemptsResponse.attempts) {
         attemptsResponse.attempts.forEach((attempt: any) => {
-          if (attempt.passed && attempt.status === 'submitted') {
+          console.log('Quiz attempt:', attempt);
+          // Check multiple conditions for completion
+          const isCompleted = (
+            (attempt.passed === true) ||
+            (attempt.status === 'completed') ||
+            (attempt.status === 'submitted' && attempt.percentage >= 70) ||
+            (attempt.score >= 70) // Assuming 70% is passing
+          );
+          
+          if (isCompleted) {
             completedQuizIds.add(attempt.quiz_id);
+            console.log(`Quiz ${attempt.quiz_id} marked as completed`);
           }
         });
       }
       
+      console.log('Completed quiz IDs:', Array.from(completedQuizIds));
       setCompletedQuizzes(completedQuizIds);
+      
+      // Also save to localStorage as backup
+      localStorage.setItem(`completed_quizzes_${courseData.id}`, JSON.stringify(Array.from(completedQuizIds)));
     } catch (error) {
       console.warn('Failed to load quiz completion status:', error);
+      // Fallback to localStorage only
+      try {
+        const storedQuizzes = localStorage.getItem(`completed_quizzes_${courseData.id}`);
+        if (storedQuizzes) {
+          const storedIds = JSON.parse(storedQuizzes);
+          setCompletedQuizzes(new Set(storedIds));
+          console.log('Using localStorage fallback for completed quizzes:', storedIds);
+        }
+      } catch (fallbackError) {
+        console.warn('Failed to load from localStorage fallback:', fallbackError);
+      }
     }
   };
 
@@ -480,7 +543,10 @@ const CourseLearnPage: React.FC = () => {
       const incompleteLessons = module.lessons.filter(lesson => !lesson.completed);
       
       toast.error(
-        `🔒 Quiz locked! Complete ${incompleteLessons.length} remaining lesson${incompleteLessons.length > 1 ? 's' : ''} in "${module.title}" first.`, 
+        `🔒 ${t('pages.courseLearnPage.quizLocked', {
+          count: incompleteLessons.length,
+          moduleTitle: module.title
+        })}`, 
         {
           duration: 5000,
           icon: '🔒'
@@ -491,7 +557,7 @@ const CourseLearnPage: React.FC = () => {
 
     try {
       // Load the full quiz with questions
-      console.log(`🔍 Loading quiz: ${quiz.quiz_id}`);
+      console.log(`🔍 ${t('pages.courseLearnPage.loadingQuiz')} ${quiz.quiz_id}`);
       const quizResponse = await quizService.getQuiz(quiz.quiz_id, true) as any;
       
       if (quizResponse && quizResponse.quiz) {
@@ -516,14 +582,16 @@ const CourseLearnPage: React.FC = () => {
         setQuizResults(null);
         setShowQuiz(true);
         
-        console.log(`✅ Quiz loaded: ${fullQuiz.questions?.length || 0} questions`);
-        console.log(`📝 Correct answers stored:`, correctAnswers);
+        console.log(`✅ ${t('pages.courseLearnPage.quizLoaded', {
+          count: fullQuiz.questions?.length || 0
+        })}`);
+        console.log(`📝 ${t('pages.courseLearnPage.correctAnswers')}`, correctAnswers);
       } else {
-        throw new Error('Quiz not found');
+        throw new Error(t('pages.courseLearnPage.quizNotFound'));
       }
     } catch (error) {
-      console.error('Failed to load quiz:', error);
-      toast.error('Failed to load quiz. Please try again.');
+      console.error(`${t('pages.courseLearnPage.failedToLoadQuiz')}`, error);
+      toast.error(t('pages.courseLearnPage.failToLoadQuizTryAgain'));
     }
   };
 
@@ -563,27 +631,191 @@ const CourseLearnPage: React.FC = () => {
       setQuizScore(score);
       setQuizResults({ results, passed, correctAnswers, totalQuestions: quizQuestions.length });
       
+      // Submit quiz attempt to backend
+      try {
+        // First start a quiz attempt
+        const startResponse = await quizService.startQuizAttempt(currentQuiz.quiz_id);
+        console.log('Quiz attempt started:', startResponse);
+        
+        // Then submit the attempt with answers
+        const attemptId = startResponse.attempt_id || `attempt_${Date.now()}`;
+        const submitResponse = await quizService.submitQuizAttempt(attemptId, quizAnswers);
+        console.log('Quiz attempt submitted:', submitResponse);
+        
+        // Update module progress with quiz score
+        if (currentModule && passed) {
+          await courseService.updateModuleProgress(currentModule.id, {
+            assessment_score: score,
+            assessment_id: currentQuiz.quiz_id
+          });
+        }
+        
+      } catch (apiError) {
+        console.warn('Failed to submit quiz to backend:', apiError);
+        // Continue with local logic even if backend fails
+      }
+      
       // Mark quiz as completed if passed
       if (passed) {
-        setCompletedQuizzes(prev => new Set([...prev, currentQuiz.quiz_id]));
+        setCompletedQuizzes(prev => {
+          const newSet = new Set([...prev, currentQuiz.quiz_id]);
+          // Also save to localStorage immediately
+          if (course) {
+            localStorage.setItem(`completed_quizzes_${course.id}`, JSON.stringify(Array.from(newSet)));
+          }
+          return newSet;
+        });
+        
+        // Show achievement notifications
+        notificationService.showQuizCompletionNotification(currentQuiz.title, score);
+        addNotification({
+          type: 'achievement',
+          title: '🎯 Quiz Completed!',
+          message: `Great job! You passed "${currentQuiz.title}" with ${score.toFixed(1)}%`,
+          icon: '🎯'
+        });
+        
+        // Check for NFT earning for excellent quiz performance
+        if (score >= 90) {
+          addNotification({
+            type: 'achievement',
+            title: '🏆 Excellent Score!',
+            message: `Outstanding performance! You scored ${score.toFixed(1)}% on "${currentQuiz.title}"`,
+            icon: '🏆'
+          });
+
+          // Check if this is the last quiz in the module and module is now complete
+          if (currentModule) {
+            const moduleHasQuizzes = currentModule.quizzes && currentModule.quizzes.length > 0;
+            const allQuizzesCompleted = moduleHasQuizzes ? 
+              currentModule.quizzes!.every(quiz => completedQuizzes.has(quiz.quiz_id)) : true;
+            const allLessonsCompleted = currentModule.lessons.every(lesson => lesson.completed);
+
+            // If module is now fully completed (lessons + quizzes), mint NFT
+            if (allLessonsCompleted && allQuizzesCompleted) {
+              try {
+                // Show NFT minting ticket popup
+                setNftMintingData({
+                  moduleTitle: currentModule.title,
+                  courseTitle: course?.title || 'Course',
+                  status: 'minting'
+                });
+                setShowNFTMintingPopup(true);
+
+                // Show NFT minting notification
+                addNotification({
+                  type: 'achievement',
+                  title: '🎫 NFT Ticket Generated!',
+                  message: `Congratulations! You've earned an NFT for completing "${currentModule.title}"`,
+                  icon: '🎫'
+                });
+
+                // Start NFT minting process
+                await mintNftForModule(currentModule.id, currentModule.title, score);
+                
+                // Update popup with success status
+                setNftMintingData(prev => prev ? {
+                  ...prev,
+                  status: 'minted',
+                  tokenId: `token_${currentModule.id}`,
+                  transactionHash: `tx_${currentModule.id}_${Date.now()}`
+                } : null);
+                
+                // Show success notification after minting
+                setTimeout(() => {
+                  addNotification({
+                    type: 'achievement',
+                    title: '🎉 NFT Minted Successfully!',
+                    message: `Your module completion NFT for "${currentModule.title}" has been minted!`,
+                    icon: '🎉'
+                  });
+                }, 1000);
+
+              } catch (error) {
+                console.error('Failed to mint NFT for module:', error);
+                
+                // Update popup with failed status
+                setNftMintingData(prev => prev ? {
+                  ...prev,
+                  status: 'failed'
+                } : null);
+                
+                addNotification({
+                  type: 'achievement',
+                  title: '⚠️ NFT Minting Failed',
+                  message: `Failed to mint NFT for "${currentModule.title}". Please try again later.`,
+                  icon: '⚠️'
+                });
+              }
+            }
+          }
+        }
+        
+        // Check for recent achievements
+        try {
+          const response = await achievementService.getRecentAchievements(1);
+          if (response && (response as any).recent_achievements) {
+            (response as any).recent_achievements.forEach((achievement: any) => {
+              notificationService.showAchievementNotification(achievement.title);
+              addNotification({
+                type: 'achievement',
+                title: `🏆 Achievement Unlocked!`,
+                message: achievement.description || `You've earned: ${achievement.title}`,
+                icon: '🏆'
+              });
+            });
+          }
+        } catch (error) {
+          console.warn('Failed to check for new achievements:', error);
+        }
+        
+        // Refresh quiz completion status to ensure UI is updated
+        if (course) {
+          await loadQuizCompletionStatus(course);
+          
+          // Check if course is now completed after quiz completion
+          const isCourseCompleted = await checkCourseCompletion(course);
+          if (isCourseCompleted) {
+            // Course completed! Show certificate notification
+            setTimeout(() => {
+              notificationService.showCourseCompletionNotification(course.title);
+              addNotification({
+                type: 'achievement',
+                title: '🎓 Course Completed!',
+                message: `Congratulations! You've completed "${course.title}" and earned a certificate!`,
+                icon: '🎓'
+              });
+              toast.success(`🎉 Congratulations! You've completed "${course.title}" and earned a certificate!`, {
+                duration: 6000,
+              });
+              
+              // Show completion popup
+              setShowCourseCompletionPopup(true);
+            }, 1500);
+          }
+        }
       }
       
       // Show result message
       if (passed) {
-        toast.success(`🎉 Quiz passed! Score: ${score.toFixed(1)}%`, {
+        toast.success(`🎉 ${t('pages.courseLearnPage.quizPassedScore', {
+          score: score.toFixed(1)
+        })}`, {
           duration: 5000,
           icon: '🏆'
         });
       } else {
-        toast.error(`Quiz score: ${score.toFixed(1)}%. You can retake it to improve!`, {
+        toast.error(`${t('pages.courseLearnPage.quizScore', {
+          score: score.toFixed(1)
+        })}`, {
           duration: 5000,
           icon: '📝'
         });
       }
       
     } catch (error) {
-      console.error('Error submitting quiz:', error);
-      toast.error('Failed to submit quiz. Please try again.');
+      console.error(`${t('pages.courseLearnPage.errorSubmittingQuiz')}`, error);
+      toast.error(t('pages.courseLearnPage.failedToSubmitQuiz'));
       setQuizSubmitted(false);
     }
   };
@@ -640,13 +872,18 @@ const CourseLearnPage: React.FC = () => {
       const lessonIndex = module.lessons.findIndex(l => l.id === lesson.id);
       
       if (lessonIndex === 0 && moduleIndex > 0) {
-        toast.error(`Complete all lessons in "${course.modules[moduleIndex - 1]?.title}" before accessing this module!`, {
+        toast.error(`${t('pages.courseLearnPage.completeAllLessons', {
+          moduleTitle: course.modules[moduleIndex - 1]?.title
+        })}`, {
           duration: 4000,
           icon: '🔒'
         });
       } else {
         const previousLesson = module.lessons[lessonIndex - 1];
-        toast.error(`Complete "${previousLesson?.title}" before accessing "${lesson.title}"!`, {
+        toast.error(`${t('pages.courseLearnPage.completePreviousLesson', {
+          previousLesson: previousLesson?.title,
+          lesson: lesson.title
+        })}`, {
           duration: 4000,
           icon: '🔒'
         });
@@ -687,6 +924,147 @@ const CourseLearnPage: React.FC = () => {
     }
   };
 
+  const checkCourseCompletion = async (courseData: Course): Promise<boolean> => {
+    try {
+      // Check if all lessons are completed
+      const allLessonsCompleted = courseData.modules.every(module => 
+        module.lessons.every(lesson => lesson.completed)
+      );
+      
+      if (!allLessonsCompleted) {
+        return false;
+      }
+      
+      // Check if all quizzes are completed
+      const allQuizzesCompleted = courseData.modules.every(module => {
+        if (!module.quizzes || module.quizzes.length === 0) {
+          return true; // No quizzes in this module
+        }
+        return module.quizzes.every(quiz => completedQuizzes.has(quiz.quiz_id));
+      });
+      
+      return allQuizzesCompleted;
+    } catch (error) {
+      console.error('Failed to check course completion:', error);
+      return false;
+    }
+  };
+
+  const checkModuleCompletionAndAchievements = async (module: Module, course: Course | null) => {
+    try {
+      // Check if module is completed (all lessons completed)
+      const allLessonsCompleted = module.lessons.every(lesson => lesson.completed);
+      
+      if (allLessonsCompleted && module.progress >= 100) {
+        // Module completed! Show notification
+        notificationService.showLessonCompletionNotification(module.title);
+        addNotification({
+          type: 'achievement',
+          title: '📚 Module Completed!',
+          message: `Great job! You've completed the module "${module.title}"`,
+          icon: '📚'
+        });
+
+        // Check if module has quizzes and if they're all completed
+        const moduleHasQuizzes = module.quizzes && module.quizzes.length > 0;
+        const allQuizzesCompleted = moduleHasQuizzes ? 
+          module.quizzes!.every(quiz => completedQuizzes.has(quiz.quiz_id)) : true;
+
+        // If module is fully completed (lessons + quizzes), mint NFT
+        if (allQuizzesCompleted) {
+          try {
+            // Show NFT minting ticket popup
+            setNftMintingData({
+              moduleTitle: module.title,
+              courseTitle: course?.title || 'Course',
+              status: 'minting'
+            });
+            setShowNFTMintingPopup(true);
+
+            // Show NFT minting notification
+            addNotification({
+              type: 'achievement',
+              title: '🎫 NFT Ticket Generated!',
+              message: `Congratulations! You've earned an NFT for completing "${module.title}"`,
+              icon: '🎫'
+            });
+
+            // Start NFT minting process
+            await mintNftForModule(module.id, module.title, 100);
+            
+            // Update popup with success status
+            setNftMintingData(prev => prev ? {
+              ...prev,
+              status: 'minted',
+              tokenId: `token_${module.id}`,
+              transactionHash: `tx_${module.id}_${Date.now()}`
+            } : null);
+            
+            // Show success notification after minting
+            setTimeout(() => {
+              addNotification({
+                type: 'achievement',
+                title: '🎉 NFT Minted Successfully!',
+                message: `Your module completion NFT for "${module.title}" has been minted!`,
+                icon: '🎉'
+              });
+            }, 1000);
+
+          } catch (error) {
+            console.error('Failed to mint NFT for module:', error);
+            
+            // Update popup with failed status
+            setNftMintingData(prev => prev ? {
+              ...prev,
+              status: 'failed'
+            } : null);
+            
+            addNotification({
+              type: 'achievement',
+              title: '⚠️ NFT Minting Failed',
+              message: `Failed to mint NFT for "${module.title}". Please try again later.`,
+              icon: '⚠️'
+            });
+          }
+        }
+
+        // Check for achievements related to this module
+        if (course) {
+          try {
+            const response = await achievementService.getRecentAchievements(5); // Last 5 minutes
+
+            if (response && (response as any).recent_achievements) {
+              // Show notifications for new achievements
+              (response as any).recent_achievements.forEach((achievement: any) => {
+                notificationService.showAchievementNotification(achievement.title);
+                addNotification({
+                  type: 'achievement',
+                  title: `🏆 Achievement Unlocked!`,
+                  message: achievement.description || `You've earned: ${achievement.title}`,
+                  icon: '🏆'
+                });
+
+                // Dispatch custom event for other components
+                window.dispatchEvent(new CustomEvent('achievementUnlocked', {
+                  detail: {
+                    title: achievement.title,
+                    description: achievement.description,
+                    tier: achievement.tier,
+                    points: achievement.points_reward
+                  }
+                }));
+              });
+            }
+          } catch (error) {
+            console.warn('Failed to check for new achievements:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`${t('pages.courseLearnPage.failToSyncCourseProgress')}`, error);
+    }
+  };
+
   const handleCompleteLesson = async () => {
     if (currentLesson && currentModule) {
       setIsCompletingLesson(true); // Start loading
@@ -699,7 +1077,9 @@ const CourseLearnPage: React.FC = () => {
         await courseService.updateLessonProgress(currentLesson.id, {
           completion_percentage: 100,
           time_spent_minutes: 5, // TODO: Track actual time spent
-          notes: `Completed lesson: ${currentLesson.title}`
+          notes: `${t('pages.courseLearnPage.completedLesson', {
+            lesson: currentLesson.title
+          })}`
         });
 
         // Complete video session if it exists
@@ -752,9 +1132,33 @@ const CourseLearnPage: React.FC = () => {
               progress: Math.round(updatedCourse.progress)
             }
           }));
+
+          // Check for module completion and achievements
+          await checkModuleCompletionAndAchievements(updatedModule, updatedCourse);
+
+          // Check if course is completed (all lessons AND all quizzes)
+          const isCourseCompleted = await checkCourseCompletion(updatedCourse);
+          if (isCourseCompleted) {
+            // Course completed! Show certificate notification
+            setTimeout(() => {
+              notificationService.showCourseCompletionNotification(updatedCourse.title);
+              addNotification({
+                type: 'achievement',
+                title: '🎓 Course Completed!',
+                message: `Congratulations! You've completed "${updatedCourse.title}" and earned a certificate!`,
+                icon: '🎓'
+              });
+              toast.success(`🎉 Congratulations! You've completed "${updatedCourse.title}" and earned a certificate!`, {
+                duration: 6000,
+              });
+              
+              // Show completion popup
+              setShowCourseCompletionPopup(true);
+            }, 1500);
+          }
         }
         
-        toast.success('Lesson completed!');
+        toast.success(t('pages.courseLearnPage.lessionCompleted'));
 
         // Auto-advance to next lesson after completion
         setTimeout(() => {
@@ -765,8 +1169,8 @@ const CourseLearnPage: React.FC = () => {
         }, 1000); // Small delay to let user see completion message
         
       } catch (error) {
-        console.error('Failed to update lesson progress:', error);
-        toast.error('Failed to save progress. Please try again.');
+        console.error(`${t('pages.courseLearnPage.failedToUpdateLessonPregress')}`, error);
+        toast.error(t('pages.courseLearnPage.failedToSaveProgress'));
       } finally {
         setIsCompletingLesson(false); // End loading
       }
@@ -811,12 +1215,12 @@ const CourseLearnPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-slate-700 mb-2">Course not found</h2>
+          <h2 className="text-xl font-semibold text-slate-700 mb-2">{t('pages.courseLearnPage.courseNotFound')}</h2>
           <button
             onClick={() => navigate('/dashboard')}
             className="btn-primary"
           >
-            Back to Dashboard
+            {t('pages.courseLearnPage.backToDashboard')}
           </button>
         </div>
       </div>
@@ -836,7 +1240,7 @@ const CourseLearnPage: React.FC = () => {
                 className="flex items-center text-blue-600 hover:text-blue-700 mb-4 text-sm font-medium"
               >
                 <ArrowLeftIcon className="w-4 h-4 mr-2" />
-                Go to Dashboard
+                {t('pages.courseLearnPage.goToDashboar')}
               </button>
               
               <h1 className="text-xl font-bold text-slate-900 mb-2">{course.title}</h1>
@@ -849,7 +1253,7 @@ const CourseLearnPage: React.FC = () => {
               
               <div className="mb-3">
                 <div className="flex justify-between text-sm text-slate-600 mb-1">
-                  <span>{course.progress.toFixed(0)}% complete</span>
+                  <span>{t("pages.courseLearnPage.complete", { value: course.progress.toFixed(0) })}</span>
                   <span>{course.totalDuration}</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2">
@@ -866,7 +1270,7 @@ const CourseLearnPage: React.FC = () => {
               <div className="p-4">
                 <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
                   <ListBulletIcon className="w-4 h-4 mr-2" />
-                  Search by lesson title
+                  {t('pages.courseLearnPage.searchByLessonTitle')}
                 </h3>
                 
                 <div className="space-y-4">
@@ -953,7 +1357,7 @@ const CourseLearnPage: React.FC = () => {
                             <div className="flex items-center space-x-2 mb-2">
                               <BookOpenIcon className="h-4 w-4 text-purple-500" />
                               <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                                Quizzes & Assessments
+                                {t('pages.courseLearnPage.quizzesAndAssessments')}
                               </span>
                             </div>
                           </div>
@@ -995,7 +1399,7 @@ const CourseLearnPage: React.FC = () => {
                                           isQuizAccessible ? 'text-slate-500' : 'text-slate-400'
                                         }`}>
                                           {quiz.total_points} pts • {quiz.time_limit_minutes || 30} min
-                                          {!isQuizAccessible && ' • Complete all lessons'}
+                                          {!isQuizAccessible && ` • ${t('pages.courseLearnPage.completeAllLessonsAccessible')}`}
                                         </p>
                                       </div>
                                     </div>
@@ -1163,11 +1567,11 @@ const CourseLearnPage: React.FC = () => {
                         {formatTime(quizTimeLeft)}
                       </span>
                       {quizTimeLeft < 300 && quizTimeLeft > 0 && (
-                        <span className="text-red-600 text-xs font-medium">Time running low!</span>
+                        <span className="text-red-600 text-xs font-medium">{t('pages.courseLearnPage.timeRunningLow')}</span>
                       )}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {quizQuestions.length} questions
+                      {t('pages.courseLearnPage.questions', { count: quizQuestions.length })}
                     </div>
                   </div>
                 </div>
@@ -1179,16 +1583,16 @@ const CourseLearnPage: React.FC = () => {
                   {currentQuiz.description}
                 </p>
                 <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-                  <span>🏆 {currentQuiz.total_points} pts</span>
-                  <span>⏱️ {currentQuiz.time_limit_minutes || 30} min</span>
-                  <span>✅ {currentQuiz.passing_score}% to pass</span>
+                  <span>🏆 {t('pages.courseLearnPage.pts', { value: currentQuiz.total_points })}</span>
+                  <span>⏱️ {t('pages.courseLearnPage.min', { value: currentQuiz.time_limit_minutes || 30 })}</span>
+                  <span>✅ {t('pages.courseLearnPage.toPass', { value: currentQuiz.passing_score })}</span>
                 </div>
                 
                 {/* Progress Bar */}
                 <div className="mt-4">
                   <div className="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Progress</span>
-                    <span>{Object.keys(quizAnswers).length} of {quizQuestions.length} answered</span>
+                    <span>{t('pages.courseLearnPage.progress')}</span>
+                    <span>{t('pages.courseLearnPage.answered', { count: Object.keys(quizAnswers).length, value: quizQuestions.length })}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
@@ -1206,7 +1610,7 @@ const CourseLearnPage: React.FC = () => {
                     <div key={question.question_id} className="bg-gray-50 rounded-lg p-6">
                       <div className="mb-4">
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          Question {index + 1} of {quizQuestions.length}
+                          {t('pages.courseLearnPage.questionOF', { count: index + 1, value: quizQuestions.length })}
                         </h3>
                         <p className="text-gray-700 leading-relaxed">
                           {question.question_text}
@@ -1261,7 +1665,7 @@ const CourseLearnPage: React.FC = () => {
                           : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      Submit Quiz ({Object.keys(quizAnswers).length}/{quizQuestions.length} answered)
+                      {t('pages.courseLearnPage.submitQuiz', { value: `${Object.keys(quizAnswers).length}/${quizQuestions.length}` })}
                     </button>
                   </div>
                 </div>
@@ -1279,7 +1683,7 @@ const CourseLearnPage: React.FC = () => {
                   <h3 className={`text-2xl font-bold mb-2 ${
                     quizResults?.passed ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {quizResults?.passed ? 'Quiz Passed!' : 'Quiz Not Passed'}
+                    {quizResults?.passed ? t('pages.courseLearnPage.quizPassed') : t('pages.courseLearnPage.quizNotPassed')}
                   </h3>
                   
                   <div className="text-4xl font-bold text-gray-900 mb-4">
@@ -1287,8 +1691,8 @@ const CourseLearnPage: React.FC = () => {
                   </div>
                   
                   <p className="text-gray-600 mb-6">
-                    You answered {quizResults?.correctAnswers} out of {quizResults?.totalQuestions} questions correctly.
-                    {quizResults?.passed ? ' Great job!' : ` You need ${currentQuiz.passing_score}% to pass.`}
+                    {t('pages.courseLearnPage.youAnswered', { count: quizResults?.correctAnswers, value: quizResults?.totalQuestions })}
+                    {quizResults?.passed ? t('pages.courseLearnPage.greatJob') : t('pages.courseLearnPage.youNeed', { value: currentQuiz.passing_score })}
                   </p>
                   
                   {/* Detailed Results */}
@@ -1299,22 +1703,22 @@ const CourseLearnPage: React.FC = () => {
                       }`}>
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="font-semibold text-gray-900">
-                            Question {index + 1}
+                            {t('pages.courseLearnPage.questionNum', { count: index + 1 })}
                           </h4>
                           <span className={`text-sm font-medium ${
                             result.isCorrect ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {result.isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                            {result.isCorrect ? '✓ ' + t('pages.courseLearnPage.correct') : '✗ ' + t('pages.courseLearnPage.incorrect')}
                           </span>
                         </div>
                         <p className="text-gray-700 mb-2">{result.question.question_text}</p>
                         <div className="text-sm">
                           <p className="text-gray-600">
-                            <span className="font-medium">Your answer:</span> {result.userAnswer || 'No answer'}
+                            <span className="font-medium">{t('pages.courseLearnPage.yourAnswer')}</span> {result.userAnswer || t('pages.courseLearnPage.noAnswer')}
                           </p>
                           {!result.isCorrect && (
                             <p className="text-green-600">
-                              <span className="font-medium">Correct answer:</span> {result.correctAnswer}
+                              <span className="font-medium">{t('pages.courseLearnPage.correctAnswer')}</span> {result.correctAnswer}
                             </p>
                           )}
                         </div>
@@ -1327,7 +1731,7 @@ const CourseLearnPage: React.FC = () => {
                       onClick={handleQuizClose}
                       className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
                     >
-                      Close Quiz
+                      {t('pages.courseLearnPage.closeQuiz')}
                     </button>
                     {!quizResults?.passed && (
                       <button
@@ -1339,7 +1743,7 @@ const CourseLearnPage: React.FC = () => {
                         }}
                         className="px-6 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors"
                       >
-                        Retake Quiz
+                        {t('pages.courseLearnPage.retakeQuiz')}
                       </button>
                     )}
                   </div>
@@ -1366,6 +1770,42 @@ const CourseLearnPage: React.FC = () => {
         <VideoSettingsPanel
           isOpen={showVideoSettingsPanel}
           onClose={() => setShowVideoSettingsPanel(false)}
+        />
+      )}
+
+      {/* Course Completion Popup */}
+      <CourseCompletionPopup
+        isOpen={showCourseCompletionPopup}
+        onClose={() => setShowCourseCompletionPopup(false)}
+        courseTitle={course?.title || ''}
+        onViewCertificate={() => {
+          setShowCourseCompletionPopup(false);
+          navigate('/certificates');
+        }}
+        onContinueLearning={() => {
+          setShowCourseCompletionPopup(false);
+          navigate('/dashboard');
+        }}
+      />
+
+      {/* NFT Minting Ticket Popup */}
+      {nftMintingData && (
+        <NFTMintingTicketPopup
+          isOpen={showNFTMintingPopup}
+          onClose={() => {
+            setShowNFTMintingPopup(false);
+            setNftMintingData(null);
+          }}
+          moduleTitle={nftMintingData.moduleTitle}
+          courseTitle={nftMintingData.courseTitle}
+          status={nftMintingData.status}
+          tokenId={nftMintingData.tokenId}
+          transactionHash={nftMintingData.transactionHash}
+          onViewNFT={() => {
+            setShowNFTMintingPopup(false);
+            setNftMintingData(null);
+            navigate('/nfts');
+          }}
         />
       )}
     </div>

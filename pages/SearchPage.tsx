@@ -9,6 +9,8 @@ import {
   TrophyIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import { apiService } from '../services/apiService';
+import { useTranslation } from '../src/hooks/useTranslation';
 import { searchService, SearchResult } from '../services/searchService';
 
 // Using SearchResult from searchService
@@ -21,6 +23,7 @@ interface SearchFilters {
 }
 
 const SearchPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   
@@ -151,7 +154,7 @@ const SearchPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Search Results</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">{t('pages.searchPage.searchResults')}</h1>
           
           {/* Search Input */}
           <div className="relative max-w-2xl">
@@ -176,27 +179,27 @@ const SearchPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-600">
-                  Found {results.length} results for "{query}"
+                  {t('pages.searchPage.FoundResults', { count: results.length, query: query })}
                 </span>
                 <div className="flex items-center space-x-2">
                   {stats.courses > 0 && (
                     <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
-                      {stats.courses} courses
+                      {stats.courses} {t('pages.searchPage.courses')}
                     </span>
                   )}
                   {stats.modules > 0 && (
                     <span className="px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-full">
-                      {stats.modules} modules
+                      {stats.modules} {t('pages.searchPage.modules')}
                     </span>
                   )}
                   {stats.lessons > 0 && (
                     <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full">
-                      {stats.lessons} lessons
+                      {stats.lessons} {t('pages.searchPage.lessons')}
                     </span>
                   )}
                   {stats.achievements > 0 && (
                     <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
-                      {stats.achievements} achievements
+                      {stats.achievements} {t('pages.searchPage.achievements')}
                     </span>
                   )}
                 </div>
@@ -210,7 +213,7 @@ const SearchPage: React.FC = () => {
                          focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <FunnelIcon className="h-4 w-4" />
-                <span>Filters</span>
+                <span>{t('pages.searchPage.Filter')}</span>
               </button>
             </div>
           </div>
@@ -222,7 +225,7 @@ const SearchPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {/* Type Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('pages.searchPage.Type')}</label>
                 <select
                   value={filters.type}
                   onChange={(e) => setFilters({ ...filters, type: e.target.value as any })}
@@ -241,17 +244,17 @@ const SearchPage: React.FC = () => {
               {/* Difficulty Level Filter */}
               {filters.type === 'all' || filters.type === 'course' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('pages.searchPage.Difficulty')}</label>
                   <select
                     value={filters.difficulty_level || ''}
                     onChange={(e) => setFilters({ ...filters, difficulty_level: e.target.value || undefined })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none 
                              focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">All Levels</option>
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
+                    <option value="">{t('pages.searchPage.AllLevels')}</option>
+                    <option value="beginner">{t('pages.searchPage.Beginner')}</option>
+                    <option value="intermediate">{t('pages.searchPage.Intermediate')}</option>
+                    <option value="advanced">{t('pages.searchPage.Advanced')}</option>
                   </select>
                 </div>
               ) : null}
@@ -259,18 +262,18 @@ const SearchPage: React.FC = () => {
               {/* Achievement Type Filter */}
               {filters.type === 'all' || filters.type === 'achievement' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Achievement Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('pages.searchPage.Achievement Type')}</label>
                   <select
                     value={filters.achievement_type || ''}
                     onChange={(e) => setFilters({ ...filters, achievement_type: e.target.value || undefined })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none 
                              focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">All Types</option>
-                    <option value="completion">Completion</option>
-                    <option value="performance">Performance</option>
-                    <option value="participation">Participation</option>
-                    <option value="mastery">Mastery</option>
+                    <option value="">{t('pages.searchPage.AllTypes')}</option>
+                    <option value="completion">{t('pages.searchPage.Completion')}</option>
+                    <option value="performance">{t('pages.searchPage.Performance')}</option>
+                    <option value="participation">{t('pages.searchPage.Participation')}</option>
+                    <option value="mastery">{t('pages.searchPage.Mastery')}</option>
                   </select>
                 </div>
               ) : null}
@@ -285,11 +288,11 @@ const SearchPage: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none 
                              focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">All Tiers</option>
-                    <option value="bronze">Bronze</option>
-                    <option value="silver">Silver</option>
-                    <option value="gold">Gold</option>
-                    <option value="platinum">Platinum</option>
+                    <option value="">{t('pages.searchPage.AllTiers')}</option>
+                    <option value="bronze">{t('pages.searchPage.Bronze')}</option>
+                    <option value="silver">{t('pages.searchPage.Silver')}</option>
+                    <option value="gold">{t('pages.searchPage.Gold')}</option>
+                    <option value="platinum">{t('pages.searchPage.Platinum')}</option>
                   </select>
                 </div>
               ) : null}
@@ -303,7 +306,7 @@ const SearchPage: React.FC = () => {
                          hover:text-gray-800 focus:outline-none"
               >
                 <XMarkIcon className="h-4 w-4" />
-                <span>Clear Filters</span>
+                <span>{t('pages.searchPage.ClearFilters')}</span>
               </button>
             </div>
           </div>
@@ -314,7 +317,7 @@ const SearchPage: React.FC = () => {
           {isLoading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Searching...</p>
+              <p className="mt-4 text-gray-600">{t('pages.searchPage.Searching')}</p>
             </div>
           ) : results.length > 0 ? (
             results.map((result, index) => (
@@ -387,7 +390,7 @@ const SearchPage: React.FC = () => {
                         ))}
                         {result.tags.length > 3 && (
                           <span className="px-2 py-1 text-xs font-medium text-gray-500">
-                            +{result.tags.length - 3} more
+                            +{t('pages.searchPage.more', { count: result.tags.length - 3 })}
                           </span>
                         )}
                       </div>
@@ -401,9 +404,9 @@ const SearchPage: React.FC = () => {
               <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                 <MagnifyingGlassIcon className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('pages.searchPage.noResultsFound')}</h3>
               <p className="text-gray-600">
-                Try adjusting your search terms or filters to find what you're looking for.
+                {t('pages.searchPage.tryAdjustingYourSearchTermsOrFiltersToFindWhatYouAreLookingFor')}
               </p>
             </div>
           ) : (
@@ -411,9 +414,9 @@ const SearchPage: React.FC = () => {
               <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
                 <MagnifyingGlassIcon className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Start searching</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('pages.searchPage.StartSearching')}</h3>
               <p className="text-gray-600">
-                Enter keywords to search for courses, modules, lessons, quizzes, and achievements.
+                {t('pages.searchPage.EnterKeywordsToSearchForCoursesModulesLessonsAndAchievements')}
               </p>
             </div>
           )}

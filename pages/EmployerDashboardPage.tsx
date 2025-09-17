@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import Modal from '../components/Modal';
 import { jwtVerify, importSPKI } from 'jose';
 import EmployerZKPVerify from '../components/EmployerZKPVerify';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface Checkpoint {
   module: string;
@@ -76,7 +77,7 @@ const INSTITUTION_PUBLIC_KEY = "0x1234567890abcdef1234567890abcdef12345678";
 // Hàm lấy CID từ DID qua smart contract (mock)
 async function getCidFromDid(did: string): Promise<string> {
   try {
-    console.log(`Getting CID from DID via smart contract: ${did}`);
+    console.log(`${t('pages.employerDashboardPage.gettingCIDfromDID')} ${did}`);
     
     // TODO: Thay thế bằng gọi smart contract thực tế
     // Ví dụ: return await contract.getCidByDid(did);
@@ -95,13 +96,13 @@ async function getCidFromDid(did: string): Promise<string> {
     
     const cid = mapping[did];
     if (!cid) {
-      throw new Error(`DID ${did} not found in blockchain registry`);
+      throw new Error(`${t('pages.employerDashboardPage.DIDNotFoundInBlockchainRegistry', { value: did })}`);
     }
     
-    console.log(`CID retrieved from blockchain: ${cid}`);
+    console.log(`${t('pages.employerDashboardPage.CIDRetrievedFromBlockchain', { value: cid })}`);
     return cid;
   } catch (error) {
-    console.error('Error getting CID from DID:', error);
+    console.error(`${t('pages.employerDashboardPage.errorGettingCIDfromDID')} ${error}`);
     throw error;
   }
 }
@@ -109,26 +110,26 @@ async function getCidFromDid(did: string): Promise<string> {
 // Hàm lấy dữ liệu từ IPFS qua backend
 async function fetchIpfsData(cid: string): Promise<any> {
   try {
-    console.log(`Fetching IPFS data for CID: ${cid}`);
+    console.log(`${t('pages.employerDashboardPage.fetchingIPFSData')} ${cid}`);
     
     const res = await fetch(`/api/v1/ipfs/download/${cid}`);
     
     if (!res.ok) {
       const errorText = await res.text();
-      console.error(`IPFS fetch failed: ${res.status} ${errorText}`);
-      throw new Error(`Failed to fetch IPFS data: ${res.status} ${errorText}`);
+      console.error(`${t('pages.employerDashboardPage.IPFSfetchFailed', { status: res.status, errorText: errorText })}`);
+      throw new Error(`${t('pages.employerDashboardPage.FailedToFetchIPFSData')} ${res.status} ${errorText}`);
     }
     
     const json = await res.json();
-    console.log('IPFS data fetched successfully:', json);
+    console.log(`${t('pages.employerDashboardPage.IPFSDataFetchedSuccessfully')} ${json}`);
     
     if (!json.data) {
-      throw new Error('Invalid IPFS data format: missing data field');
+      throw new Error(`${t('pages.employerDashboardPage.invalidIPFSDataFormat')}`);
     }
     
     return json.data;
   } catch (error) {
-    console.error('Error fetching IPFS data:', error);
+    console.error(`${t('pages.employerDashboardPage.errorFetchingIPFSData')} ${error}`);
     throw error;
   }
 }
@@ -136,25 +137,25 @@ async function fetchIpfsData(cid: string): Promise<any> {
 // Hàm lấy public key trường từ backend API
 async function fetchSchoolPublicKey(): Promise<string> {
   try {
-    console.log('Fetching school public key from backend...');
+    console.log(`${t('pages.employerDashboardPage.fetchingSchoolPublicKey')}`);
     const res = await fetch('/api/v1/ipfs/school-public-key');
     
     if (!res.ok) {
       const errorText = await res.text();
-      console.error(`Failed to fetch public key: ${res.status} ${errorText}`);
-      throw new Error(`Failed to fetch public key: ${res.status} ${errorText}`);
+      console.error(`${t('pages.employerDashboardPage.FailedToFetchPublicKey')} ${res.status} ${errorText}`);
+      throw new Error(`${t('pages.employerDashboardPage.FailedToFetchPublicKey')} ${res.status} ${errorText}`);
     }
     
     const json = await res.json();
-    console.log('School public key fetched successfully');
+    console.log(`${t('pages.employerDashboardPage.SchoolPublicKeyFetchedSuccessfully')}`);
     
     if (!json.public_key) {
-      throw new Error('Invalid public key response: missing public_key field');
+      throw new Error(`${t('pages.employerDashboardPage.invalidPublicKeyResponse')}`);
     }
     
     return json.public_key;
   } catch (error) {
-    console.error('Error fetching school public key:', error);
+    console.error(`${t('pages.employerDashboardPage.errorFetchingSchoolPublicKey')} ${error}`);
     // Fallback to demo key
     return `-----BEGIN PUBLIC KEY-----
 MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAE8tKwV1FQ9yDjMZrfsWyCACmOP5rDFCRx
@@ -166,32 +167,32 @@ I9CzHvAcbxfiVy6KtTnmRVEhmLjK65O+mONHRU4gZq/2r72mwt1z8Q==
 // Hàm verify JWS (ECDSA secp256k1)
 async function verifyJws(vc: any, publicKeyPem: string): Promise<boolean> {
   try {
-    console.log('Starting JWS verification...');
+    console.log(`${t('pages.employerDashboardPage.startingJWSVerification')}`);
     
     // Kiểm tra xem data có proof không
     if (!vc.proof || !vc.proof.jws) {
-      console.log('No proof.jws found in data, skipping verification');
+      console.log(`${t('pages.employerDashboardPage.noProofJwsFoundInDataSkippingVerification')}`);
       return true; // Tạm thời return true nếu không có proof
     }
     
     const { proof, ...payload } = vc;
     const jws = proof.jws;
     
-    console.log('JWS found, attempting verification...');
+    console.log(`${t('pages.employerDashboardPage.JWSFoundAttemptingVerification')}`);
     
     // Chuyển publicKeyPem sang định dạng jose
     const pubKey = await importSPKI(publicKeyPem, 'ES256K');
     
     try {
       await jwtVerify(jws, pubKey, { algorithms: ['ES256K'] });
-      console.log('JWS verification successful');
+      console.log(`${t('pages.employerDashboardPage.JWSVerificationSuccessful')}`);
       return true;
     } catch (verifyError) {
-      console.error('JWS verification failed:', verifyError);
+      console.error(`${t('pages.employerDashboardPage.JWSVerificationFailed')} ${verifyError}`);
       return false;
     }
   } catch (error) {
-    console.error('Error in JWS verification:', error);
+    console.error(`${t('pages.employerDashboardPage.errorInJWSVerification')} ${error}`);
     return false;
   }
 }
@@ -202,6 +203,7 @@ function getStudentNameFromDid(did: string): string {
 }
 
 const EmployerDashboardPage: React.FC = () => {
+  const { t } = useTranslation();
   const [studentDid, setStudentDid] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verificationHistory, setVerificationHistory] = useState<StudentVerification[]>([]);
@@ -210,49 +212,49 @@ const EmployerDashboardPage: React.FC = () => {
 
   const handleVerifyStudent = async () => {
     if (!studentDid.trim()) {
-      toast.error('Please enter a valid student DID');
+      toast.error(`${t('pages.employerDashboardPage.PleaseEnterAValidStudentDID')}`);
       return;
     }
 
     if (!studentDid.startsWith('did:learntwin:')) {
-      toast.error('Invalid DID format. Expected format: did:learntwin:studentXXX');
+      toast.error(`${t('pages.employerDashboardPage.InvalidDIDFormatExpectedFormatDidLearntwinStudentXXX')}`);
       return;
     }
 
     setVerifying(true);
     
     try {
-      console.log('🔍 Starting verification for DID:', studentDid);
+      console.log(`🔍 ${t('pages.employerDashboardPage.StartingVerificationForDID')} ${studentDid}`);
       
       // Bước 1: Lấy CID từ DID qua smart contract
-      console.log('📋 Step 1: Getting CID from DID...');
+      console.log(`📋 ${t('pages.employerDashboardPage.step1')} ${studentDid}`);
       const cid = await getCidFromDid(studentDid);
-      console.log('✅ CID retrieved:', cid);
+      console.log(`✅ ${t('pages.employerDashboardPage.CIDRetrieved')} ${cid}`);
       
       // Bước 2: Download data từ IPFS bằng CID
-      console.log('📥 Step 2: Fetching IPFS data...');
+      console.log(`📥 ${t('pages.employerDashboardPage.step2')} ${cid}`);
       const studentData = await fetchIpfsData(cid);
-      console.log('✅ IPFS data fetched:', studentData);
+      console.log(`✅ ${t('pages.employerDashboardPage.IPFSDataFetched')} ${studentData}`);
       
       // Bước 3: Lấy public key trường để verify
-      console.log('🔑 Step 3: Getting school public key...');
+      console.log(`🔑 ${t('pages.employerDashboardPage.step3')} ${cid}`);
       const schoolPublicKey = await fetchSchoolPublicKey();
-      console.log('✅ School public key retrieved');
+      console.log(`✅ ${t('pages.employerDashboardPage.SchoolPublicKeyRetrieved')} ${schoolPublicKey}`);
       
       // Bước 4: Verify chữ ký của data
-      console.log('🔐 Step 4: Verifying digital signature...');
+      console.log(`🔐 ${t('pages.employerDashboardPage.step4')} ${cid}`);
       const isVerified = await verifyJws(studentData, schoolPublicKey);
-      console.log('✅ Signature verification result:', isVerified);
+      console.log(`✅ ${t('pages.employerDashboardPage.SignatureVerificationResult')} ${isVerified}`);
       
       if (!isVerified) {
-        throw new Error('Digital signature verification failed');
+        throw new Error(`${t('pages.employerDashboardPage.digitalSignatureVerificationFailed')}`);
       }
       
       // Bước 5: Tạo verification result
-      console.log('📝 Step 5: Creating verification result...');
+      console.log(`📝 ${t('pages.employerDashboardPage.step5')} ${studentDid}`);
       const verificationResult: VerificationResult = {
         success: true,
-        message: `Successfully verified student data for ${studentDid}`,
+        message: `${t('pages.employerDashboardPage.successfullyVerifiedStudentData', { studentDid: studentDid })}`,
         details: {
           studentDid,
           digitalTwinCid: cid,
@@ -264,7 +266,7 @@ const EmployerDashboardPage: React.FC = () => {
       };
 
       // Bước 6: Tạo student verification record
-      console.log('💾 Step 6: Creating student verification record...');
+      console.log(`💾 ${t('pages.employerDashboardPage.step6')} ${studentDid}`);
       const studentVerification: StudentVerification = {
         did: studentDid,
         name: studentData.learnerName || getStudentNameFromDid(studentDid),
@@ -277,13 +279,13 @@ const EmployerDashboardPage: React.FC = () => {
       // Thêm vào history
       setVerificationHistory(prev => [studentVerification, ...prev]);
       
-      console.log('🎉 Verification completed successfully!');
+      console.log(`🎉 ${t('pages.employerDashboardPage.verificationCompletedSuccessfully')}`);
       toast.success(verificationResult.message);
       setStudentDid('');
       
     } catch (error) {
-      console.error('❌ Verification error:', error);
-      console.error('❌ Error details:', {
+      console.error(`❌ ${t('pages.employerDashboardPage.verificationError')} ${error}`);
+      console.error(`❌ ${t('pages.employerDashboardPage.errorDetails')}`, {
         message: (error as Error).message,
         stack: (error as Error).stack,
         name: (error as Error).name
@@ -291,7 +293,7 @@ const EmployerDashboardPage: React.FC = () => {
       
       // Hiển thị error message chi tiết hơn
       const errorMessage = (error as Error).message;
-      toast.error(`Verification failed: ${errorMessage}`);
+      toast.error(`${t('pages.employerDashboardPage.VerificationFailed')} ${errorMessage}`);
       
       // Thêm failed verification vào history
       const failedVerification: StudentVerification = {
@@ -319,13 +321,13 @@ const EmployerDashboardPage: React.FC = () => {
 
   const handleCopyDid = (did: string) => {
     navigator.clipboard.writeText(did);
-    toast.success('DID copied to clipboard!');
+    toast.success(`${t('pages.employerDashboardPage.DIDcopiedToClipboard')}`);
   };
 
   const handleCopyCid = (cid: string | undefined) => {
     if (!cid) return;
     navigator.clipboard.writeText(cid);
-    toast.success('CID copied to clipboard!');
+    toast.success(`${t('pages.employerDashboardPage.CIDcopiedToClipboard')}`);
   };
 
   // Helper function to truncate text and show tooltip
@@ -355,12 +357,12 @@ const EmployerDashboardPage: React.FC = () => {
         <div className="px-8 py-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div className="mb-4 md:mb-0">
-              <h1 className="text-3xl font-bold text-white mb-2">Certificate Verification</h1>
-              <p className="text-purple-100">Verify student certificates using blockchain and institutional public keys</p>
+              <h1 className="text-3xl font-bold text-white mb-2">{t('pages.employerDashboardPage.CertificateVerification')}</h1>
+              <p className="text-purple-100">{t('pages.employerDashboardPage.VerifyStudentCertificateUsing')}</p>
             </div>
             <div className="flex items-center space-x-2">
               <ShieldCheckIcon className="w-8 h-8 text-white" />
-              <span className="text-white font-medium">Institution: UIT</span>
+              <span className="text-white font-medium">{t('pages.employerDashboardPage.Institution')}: UIT</span>
             </div>
           </div>
         </div>
@@ -370,13 +372,13 @@ const EmployerDashboardPage: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
           <DocumentTextIcon className="w-6 h-6 mr-3 text-purple-600" />
-          Verify Student Certificate
+          {t('pages.employerDashboardPage.VerifyStudentCertificate')}
         </h2>
         
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Student DID (Decentralized Identifier)
+              {t('pages.employerDashboardPage.StudentDID')}
             </label>
             <div className="flex space-x-3">
               <input
@@ -395,18 +397,18 @@ const EmployerDashboardPage: React.FC = () => {
                 {verifying ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Verifying...
+                    {t('pages.employerDashboardPage.Verifying...')}
                   </>
                 ) : (
                   <>
                     <ShieldCheckIcon className="w-5 h-5 mr-2" />
-                    Verify
+                    {t('pages.employerDashboardPage.Verify')}
                   </>
                 )}
               </button>
             </div>
             <p className="text-sm text-gray-500 mt-2">
-              Enter the student's DID to retrieve and verify their certificates from the blockchain
+              {t('pages.employerDashboardPage.EnterTheStudentSDIDToRetrieveAndVerifyTheirCertificatesFromTheBlockchain')}
             </p>
           </div>
         </div>
@@ -416,13 +418,13 @@ const EmployerDashboardPage: React.FC = () => {
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
           <ClipboardDocumentIcon className="w-6 h-6 mr-3 text-purple-600" />
-          Verification History
+          {t('pages.employerDashboardPage.VerificationHistory')}
         </h2>
         
         {verificationHistory.length === 0 ? (
           <div className="text-center py-8">
             <DocumentTextIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No verifications yet. Enter a student DID above to start verifying certificates.</p>
+            <p className="text-gray-500">{t('pages.employerDashboardPage.NoVerificationsYet')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -455,11 +457,11 @@ const EmployerDashboardPage: React.FC = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-500">Certificates Found:</span>
+                    <span className="text-gray-500">{t('pages.employerDashboardPage.CertificatesFound')}</span>
                     <span className="ml-2 font-medium">{verification.nfts.length}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Verification Time:</span>
+                    <span className="text-gray-500">{t('pages.employerDashboardPage.VerificationTime')}</span>
                     <span className="ml-2 font-medium">
                       {verification.verificationResult?.details?.verificationTimestamp 
                         ? new Date(verification.verificationResult.details.verificationTimestamp).toLocaleString()
@@ -468,7 +470,7 @@ const EmployerDashboardPage: React.FC = () => {
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Institution:</span>
+                    <span className="text-gray-500">{t('pages.employerDashboardPage.Institution')}</span>
                     <span className="ml-2 font-medium">UIT</span>
                   </div>
                 </div>
@@ -525,38 +527,38 @@ const EmployerDashboardPage: React.FC = () => {
                   <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  Student Information
+                  {t('pages.employerDashboardPage.StudentInformation')}
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-gray-600 font-medium">Student Name:</span>
+                      <span className="text-gray-600 font-medium">{t('pages.employerDashboardPage.StudentName')}</span>
                       <span className="font-semibold text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.learnerName}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-gray-600 font-medium">Student ID:</span>
+                      <span className="text-gray-600 font-medium">{t('pages.employerDashboardPage.StudentID')}</span>
                       <span className="font-mono text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.student_id}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-gray-600 font-medium">Institution:</span>
+                      <span className="text-gray-600 font-medium">{t('pages.employerDashboardPage.Institution')}</span>
                       <span className="font-semibold text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.institution}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-gray-600 font-medium">Major:</span>
+                      <span className="text-gray-600 font-medium">{t('pages.employerDashboardPage.Major')}</span>
                       <span className="text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.major}</span>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-gray-600 font-medium">Email:</span>
+                      <span className="text-gray-600 font-medium">{t('pages.employerDashboardPage.Email')}</span>
                       <span className="text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.email}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-gray-600 font-medium">Phone:</span>
+                      <span className="text-gray-600 font-medium">{t('pages.employerDashboardPage.Phone')}</span>
                       <span className="text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.phone}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-gray-600 font-medium">Last Updated:</span>
+                      <span className="text-gray-600 font-medium">{t('pages.employerDashboardPage.LastUpdated')}</span>
                       <span className="text-gray-900 truncate ml-2">{selectedVerification.digitalTwin.lastUpdated ? new Date(selectedVerification.digitalTwin.lastUpdated).toLocaleString() : 'N/A'}</span>
                     </div>
                   </div>
@@ -570,9 +572,9 @@ const EmployerDashboardPage: React.FC = () => {
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Digital Certificates ({selectedVerification.nfts.length})
+                    {t('pages.employerDashboardPage.DigitalCertificates')} ({selectedVerification.nfts.length})
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">Verified blockchain credentials and achievements</p>
+                  <p className="text-sm text-gray-500 mt-1">{t('pages.employerDashboardPage.VerifiedBlockchainCredentialsAndAchievements')}</p>
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -585,17 +587,17 @@ const EmployerDashboardPage: React.FC = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <h4 className="font-semibold text-gray-900 text-lg truncate">{nft.skill}</h4>
-                              <p className="text-sm text-gray-500">Certificate #{index + 1}</p>
+                              <p className="text-sm text-gray-500">{t('pages.employerDashboardPage.Certificate', { index: index + 1 })}</p>
                             </div>
                           </div>
                           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200 flex-shrink-0">
-                            Verified
+                            {t('pages.employerDashboardPage.Verified')}
                           </span>
                         </div>
                         
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between items-center py-1">
-                            <span className="text-gray-600 flex-shrink-0">Token ID:</span>
+                            <span className="text-gray-600 flex-shrink-0">{t('pages.employerDashboardPage.TokenID')}</span>
                             <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
                               <TruncatedText text={nft.token_id} maxLength={20} />
                               <button 
@@ -607,15 +609,15 @@ const EmployerDashboardPage: React.FC = () => {
                             </div>
                           </div>
                           <div className="flex justify-between items-center py-1">
-                            <span className="text-gray-600 flex-shrink-0">Issuer:</span>
+                            <span className="text-gray-600 flex-shrink-0">{t('pages.employerDashboardPage.Issuer')}</span>
                             <span className="text-gray-900 truncate ml-2">{nft.issuer}</span>
                           </div>
                           <div className="flex justify-between items-center py-1">
-                            <span className="text-gray-600 flex-shrink-0">Mint Date:</span>
+                            <span className="text-gray-600 flex-shrink-0">{t('pages.employerDashboardPage.MintDate')}</span>
                             <span className="text-gray-900 truncate ml-2">{nft.mint_date}</span>
                           </div>
                           <div className="flex justify-between items-center py-1">
-                            <span className="text-gray-600 flex-shrink-0">NFT CID:</span>
+                            <span className="text-gray-600 flex-shrink-0">{t('pages.employerDashboardPage.NFTCID')}</span>
                             <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
                               <TruncatedText text={nft.cid_nft} maxLength={15} />
                               <button 
@@ -649,15 +651,15 @@ const EmployerDashboardPage: React.FC = () => {
                     <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                     </svg>
-                    Technical Verification Details
+                    {t('pages.employerDashboardPage.TechnicalVerificationDetails')}
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">Blockchain verification and cryptographic proof</p>
+                  <p className="text-sm text-gray-500 mt-1">{t('pages.employerDashboardPage.BlockchainVerificationAndCryptographicProof')}</p>
                 </div>
                 <div className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Institution Public Key</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('pages.employerDashboardPage.InsttutionPublic')}</label>
                         <div className="flex items-start gap-2">
                           <div className="flex-1 font-mono text-xs bg-white px-3 py-2 rounded-md border break-all min-w-0">
                             {INSTITUTION_PUBLIC_KEY}
@@ -672,7 +674,7 @@ const EmployerDashboardPage: React.FC = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Digital Twin CID</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('pages.employerDashboardPage.DigitalTwinCID')}</label>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 font-mono text-xs bg-white px-3 py-2 rounded-md border min-w-0">
                             <TruncatedText 
@@ -693,7 +695,7 @@ const EmployerDashboardPage: React.FC = () => {
                     
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Verification Timestamp</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('pages.employerDashboardPage.VerificationTimestamp')}</label>
                         <div className="bg-white px-3 py-2 rounded-md border text-sm truncate">
                           {selectedVerification.verificationResult?.details?.verificationTimestamp 
                             ? new Date(selectedVerification.verificationResult.details.verificationTimestamp).toLocaleString()
@@ -703,7 +705,7 @@ const EmployerDashboardPage: React.FC = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Blockchain Transaction</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t('pages.employerDashboardPage.BlockchainTransaction')}</label>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 font-mono text-xs bg-white px-3 py-2 rounded-md border min-w-0">
                             <TruncatedText 

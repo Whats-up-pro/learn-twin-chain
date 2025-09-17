@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { subscriptionService } from '../services/subscriptionService';
 import { useAppContext } from '../contexts/AppContext';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface SubscriptionPlan {
   plan: 'basic' | 'premium';
@@ -46,6 +47,7 @@ interface UserSubscription {
 }
 
 const SubscriptionPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { learnerProfile } = useAppContext();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -109,7 +111,7 @@ const SubscriptionPage: React.FC = () => {
       // Show user-friendly error message
       let errorMessage = error.message;
       if (error.message?.includes('404') || error.message?.includes('not available')) {
-        errorMessage = 'Subscription service is currently unavailable. Please try again later or contact support.';
+        errorMessage = t('subscription.subscriptionServiceIsCurrentlyUnavailable');
       }
       
       alert(`Subscription failed: ${errorMessage}`);
@@ -127,7 +129,7 @@ const SubscriptionPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-700">Loading subscription plans...</p>
+          <p className="text-gray-700">{t('subscription.LoadingSubscriptionPlans')}</p>
         </div>
       </div>
     );
@@ -149,25 +151,25 @@ const SubscriptionPage: React.FC = () => {
             <RocketLaunchIcon className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
-            Chọn Gói Học Tập
+            {t('subscription.ChooseYourLearningPlan')}
           </h1>
           <p className="text-base text-gray-700 max-w-2xl mx-auto leading-relaxed mb-4">
-            Nâng cao kỹ năng blockchain và Web3 với các gói học tập được thiết kế đặc biệt cho từng cấp độ
+          {t('subscription.EnhanceYourBlockchainAndWeb3Skills')}
           </p>
           
           {/* Trust indicators */}
           <div className="flex items-center justify-center space-x-6 text-xs text-gray-600">
             <div className="flex items-center">
               <ShieldCheckIcon className="w-4 h-4 text-green-500 mr-1.5" />
-              Bảo mật tuyệt đối
+              {t('subscription.TopGradeSecurity')}
             </div>
             <div className="flex items-center">
               <BoltIcon className="w-4 h-4 text-blue-500 mr-1.5" />
-              Hỗ trợ 24/7
+              {t('subscription.247Support')}
             </div>
             <div className="flex items-center">
               <HeartIcon className="w-4 h-4 text-red-500 mr-1.5" />
-              Bảo đảm hoàn tiền
+              {t('subscription.MoneyBackGuarantee')}
             </div>
           </div>
         </div>
@@ -183,17 +185,17 @@ const SubscriptionPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      Gói hiện tại: {currentSubscription.plan_name}
+                      {t('subscription.CurrentPlan')}: {currentSubscription.plan_name}
                     </h3>
                     <p className="text-gray-600 text-sm">
-                      {currentSubscription.days_remaining} ngày còn lại • 
-                      Gia hạn: {new Date(currentSubscription.end_date).toLocaleDateString('vi-VN')}
+                      {t('subscription.dayRemaining', {count: currentSubscription.days_remaining})} • 
+                      {t('subscription.Renewal')}: {new Date(currentSubscription.end_date).toLocaleDateString('vi-VN')}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-green-600 text-sm font-medium">Đang hoạt động</span>
+                  <span className="text-green-600 text-sm font-medium">{t('subscription.Active')}</span>
                 </div>
               </div>
             </div>
@@ -211,7 +213,7 @@ const SubscriptionPage: React.FC = () => {
                   : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
-              Hàng tháng
+              {t('subscription.Monthly')}
             </button>
             <button
               onClick={() => setSelectedBilling('yearly')}
@@ -221,10 +223,10 @@ const SubscriptionPage: React.FC = () => {
                   : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
               }`}
             >
-              Hàng năm
+              {t('subscription.Yearly')}
               <span className="absolute -top-2 -right-2 bg-gradient-to-r from-green-400 to-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                 <GiftIcon className="w-3 h-3 inline mr-1" />
-                Tiết kiệm 20%
+                {t('subscription.Save', {count: '20%'})}
               </span>
             </button>
           </div>
@@ -268,7 +270,7 @@ const SubscriptionPage: React.FC = () => {
                   <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 z-10">
                     <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-8 py-3 rounded-full text-sm font-bold flex items-center shadow-lg animate-pulse">
                       <StarIcon className="w-5 h-5 mr-2" />
-                      Phổ biến nhất
+                      {t('subscription.MostPopular')}
                     </div>
                   </div>
                 )}
@@ -292,7 +294,7 @@ const SubscriptionPage: React.FC = () => {
                         <div>
                           <h3 className="text-2xl font-bold text-gray-800">{plan.name}</h3>
                           <p className={`text-sm ${colors.accent} font-medium`}>
-                            {plan.badge || (plan.plan === 'basic' ? 'Bắt đầu hành trình' : 'Nâng cao chuyên nghiệp')}
+                            {plan.badge || (plan.plan === 'basic' ? t('subscription.StartYourJourney') : t('subscription.ProfessionalAdvance'))}
                           </p>
                         </div>
                       </div>
@@ -302,13 +304,13 @@ const SubscriptionPage: React.FC = () => {
                     <div className="mb-6">
                       <div className="flex items-baseline">
                         <span className="text-5xl font-bold text-gray-800">{formatPrice(price)}</span>
-                        <span className="text-gray-600 ml-2">/{selectedBilling === 'yearly' ? 'năm' : 'tháng'}</span>
+                        <span className="text-gray-600 ml-2">/{selectedBilling === 'yearly' ? t('subscription.year') : t('subscription.month')}</span>
                       </div>
                       {savings > 0 && (
                         <div className="flex items-center mt-2">
                           <span className="text-lg text-gray-500 line-through">{formatPrice(originalPrice)}</span>
                           <span className="ml-3 bg-green-500 text-white text-sm px-3 py-1 rounded-full font-medium">
-                            Tiết kiệm {formatPrice(savings)}
+                            {t('subscription.Save', {count: savings})}
                           </span>
                         </div>
                       )}
@@ -334,12 +336,12 @@ const SubscriptionPage: React.FC = () => {
                       {isCurrentPlan ? (
                         <div className="flex items-center justify-center">
                           <CheckIcon className="w-5 h-5 mr-2" />
-                          Gói hiện tại
+                          {t('subscription.CurrentPlan')}
                         </div>
                       ) : isSelected ? (
-                        'Đã chọn'
+                        <>{t('subscription.Selected')}</>
                       ) : (
-                        'Chọn gói này'
+                        <>{t('subscription.SelectThisPlan')}</>
                       )}
                     </button>
                   </div>
@@ -348,7 +350,7 @@ const SubscriptionPage: React.FC = () => {
                   <div className="px-8 pb-8">
                     <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                       <StarIcon className="w-5 h-5 mr-2 text-yellow-500" />
-                      Tính năng bao gồm
+                      {t('subscription.IncludedFeatures')}
                     </h4>
                     <div className="space-y-3">
                       {plan.features.map((feature, featureIndex) => (
@@ -366,13 +368,13 @@ const SubscriptionPage: React.FC = () => {
                       <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl p-4 border border-indigo-200">
                         <h5 className="text-indigo-600 font-semibold mb-2 flex items-center">
                           <SparklesIcon className="w-4 h-4 mr-2" />
-                          Tính năng độc quyền
+                          {t('subscription.ExclusiveFeatures')}
                         </h5>
                         <div className="text-sm text-indigo-700 space-y-1">
-                          <div>• Truy cập sớm các khóa học mới</div>
-                          <div>• Mentoring 1-1 với chuyên gia</div>
-                          <div>• NFT trading marketplace</div>
-                          <div>• Hỗ trợ ưu tiên 24/7</div>
+                          <div>• {t('subscription.EarlyAccessToNewCourses')}</div>
+                          <div>• {t('subscription.Mentoring11WithExperts')}</div>
+                          <div>• {t('subscription.NFTTradingMarketplace')}</div>
+                          <div>• {t('subscription.PrioritySupport247')}</div>
                         </div>
                       </div>
                     </div>
@@ -385,7 +387,7 @@ const SubscriptionPage: React.FC = () => {
 
         {/* Payment Methods */}
         <div className="max-w-4xl mx-auto mb-8">
-          <h3 className="text-2xl font-bold text-gray-800 text-center mb-8">Chọn phương thức thanh toán</h3>
+          <h3 className="text-2xl font-bold text-gray-800 text-center mb-8">{t('subscription.ChoosePaymentMethod')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {(['credit_card', 'vnpay_qr'] as const).map((method) => {
               const methodInfo = subscriptionService.getPaymentMethodInfo(method);
@@ -441,23 +443,22 @@ const SubscriptionPage: React.FC = () => {
             {isProcessing ? (
               <div className="flex items-center">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                Đang xử lý...
+                {t('subscription.Processing')}
               </div>
             ) : !learnerProfile ? (
-              'Đăng nhập để tiếp tục'
             ) : currentSubscription?.plan === selectedPlan ? (
-              'Gói hiện tại'
+              <>{t('subscription.CurrentPlan')}</>
             ) : (
               <div className="flex items-center">
                 <RocketLaunchIcon className="w-6 h-6 mr-2" />
-                Bắt đầu ngay
+                {t('subscription.StartNow')}
               </div>
             )}
           </button>
           
           {learnerProfile && (
             <p className="text-gray-600 text-sm mt-4">
-              Bạn sẽ được chuyển đến trang thanh toán an toàn
+              {t('subscription.YouWillBeRedirectedToTheSecurePaymentPage')}
             </p>
           )}
         </div>
@@ -467,15 +468,15 @@ const SubscriptionPage: React.FC = () => {
           <div className="flex items-center justify-center space-x-8 text-gray-600 text-sm">
             <div className="flex items-center">
               <ShieldCheckIcon className="w-4 h-4 mr-2" />
-              Bảo mật SSL 256-bit
+              {t('subscription.SSL256BitSecurity')}
             </div>
             <div className="flex items-center">
               <HeartIcon className="w-4 h-4 mr-2" />
-              Hoàn tiền trong 30 ngày
+              {t('subscription.RefundIn30Days')}
             </div>
             <div className="flex items-center">
               <BoltIcon className="w-4 h-4 mr-2" />
-              Hủy bất kỳ lúc nào
+              {t('subscription.CancelAnytime')}
             </div>
           </div>
         </div>

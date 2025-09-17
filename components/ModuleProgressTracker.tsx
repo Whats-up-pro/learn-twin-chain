@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { TrophyIcon as TrophyIconSolid } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface ModuleProgressTrackerProps {
   courseId: string;
@@ -23,6 +24,7 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
   completedModules,
   onMilestoneReached
 }) => {
+  const { t } = useTranslation();
   const { digitalTwin, updateBehavior } = useAppContext();
   const [milestones, setMilestones] = useState<any[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -108,7 +110,7 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
           
           // Show success toast
           toast.success(
-            `🎉 Achievement Unlocked: ${milestone.title}!`,
+            `🎉 ${t('components.moduleProgressTracker.AchievementUnlocked')}: ${milestone.title}!`,
             {
               duration: 4000,
               style: {
@@ -162,8 +164,8 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 text-center shadow-2xl transform animate-bounce-in">
             <div className="text-6xl mb-4">🎉</div>
-            <div className="text-2xl font-bold text-gray-900 mb-2">Achievement Unlocked!</div>
-            <div className="text-gray-600">Your NFT is being minted...</div>
+            <div className="text-2xl font-bold text-gray-900 mb-2">{t('components.moduleProgressTracker.AchievementUnlocked')}</div>
+            <div className="text-gray-600">{t('components.moduleProgressTracker.YourNFTIsBeingMinted')}</div>
             <div className="mt-4">
               <div className="w-16 h-16 mx-auto border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
@@ -176,10 +178,10 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-gray-900 flex items-center">
             <TrophyIconSolid className="h-6 w-6 text-yellow-500 mr-2" />
-            Course Milestones
+            {t('components.moduleProgressTracker.CourseMilestones')}
           </h3>
           <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-            {completedModules.length} modules completed
+            {t('components.moduleProgressTracker.modulesCompleted', {n: completedModules.length})}
           </div>
         </div>
 
@@ -210,7 +212,7 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
                       {unlocked && (
                         <div className="flex items-center space-x-1 text-emerald-600">
                           <CheckCircleIcon className="h-5 w-5" />
-                          <span className="text-sm font-medium">Unlocked</span>
+                          <span className="text-sm font-medium">{t('components.moduleProgressTracker.Unlocked')}</span>
                         </div>
                       )}
                     </div>
@@ -220,7 +222,7 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
                     {/* Progress Bar */}
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs text-gray-500">
-                        <span>Progress</span>
+                        <span>{t('components.moduleProgressTracker.Progress')}</span>
                         <span>{Math.min(completedModules.length, milestone.requirement)}/{milestone.requirement}</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -271,10 +273,10 @@ const ModuleProgressTracker: React.FC<ModuleProgressTrackerProps> = ({
           <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
             <div className="flex items-center space-x-2 text-blue-700">
               <StarIcon className="h-5 w-5" />
-              <span className="font-semibold">Next Milestone</span>
+              <span className="font-semibold">{t('components.moduleProgressTracker.NextMilestone')}</span>
             </div>
             <p className="text-blue-600 text-sm mt-1">
-              Complete {milestones.find(m => completedModules.length < m.requirement)?.requirement} modules to unlock your next achievement!
+              {t('components.moduleProgressTracker.CompleteModulesTo', {milestones: milestones.find(m => completedModules.length < m.requirement)?.requirement})}
             </p>
           </div>
         )}

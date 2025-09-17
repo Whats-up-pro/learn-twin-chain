@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { blockchainService } from '../services/blockchainService';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface BlockchainStatusProps {
   className?: string;
 }
 
 export const BlockchainStatus: React.FC<BlockchainStatusProps> = ({ className = '' }) => {
+  const { t } = useTranslation();
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,12 +57,12 @@ export const BlockchainStatus: React.FC<BlockchainStatusProps> = ({ className = 
         </span>
         {!isConnected && !isLoading && (
           <span className="text-xs text-gray-500">
-            NFTs will be simulated
+            {t('components.blockchainStatus.NFTsWillBeSimulated')}
           </span>
         )}
         {error && (
           <span className="text-xs text-red-500" title={error}>
-            Connection failed
+            {t('components.blockchainStatus.ConnectionFailed')}
           </span>
         )}
       </div>

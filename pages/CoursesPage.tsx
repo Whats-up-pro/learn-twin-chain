@@ -12,6 +12,7 @@ import { apiService } from '../services/apiService';
 import { useAppContext } from '../contexts/AppContext';
 import CompactBanner from '../components/CompactBanner';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface Course {
   id: string;
@@ -29,6 +30,7 @@ interface Course {
 }
 
 const CoursesPage: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { courses, coursesLoading, loadCourses } = useAppContext();
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
@@ -82,10 +84,10 @@ const CoursesPage: React.FC = () => {
 
     try {
       const response = await apiService.enrollInCourse(courseId) as any;
-      console.log('Enrollment response:', response);
+      console.log(t('pages.coursesPage.enrollmentResponse'), response);
       
       // Show success message
-      const message = response?.message || 'Successfully enrolled in course!';
+      const message = response?.message || t('pages.coursesPage.successfullyEnrolled');
       toast.success(message);
       
       // Refresh courses from AppContext to ensure consistency with backend
@@ -94,8 +96,8 @@ const CoursesPage: React.FC = () => {
       }, 500);
       
     } catch (error) {
-      console.error('Error enrolling in course:', error);
-      toast.error('Failed to enroll in course. Please try again.');
+      console.error(t('pages.coursesPage.errorEnrolling'), error);
+      toast.error(t('pages.coursesPage.failedToEnroll'));
     }
   };
 
@@ -126,8 +128,8 @@ const CoursesPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Available Courses</h1>
-          <p className="text-gray-600">Discover and enroll in courses to enhance your skills</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('pages.coursesPage.availableCourses')}</h1>
+          <p className="text-gray-600">{t('pages.coursesPage.discoverAndEnrollInCoursesToEnhanceYourSkills')}</p>
         </div>
 
         {/* Compact Banner */}
@@ -145,7 +147,7 @@ const CoursesPage: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search courses, instructors, or topics..."
+                placeholder={t('pages.coursesPage.searchCoursesInstructorsOrTopics')}
                 className="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg 
                          bg-white text-gray-900 placeholder-gray-500 focus:outline-none 
                          focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -160,7 +162,7 @@ const CoursesPage: React.FC = () => {
                        focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <FunnelIcon className="h-4 w-4" />
-              <span>Filters</span>
+              <span>{t('pages.coursesPage.filters')}</span>
             </button>
           </div>
 
@@ -169,17 +171,17 @@ const CoursesPage: React.FC = () => {
             <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('pages.coursesPage.difficultyLevel')}</label>
                   <select
                     value={selectedDifficulty}
                     onChange={(e) => setSelectedDifficulty(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none 
                              focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="all">All Levels</option>
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
+                    <option value="all">{t('pages.coursesPage.allLevels')}</option>
+                    <option value="beginner">{t('pages.coursesPage.beginner')}</option>
+                    <option value="intermediate">{t('pages.coursesPage.intermediate')}</option>
+                    <option value="advanced">{t('pages.coursesPage.advanced')}</option>
                   </select>
                 </div>
               </div>
@@ -190,7 +192,7 @@ const CoursesPage: React.FC = () => {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-sm text-gray-600">
-            Showing {filteredCourses.length} of {courses.length} courses
+            {t('pages.coursesPage.showing', { count: filteredCourses.length, total: courses.length })}
           </p>
         </div>
 
@@ -198,7 +200,7 @@ const CoursesPage: React.FC = () => {
         {coursesLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading courses...</p>
+            <p className="mt-4 text-gray-600">{t('pages.coursesPage.loadingCourses')}</p>
           </div>
         ) : filteredCourses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -252,7 +254,7 @@ const CoursesPage: React.FC = () => {
                     </div>
                     <div className="flex items-center text-sm text-gray-500">
                       <UserGroupIcon className="h-4 w-4 mr-1" />
-                      <span>{course.enrollment_count} enrolled</span>
+                      <span>{t('pages.coursesPage.numEnrollment', { count: course.enrollment_count })}</span>
                     </div>
                     {course.average_rating > 0 && (
                       <div className="flex items-center text-sm text-gray-500">
@@ -278,7 +280,7 @@ const CoursesPage: React.FC = () => {
                       ))}
                       {course.tags.length > 3 && (
                         <span className="px-2 py-1 text-xs font-medium text-gray-500">
-                          +{course.tags.length - 3} more
+                          {t('pages.coursesPage.moreCourses', { count: course.tags.length - 3 })}
                         </span>
                       )}
                     </div>
@@ -293,9 +295,9 @@ const CoursesPage: React.FC = () => {
                         ? 'bg-green-100 text-green-700 cursor-not-allowed border-2 border-green-200'
                         : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg'
                     }`}
-                    title={course.is_enrolled ? 'You are already enrolled in this course' : 'Click to enroll in this course'}
+                    title={course.is_enrolled ? t('pages.coursesPage.alreadyEnrolled') : t('pages.coursesPage.clickToEnrollInThisCourse')}
                   >
-                    {course.is_enrolled ? '✓ Already Enrolled' : 'Enroll Course'}
+                    {course.is_enrolled ? '✓ ' + t('pages.coursesPage.alreadyEnrolled') : '✗' + t('pages.coursesPage.enrollCourse')}
                   </button>
                 </div>
               </div>
@@ -306,9 +308,9 @@ const CoursesPage: React.FC = () => {
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
               <BookOpenIcon className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No courses found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('pages.coursesPage.noCoursesFound')}</h3>
             <p className="text-gray-600">
-              Try adjusting your search terms or filters to find what you're looking for.
+              {t('pages.coursesPage.tryAdjustingYourSearchTermsOrFiltersToFindWhatYouAreLookingFor')}
             </p>
           </div>
         )}

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 const StudentZKPSection: React.FC = () => {
+  const { t } = useTranslation();
   const [score, setScore] = useState('');
   const [minScore, setMinScore] = useState('');
   const [zkpResult, setZkpResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  
 
   const handleGenerateProof = async () => {
     setLoading(true);
@@ -32,17 +35,17 @@ const StudentZKPSection: React.FC = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
-      <h3 className="text-lg font-bold mb-2">Zero Knowledge Proof: Prove Your Score</h3>
+      <h3 className="text-lg font-bold mb-2">{t('components.studentZKPSection.ZeroKnowledgeProof')}</h3>
       <div className="flex gap-2 mb-2">
-        <input type="number" placeholder="Your score" value={score} onChange={e => setScore(e.target.value)} className="border px-2 py-1 rounded"/>
-        <input type="number" placeholder="Min score" value={minScore} onChange={e => setMinScore(e.target.value)} className="border px-2 py-1 rounded"/>
+        <input type="number" placeholder={t('components.studentZKPSection.yourScore')} value={score} onChange={e => setScore(e.target.value)} className="border px-2 py-1 rounded"/>
+        <input type="number" placeholder={t('components.studentZKPSection.MinScore')} value={minScore} onChange={e => setMinScore(e.target.value)} className="border px-2 py-1 rounded"/>
         <button onClick={handleGenerateProof} className="bg-purple-600 text-white px-4 py-1 rounded" disabled={loading}>
-          {loading ? 'Generating...' : 'Generate ZKP'}
+          {loading ? t('components.studentZKPSection.Generating') : t('components.studentZKPSection.GenerateZKP')}
         </button>
       </div>
       {zkpResult && (
         <div className="mt-2">
-          <div className="font-bold">Proof:</div>
+          <div className="font-bold">{t('components.studentZKPSection.proof')}</div>
           <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">{JSON.stringify(zkpResult, null, 2)}</pre>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ClockIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { LearnerProgress } from '../types';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface LearnerProgressCardProps {
   learner: LearnerProgress;
@@ -8,6 +9,7 @@ interface LearnerProgressCardProps {
 }
 
 const LearnerProgressCard: React.FC<LearnerProgressCardProps> = ({ learner, onViewDetails }) => {
+  const { t } = useTranslation();
   const progressPercentage = (learner.courseProgress.completedModules / learner.courseProgress.totalModules) * 100;
   
   const getProgressColor = (percentage: number) => {
@@ -40,11 +42,11 @@ const LearnerProgressCard: React.FC<LearnerProgressCardProps> = ({ learner, onVi
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900">{learner.learnerName}</h3>
-            <p className="text-sm text-gray-600">Learner ID: {learner.learnerId}</p>
+            <p className="text-sm text-gray-600">{t('components.learnerProgressCard.LearnerID')}: {learner.learnerId}</p>
             <div className="flex items-center mt-1">
               <ChartBarIcon className="w-4 h-4 text-gray-400 mr-1" />
               <span className={`text-sm font-semibold ${getScoreColor(learner.courseProgress.averageScore)}`}>
-                {learner.courseProgress.averageScore}% Average Score
+                {t('components.learnerProgressCard.AverageScore', {value: learner.courseProgress.averageScore})}
               </span>
             </div>
           </div>
@@ -58,7 +60,7 @@ const LearnerProgressCard: React.FC<LearnerProgressCardProps> = ({ learner, onVi
             onClick={() => onViewDetails(learner)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
           >
-            View Details
+            {t('components.learnerProgressCard.ViewDetails')}
           </button>
         </div>
       </div>
@@ -66,7 +68,7 @@ const LearnerProgressCard: React.FC<LearnerProgressCardProps> = ({ learner, onVi
       {/* Progress Section */}
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Course Progress</span>
+          <span className="text-sm font-medium text-gray-700">{t('components.learnerProgressCard.CourseProgress')}</span>
           <span className={`text-sm font-semibold ${getProgressColor(progressPercentage)}`}>
             {Math.round(progressPercentage)}%
           </span>
@@ -80,31 +82,31 @@ const LearnerProgressCard: React.FC<LearnerProgressCardProps> = ({ learner, onVi
         </div>
         
         <div className="flex justify-between text-xs text-gray-500">
-          <span>{learner.courseProgress.completedModules} of {learner.courseProgress.totalModules} modules completed</span>
+          <span>{t('components.learnerProgressCard.modulesCompleted', {n: learner.courseProgress.completedModules, total: learner.courseProgress.totalModules})}</span>
         </div>
       </div>
 
       {/* Skills Overview */}
       <div className="mt-4 pt-4 border-t border-gray-100">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Skills Overview</h4>
+        <h4 className="text-sm font-medium text-gray-700 mb-2">{t('components.learnerProgressCard.SkillsOverview')}</h4>
         <div className="grid grid-cols-3 gap-2">
           <div className="text-center">
             <div className="text-lg font-bold text-blue-600">
               {Math.round(learner.digitalTwin.skills.problemSolving * 100)}%
             </div>
-            <div className="text-xs text-gray-600">Problem Solving</div>
+            <div className="text-xs text-gray-600">{t('components.learnerProgressCard.ProblemSolving')}</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-bold text-green-600">
               {Math.round(learner.digitalTwin.skills.logicalThinking * 100)}%
             </div>
-            <div className="text-xs text-gray-600">Logical Thinking</div>
+            <div className="text-xs text-gray-600">{t('components.learnerProgressCard.LogicalThinking')}</div>
           </div>
           <div className="text-center">
             <div className="text-lg font-bold text-purple-600">
               {Math.round(learner.digitalTwin.skills.selfLearning * 100)}%
             </div>
-            <div className="text-xs text-gray-600">Self Learning</div>
+            <div className="text-xs text-gray-600">{t('components.learnerProgressCard.SelfLearning')}</div>
           </div>
         </div>
       </div>

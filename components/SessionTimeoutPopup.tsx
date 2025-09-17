@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface SessionTimeoutPopupProps {
   isVisible: boolean;
@@ -21,6 +22,7 @@ const SessionTimeoutPopup: React.FC<SessionTimeoutPopupProps> = ({
   onLogout,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [countdown, setCountdown] = useState(timeRemaining);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -104,18 +106,18 @@ const SessionTimeoutPopup: React.FC<SessionTimeoutPopupProps> = ({
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Session Expiring Soon!
+              {t('components.sessionTimeoutPopup.SessionExpiringSoon')}!
             </h3>
             <p className="text-gray-600 text-sm">
-              Your learning session will expire in{' '}
-              <span className="font-bold text-red-600">{countdown}</span> seconds
+              {t('components.sessionTimeoutPopup.YourLearningSessionWillExpireIn')} {' '}
+              <span className="font-bold text-red-600">{countdown}</span> {t('components.sessionTimeoutPopup.Seconds')}
             </p>
           </div>
 
           {/* Message */}
           <div className="text-center mb-6">
             <p className="text-gray-700">
-              Would you like to continue learning or log out?
+              {t('components.sessionTimeoutPopup.WouldYouLikeToContinueLearningOrLogout')}
             </p>
           </div>
 
@@ -137,10 +139,10 @@ const SessionTimeoutPopup: React.FC<SessionTimeoutPopupProps> = ({
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Refreshing...
+                  {t('components.sessionTimeoutPopup.refreshing')}
                 </span>
               ) : (
-                '📚 Stay Learning'
+                `📚 {t('components.sessionTimeoutPopup.stayLearning')}`
               )}
             </button>
 
@@ -160,10 +162,10 @@ const SessionTimeoutPopup: React.FC<SessionTimeoutPopupProps> = ({
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Logging out...
+                  {t('components.sessionTimeoutPopup.LoggingOut')}
                 </span>
               ) : (
-                '🚪 Logout'
+                `🚪 {t('components.sessionTimeoutPopup.logout')}`
               )}
             </button>
           </div>
@@ -179,7 +181,7 @@ const SessionTimeoutPopup: React.FC<SessionTimeoutPopupProps> = ({
               ></div>
             </div>
             <p className="text-xs text-gray-500 text-center mt-1">
-              Auto-logout in {countdown} seconds if no action is taken
+              {t('components.sessionTimeoutPopup.AutoLogoutIn', {countdown: countdown})}
             </p>
           </div>
         </div>

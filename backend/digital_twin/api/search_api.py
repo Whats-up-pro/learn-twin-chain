@@ -147,7 +147,7 @@ async def unified_search(
                         module_id=lesson.module_id,
                         module_name=module_name,
                         tags=keywords,
-                        difficulty_level=lesson.difficulty_level,
+                        difficulty_level=None,
                         duration_minutes=lesson.duration_minutes,
                         url=f"/course/{lesson.course_id}/lesson/{lesson.lesson_id}",
                         metadata={

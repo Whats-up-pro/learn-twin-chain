@@ -136,6 +136,7 @@ async def create_achievement(
         logger.error(f"Achievement creation failed: {e}")
         raise HTTPException(status_code=500, detail="Achievement creation failed")
 
+@router.get("")
 @router.get("/")
 async def search_achievements(
     achievement_type: Optional[AchievementType] = Query(None),
@@ -316,6 +317,7 @@ async def award_achievement(
         raise HTTPException(status_code=500, detail="Achievement awarding failed")
 
 @router.get("/my")
+@router.get("/my/")
 async def get_user_achievements(
     user_id: Optional[str] = Query(None),
     achievement_type: Optional[AchievementType] = Query(None),
@@ -398,6 +400,7 @@ async def get_user_achievements(
         }
 
 @router.get("/my/statistics")
+@router.get("/my/statistics/")
 async def get_user_achievement_stats(
     user_id: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user)
@@ -501,6 +504,52 @@ async def mint_achievement_nft(
     except Exception as e:
         logger.error(f"NFT minting failed: {e}")
         raise HTTPException(status_code=500, detail="NFT minting failed")
+
+@router.get("/my/recent")
+async def get_recent_achievements(
+    minutes: int = Query(5, ge=1, le=60, description="Minutes to look back for recent achievements"),
+    current_user: User = Depends(get_current_user)
+):
+    """Get recently earned achievements (for notifications)"""
+    try:
+        from datetime import timedelta
+        
+        # Calculate time threshold
+        time_threshold = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+        
+        # Get recent user achievements
+        recent_achievements = await UserAchievement.find({
+            "user_id": current_user.did,
+            "earned_at": {"$gte": time_threshold}
+        }).to_list()
+        
+        # Enhance with achievement details
+        enhanced_achievements = []
+        for ua in recent_achievements:
+            achievement = await Achievement.find_one({"achievement_id": ua.achievement_id})
+            if achievement:
+                enhanced_achievements.append({
+                    "user_achievement_id": str(ua.id),
+                    "achievement_id": ua.achievement_id,
+                    "title": achievement.title,
+                    "description": achievement.description,
+                    "tier": achievement.tier,
+                    "points_reward": achievement.points_reward,
+                    "earned_at": ua.earned_at.isoformat(),
+                    "earned_through": ua.earned_through
+                })
+        
+        return {
+            "recent_achievements": enhanced_achievements,
+            "count": len(enhanced_achievements)
+        }
+        
+    except Exception as e:
+        logger.error(f"Recent achievements retrieval failed: {e}")
+        return {
+            "recent_achievements": [],
+            "count": 0
+        }
 
 @router.get("/my/earned")
 async def get_my_achievements(

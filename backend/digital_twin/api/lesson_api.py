@@ -384,6 +384,57 @@ async def update_lesson_progress(
                 module_progress.completed_at = datetime.now(timezone.utc)
         
         await module_progress.save()
+
+        # If module just reached 100%, persist NFT placeholders to DB once minting returns
+        if module_progress.status == "completed" and not module_progress.nft_minted:
+            try:
+                # Optionally, you can trigger backend-side NFT minting here if desired
+                # Or simply leave DB to be updated by the mint callback endpoint
+                pass
+            except Exception:
+                pass
+
+        # Auto-award achievements tied to this module completion
+        try:
+            if module_progress.status == "completed":
+                from ..models.quiz_achievement import Achievement, UserAchievement
+                from ..models.user import User
+                # Find active achievements for this module that require module completion
+                achievements = await Achievement.find({
+                    "status": "active",
+                    "$or": [
+                        {"module_id": module_progress.module_id},
+                        {"course_id": module_progress.course_id}
+                    ],
+                }).to_list()
+
+                for ach in achievements:
+                    try:
+                        crit = getattr(ach, 'criteria', None)
+                        is_module_completion = bool(crit and getattr(crit, 'type', '') in ["module_completion", "quiz_score_percentage", "general"])  # basic match
+                        if not is_module_completion:
+                            continue
+                        # Skip if not repeatable and already earned
+                        existing = await UserAchievement.find_one({
+                            "user_id": module_progress.user_id,
+                            "achievement_id": ach.achievement_id
+                        })
+                        if existing and not ach.is_repeatable:
+                            continue
+                        ua = UserAchievement(
+                            user_id=module_progress.user_id,
+                            achievement_id=ach.achievement_id,
+                            earned_through="module_completion",
+                            course_id=module_progress.course_id,
+                            module_id=module_progress.module_id,
+                            earned_value=module_progress.best_score,
+                            bonus_points=ach.points_reward
+                        )
+                        await ua.insert()
+                    except Exception:
+                        continue
+        except Exception:
+            pass
         
         # Update digital twin if lesson is completed
         if request.completion_percentage >= 100:

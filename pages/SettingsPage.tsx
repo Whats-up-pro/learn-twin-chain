@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 // Use UserSettings from settingsService
 type SettingsState = UserSettings;
@@ -81,10 +82,12 @@ const SettingsPage: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [settings]);
 
+  const { t, changeLanguage, currentLanguage } = useTranslation();
+
   const handleLanguageChange = async (language: string) => {
     setSettings(prev => ({ ...prev, language }));
-    settingsService.applyLanguage(language);
-    toast.success(`Language changed to ${languages.find(l => l.code === language)?.name}`);
+    changeLanguage(language);
+    toast.success(t('settings.languageChanged', { language: languages.find(l => l.code === language)?.name }));
   };
 
   const handleDarkModeChange = async (darkMode: boolean) => {
@@ -252,10 +255,10 @@ const SettingsPage: React.FC = () => {
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Español', flag: '🇪🇸' },
     { code: 'fr', name: 'Français', flag: '🇫🇷' },
-    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-    { code: 'zh', name: '中文', flag: '🇨🇳' },
+    // { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+    // { code: 'zh', name: '中文', flag: '🇨🇳' },
     { code: 'ja', name: '日本語', flag: '🇯🇵' },
-    { code: 'ko', name: '한국어', flag: '🇰🇷' },
+    // { code: 'ko', name: '한국어', flag: '🇰🇷' },
     { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
   ];
 
@@ -280,7 +283,8 @@ const SettingsPage: React.FC = () => {
     onChange: (enabled: boolean) => void; 
     label: string;
     description?: string;
-  }> = ({ enabled, onChange, label, description }) => (
+    hideButton?: boolean;
+  }> = ({ enabled, onChange, label, description, hideButton = false }) => (
     <div className="flex items-center justify-between py-3">
       <div className="flex-1">
         <p className="text-sm font-medium text-gray-900">{label}</p>
@@ -288,6 +292,7 @@ const SettingsPage: React.FC = () => {
           <p className="text-sm text-gray-500 mt-1">{description}</p>
         )}
       </div>
+      {!hideButton && (
       <button
         onClick={() => onChange(!enabled)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -300,6 +305,7 @@ const SettingsPage: React.FC = () => {
           }`}
         />
       </button>
+      )}
     </div>
   );
 
@@ -313,22 +319,22 @@ const SettingsPage: React.FC = () => {
             className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors mb-4"
           >
             <ArrowLeftIcon className="h-5 w-5" />
-            <span>Back</span>
+            <span>{t('common.back')}</span>
           </button>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-gray-600">Customize your learning experience and manage your account preferences</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('settings.title')}</h1>
+          <p className="text-gray-600">{t('settings.description')}</p>
         </div>
 
         <div className="space-y-6">
           {/* Language Settings */}
           <SettingSection
-            title="Language & Region"
+            title={t('settings.languageRegion')}
             icon={<LanguageIcon className="h-6 w-6 text-blue-600" />}
           >
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Preferred Language
+                  {t('settings.preferredLanguage')}
                 </label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {languages.map((lang) => (
@@ -336,7 +342,7 @@ const SettingsPage: React.FC = () => {
                       key={lang.code}
                       onClick={() => handleLanguageChange(lang.code)}
                       className={`p-3 rounded-lg border-2 transition-all ${
-                        settings.language === lang.code
+                        currentLanguage === lang.code
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
@@ -352,73 +358,74 @@ const SettingsPage: React.FC = () => {
 
           {/* Appearance Settings */}
           <SettingSection
-            title="Appearance"
+            title={t('settings.appearance') + ' (Not available in this version)'}
             icon={<SunIcon className="h-6 w-6 text-blue-600" />}
           >
             <div className="space-y-4">
               <ToggleSwitch
                 enabled={settings.darkMode}
                 onChange={handleDarkModeChange}
-                label="Dark Mode"
-                description="Switch between light and dark themes"
+                label={t('settings.darkMode')}
+                description={t('settings.switchToDark')}
+                hideButton={true}
               />
             </div>
           </SettingSection>
 
           {/* Notification Settings */}
           <SettingSection
-            title="Notifications"
+            title={t('settings.notifications')}
             icon={<BellIcon className="h-6 w-6 text-blue-600" />}
           >
             <div className="space-y-4">
               <ToggleSwitch
                 enabled={settings.notifications.email}
                 onChange={(enabled) => handleNotificationChange('email', enabled)}
-                label="Email Notifications"
-                description="Receive notifications via email"
+                label={t('settings.emailNotifications')}
+                description={t('settings.emailNotificationsDesc')}
               />
               <ToggleSwitch
                 enabled={settings.notifications.push}
                 onChange={(enabled) => handleNotificationChange('push', enabled)}
-                label="Push Notifications"
-                description="Receive browser push notifications"
+                label={t('settings.pushNotifications')}
+                description={t('settings.pushNotificationsDesc')}
               />
               <ToggleSwitch
                 enabled={settings.notifications.nftEarned}
                 onChange={(enabled) => handleNotificationChange('nftEarned', enabled)}
-                label="NFT Earned Notifications"
-                description="Get notified when you earn new NFTs"
+                label={t('settings.nftEarned')}
+                description={t('settings.nftEarnedDesc')}
               />
               <ToggleSwitch
                 enabled={settings.notifications.courseUpdates}
                 onChange={(enabled) => handleNotificationChange('courseUpdates', enabled)}
-                label="Course Updates"
-                description="Notifications about course content updates"
+                label={t('settings.courseUpdates')}
+                description={t('settings.courseUpdatesDesc')}
               />
               <ToggleSwitch
                 enabled={settings.notifications.achievements}
                 onChange={(enabled) => handleNotificationChange('achievements', enabled)}
-                label="Achievement Notifications"
-                description="Get notified when you unlock new achievements"
+                label={t('settings.achievementNotifications')}
+                description={t('settings.achievementNotificationsDesc')}
               />
             </div>
           </SettingSection>
 
           {/* Privacy Settings */}
           <SettingSection
-            title="Privacy & Security"
+            title={t('settings.privacySecurity')}
             icon={<ShieldCheckIcon className="h-6 w-6 text-blue-600" />}
           >
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Profile Visibility
+                  {t('settings.profileVisibility')}
                 </label>
                 <div className="space-y-2">
                   {[
-                    { value: 'public', label: 'Public', description: 'Anyone can see your profile' },
-                    { value: 'friends', label: 'Friends Only', description: 'Only your connections can see your profile' },
-                    { value: 'private', label: 'Private', description: 'Only you can see your profile' },
+                    { value: 'public', label: t('settings.public'), description: t('settings.publicDesc') },
+                    { value: 'friends', label: t('settings.friendsOnly'), description: t('settings.friendsOnlyDesc') },
+                    { value: 'private', label: t('settings.private'), description: t('settings.privateDesc') },
                   ].map((option) => (
                     <label key={option.value} className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
                       <input
@@ -441,34 +448,34 @@ const SettingsPage: React.FC = () => {
               <ToggleSwitch
                 enabled={settings.privacy.showProgress}
                 onChange={(enabled) => handlePrivacyChange('showProgress', enabled)}
-                label="Show Learning Progress"
-                description="Allow others to see your course progress"
+                label={t('settings.showLearningProgress')}
+                description={t('settings.showLearningProgressDesc')}
               />
 
               <ToggleSwitch
                 enabled={settings.privacy.showAchievements}
                 onChange={(enabled) => handlePrivacyChange('showAchievements', enabled)}
-                label="Show Achievements"
-                description="Display your achievements on your profile"
+                label={t('settings.showAchievements')}
+                description={t('settings.showAchievementsDesc')}
               />
             </div>
           </SettingSection>
 
           {/* Account Settings */}
           <SettingSection
-            title="Account"
+            title={t('settings.account')}
             icon={<UserIcon className="h-6 w-6 text-blue-600" />}
           >
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Password & Security</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.passwordSecurity')}</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Two-Factor Authentication</p>
-                      <p className="text-sm text-gray-500 mt-1">Add an extra layer of security to your account</p>
+                      <p className="text-sm font-medium text-gray-900">{t('settings.twoFactorAuth')}</p>
+                      <p className="text-sm text-gray-500 mt-1">{t('settings.twoFactorAuthDesc')}</p>
                       {settings.account.twoFactorAuth && (
-                        <p className="text-xs text-green-600 mt-1">✓ 2FA is currently enabled</p>
+                        <p className="text-xs text-green-600 mt-1">✓ {t('settings.twoFactorAuthEnabled')}</p>
                       )}
                     </div>
                     <div className="flex items-center space-x-2">
@@ -478,7 +485,7 @@ const SettingsPage: React.FC = () => {
                           disabled={isLoading}
                           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                         >
-                          {isLoading ? 'Setting up...' : 'Enable 2FA'}
+                          {isLoading ? t('common.settingUp') : t('settings.enable2FA')}
                         </button>
                       ) : (
                         <button
@@ -486,7 +493,7 @@ const SettingsPage: React.FC = () => {
                           disabled={isLoading}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
                         >
-                          {isLoading ? 'Disabling...' : 'Disable 2FA'}
+                          {isLoading ? t('common.disabling') : t('settings.disable2FA')}
                         </button>
                       )}
                     </div>
@@ -498,14 +505,14 @@ const SettingsPage: React.FC = () => {
                       className="flex items-center space-x-2 text-blue-600 hover:text-blue-800 transition-colors"
                     >
                       <KeyIcon className="h-5 w-5" />
-                      <span>Change Password</span>
+                      <span>{t('settings.changePassword')}</span>
                     </button>
 
                     {showPasswordForm && (
                       <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Current Password
+                          {t('settings.currentPassword')}
                           </label>
                           <input
                             type="password"
@@ -516,7 +523,7 @@ const SettingsPage: React.FC = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            New Password
+                          {t('settings.newPassword')}
                           </label>
                           <input
                             type="password"
@@ -527,7 +534,7 @@ const SettingsPage: React.FC = () => {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Confirm New Password
+                          {t('settings.confirmNewPassword')}
                           </label>
                           <input
                             type="password"
@@ -542,13 +549,13 @@ const SettingsPage: React.FC = () => {
                             disabled={isLoading}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                           >
-                            {isLoading ? 'Updating...' : 'Update Password'}
+                            {isLoading ? t('common.updating') : t('settings.updatePassword')}
                           </button>
                           <button
                             onClick={() => setShowPasswordForm(false)}
                             className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </button>
                         </div>
                       </div>
@@ -563,19 +570,19 @@ const SettingsPage: React.FC = () => {
                   <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
                     <div className="text-center mb-6">
                       <QrCodeIcon className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">Setup Two-Factor Authentication</h3>
-                      <p className="text-gray-600">Scan this QR code with your authenticator app</p>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{t('settings.setupTwoFactorAuthentication')}</h3>
+                      <p className="text-gray-600">{t('settings.scanQRCodeWithAuthenticatorApp')}</p>
                     </div>
 
                     {twoFAQRCode && (
                       <div className="text-center mb-6">
-                        <img src={twoFAQRCode} alt="2FA QR Code" className="mx-auto border rounded-lg" />
+                        <img src={twoFAQRCode} alt={t('tooltip.twoFAQRcode')} className="mx-auto border rounded-lg" />
                       </div>
                     )}
 
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Enter verification code
+                        {t('settings.enterVerificationCode')}
                       </label>
                       <input
                         type="text"
@@ -592,9 +599,9 @@ const SettingsPage: React.FC = () => {
                         <div className="flex items-start">
                           <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 mt-0.5 mr-2" />
                           <div>
-                            <h4 className="text-sm font-medium text-yellow-800">Save your backup codes</h4>
+                            <h4 className="text-sm font-medium text-yellow-800">{t('settings.saveYourBackupCodes')}</h4>
                             <p className="text-sm text-yellow-700 mt-1">
-                              Store these codes in a safe place. You can use them to access your account if you lose your device.
+                              {t('settings.saveYourBackupCodesDesc')}
                             </p>
                             <div className="mt-2 grid grid-cols-2 gap-2">
                               {twoFABackupCodes.map((code, index) => (
@@ -614,7 +621,7 @@ const SettingsPage: React.FC = () => {
                         disabled={isLoading || !twoFAToken}
                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                       >
-                        {isLoading ? 'Verifying...' : 'Verify & Enable'}
+                        {isLoading ? t('common.verifying') : t('settings.verifyAndEnable')}
                       </button>
                       <button
                         onClick={() => {
@@ -623,7 +630,7 @@ const SettingsPage: React.FC = () => {
                         }}
                         className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>
@@ -631,20 +638,20 @@ const SettingsPage: React.FC = () => {
               )}
 
               <div className="border-t pt-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Data & Privacy</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('settings.dataPrivacy')}</h3>
                 <div className="space-y-4">
                   <ToggleSwitch
                     enabled={settings.account.emailNotifications}
                     onChange={(enabled) => handleAccountChange('emailNotifications', enabled)}
-                    label="Email Notifications"
-                    description="Receive important updates via email"
+                    label={t('settings.emailNotifications')}
+                    description={t('settings.emailNotificationsDesc')}
                   />
 
                   <div className="flex items-center justify-between py-3">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Export My Data</p>
+                      <p className="text-sm font-medium text-gray-900">{t('settings.exportMyData')}</p>
                       <p className="text-sm text-gray-500 mt-1">
-                        Download a copy of your learning data and progress
+                        {t('settings.exportMyDataDesc')}
                       </p>
                     </div>
                     <button
@@ -652,7 +659,7 @@ const SettingsPage: React.FC = () => {
                       disabled={isLoading}
                       className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
                     >
-                      {isLoading ? 'Exporting...' : 'Export Data'}
+                      {isLoading ? t('common.exporting') : t('settings.exportData')}
                     </button>
                   </div>
                 </div>
@@ -664,14 +671,14 @@ const SettingsPage: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Settings Status</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('settings.settingsStatus')}</h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Your settings are automatically saved as you make changes
+                  {t('settings.settingsStatusDesc')}
                 </p>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <CheckIcon className="h-5 w-5 text-green-500" />
-                <span>Auto-save enabled</span>
+                <span>{t('settings.autoSaveEnabled')}</span>
               </div>
             </div>
           </div>

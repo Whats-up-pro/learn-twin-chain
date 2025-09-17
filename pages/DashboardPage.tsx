@@ -23,8 +23,10 @@ import {
 import { Nft } from '../types';
 import { blockchainService } from '../services/blockchainService';
 import toast from 'react-hot-toast';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 const DashboardPage: React.FC = () => {
+  const { t } = useTranslation();
   const { learnerProfile, digitalTwin, nfts, learningModules, achievements, courses } = useAppContext();
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const [realEnrollments, setRealEnrollments] = useState<EnrollmentData[]>([]);
@@ -54,14 +56,14 @@ const DashboardPage: React.FC = () => {
   // Load real dashboard data
   const loadDashboardData = useCallback(async () => {
     if (!learnerProfile?.did) {
-      console.log('DashboardPage: No learner profile DID, skipping data load');
+      console.log(t('pages.dashboardPage.dashboardPageNoProfile'));
       return;
     }
     
     try {
       setLoadingStats(true);
       setError(null);
-      console.log('DashboardPage: Loading dashboard data...');
+      console.log(t('pages.dashboardPage.dashboardPageLoadingData'));
       
       // Load real enrollment and progress data with timeout
       const [enrollmentResponse, progressResponse] = await Promise.allSettled([
@@ -75,18 +77,18 @@ const DashboardPage: React.FC = () => {
           (enrollmentResponse.value as any)?.enrollments) {
         enrollments = (enrollmentResponse.value as any).enrollments;
         setRealEnrollments(enrollments);
-        console.log('DashboardPage: Loaded enrollments:', enrollments.length);
+        console.log(t('pages.dashboardPage.dashboardPageLoadedEnrollments', { count: enrollments.length }));
       } else {
-        console.warn('DashboardPage: Failed to load enrollments:', enrollmentResponse);
+        console.warn(t('pages.dashboardPage.dashboardPageFailedToLoadEnrollments'), enrollmentResponse);
       }
       
       let progress: any[] = [];
       if (progressResponse.status === 'fulfilled' && 
           (progressResponse.value as any)?.progress) {
         progress = (progressResponse.value as any).progress;
-        console.log('DashboardPage: Loaded progress data:', progress.length);
+        console.log(t('pages.dashboardPage.dashboardPageLoadedProgress'), progress.length);
       } else {
-        console.warn('DashboardPage: Failed to load progress:', progressResponse);
+        console.warn(t('pages.dashboardPage.dashboardPageFailedToLoadProgress'), progressResponse);
       }
       
       // Calculate real statistics with safe fallbacks
@@ -140,17 +142,17 @@ const DashboardPage: React.FC = () => {
         totalEnrollments: Math.max(enrollments.length, 0)
       });
       
-      console.log('DashboardPage: Dashboard stats calculated:', {
+      console.log(t('pages.dashboardPage.dashboardPageCalculatedStats', {
         overallProgress: avgProgress,
         completedModules,
         totalModules,
         learningStreak: streak,
         totalEnrollments: enrollments.length
-      });
+      }));
       
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      setError('Failed to load dashboard data. Please try refreshing the page.');
+      console.error(t('pages.dashboardPage.failedToLoadDashboardData'), error);
+      setError(t('pages.dashboardPage.failedToLoadDashboardDataRefresh'));
       
       // Fallback to digital twin data with safe defaults
       const totalModules = learningModules?.length || 0;
@@ -184,8 +186,8 @@ const DashboardPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Loading Dashboard...</h2>
-          <p className="text-gray-600">Please wait while we prepare your learning dashboard.</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('pages.dashboardPage.loadingDashboard')}</h2>
+          <p className="text-gray-600">{t('pages.dashboardPage.pleaseWaitWhileWePrepareYourLearningDashboard')}</p>
         </div>
       </div>
     );
@@ -197,20 +199,20 @@ const DashboardPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-6">
           <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-red-600 mb-2">Dashboard Error</h2>
+          <h2 className="text-2xl font-bold text-red-600 mb-2">{t('pages.dashboardPage.dashboardError')}</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <div className="space-y-3">
             <button
               onClick={() => window.location.reload()}
               className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors"
             >
-              Reload Page
+              {t('pages.dashboardPage.reloadPage')}
             </button>
             <button
               onClick={() => navigate('/courses')}
               className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors"
             >
-              Browse Courses
+                {t('pages.dashboardPage.browseCourses')}
             </button>
           </div>
         </div>
@@ -244,13 +246,13 @@ const DashboardPage: React.FC = () => {
 
   const handleVerifyNft = (nft: Nft) => {
     setIsVerificationModalOpen(true);
-    toast.success(`Verifying NFT: ${nft.name}`);
+    toast.success(t('pages.dashboardPage.verifyingNft', { nftName: nft.name }));
   };
 
   const handleStartLearning = async (moduleId: string) => {
     const isConnected = await blockchainService.checkWalletConnection();
     if (!isConnected) {
-      toast.error('Please connect your MetaMask wallet before learning to enable NFT minting.');
+      toast.error(t('pages.dashboardPage.pleaseConnectYourMetaMaskWallet'));
       return;
     }
     navigate(`/module/${moduleId}`);
@@ -293,7 +295,7 @@ const DashboardPage: React.FC = () => {
   const handleContinueLearning = async () => {
     const isConnected = await blockchainService.checkWalletConnection();
     if (!isConnected) {
-      toast.error('Please connect your MetaMask wallet before continuing.');
+      toast.error(t('pages.dashboardPage.pleaseConnectYourMetaMaskWalletBeforeContinuing'));
       return;
     }
     
@@ -309,26 +311,26 @@ const DashboardPage: React.FC = () => {
       
       // Show informative toast message based on progress
       if (progress === 0) {
-        toast.success(`Starting: ${course.title} 🚀`);
+        toast.success(t('pages.dashboardPage.Starting', { courseTitle: course.title }));
       } else if (progress < 25) {
-        toast.success(`Getting started: ${course.title} (${progress}% complete) 📖`);
+        toast.success(t('pages.dashboardPage.GettingStarted', { courseTitle: course.title, progress: progress }));
       } else if (progress < 50) {
-        toast.success(`Making progress: ${course.title} (${progress}% complete) 📚`);
+        toast.success(t('pages.dashboardPage.MakingProgress', { courseTitle: course.title, progress: progress }));
       } else if (progress < 75) {
-        toast.success(`Almost there: ${course.title} (${progress}% complete) 🎯`);
+        toast.success(t('pages.dashboardPage.AlmostThere', { courseTitle: course.title, progress: progress }));
       } else {
-        toast.success(`Finishing up: ${course.title} (${progress}% complete) 🏁`);
+        toast.success(t('pages.dashboardPage.FinishingUp', { courseTitle: course.title, progress: progress }));
       }
       
-      console.log(`Continue Learning: Selected course "${course.title}" with ${progress}% progress`);
+      console.log(t('pages.dashboardPage.continueLearning', { courseTitle: course.title, progress: progress }));
     } else {
       // Check if user has any enrollments at all
       if (realEnrollments.length === 0) {
-        toast.success('No courses enrolled yet. Browse courses to start learning! 📖');
+        toast.success(t('pages.dashboardPage.noCoursesEnrolledYet'));
         navigate('/courses');
       } else {
         // All courses are completed
-        toast.success('🎉 Congratulations! All enrolled courses completed! Browse more courses to continue learning.');
+        toast.success(t('pages.dashboardPage.congratulationsAllEnrolledCoursesCompleted'));
         navigate('/courses');
       }
     }
@@ -421,11 +423,11 @@ const DashboardPage: React.FC = () => {
                     ).length;
                     
                     if (incompleteCount === 0 && realEnrollments.length === 0) {
-                      return 'Start Learning';
+                      return t('pages.dashboardPage.startLearning');
                     } else if (incompleteCount === 0) {
-                      return 'Browse Courses';
+                      return t('pages.dashboardPage.browseCourses');
                     } else {
-                      return 'Continue Learning';
+                      return t('pages.dashboardPage.continueLearning');
                     }
                   })()}
                 </div>
@@ -437,11 +439,11 @@ const DashboardPage: React.FC = () => {
                     ).length;
                     
                     if (incompleteCount === 0 && realEnrollments.length === 0) {
-                      return 'Begin your journey';
+                      return t('pages.dashboardPage.beginYourJourney');
                     } else if (incompleteCount === 0) {
-                      return 'Find new courses';
+                      return t('pages.dashboardPage.findNewCourses');
                     } else {
-                      return `Resume your progress (${incompleteCount} active)`;
+                      return t('pages.dashboardPage.resumeYourProgress', { count: incompleteCount });
                     }
                   })()}
                 </div>
@@ -459,8 +461,8 @@ const DashboardPage: React.FC = () => {
                 <TrophyIcon className="h-8 w-8" />
               </div>
               <div className="text-left">
-                <div className="text-xl font-bold">Achievements</div>
-                <div className="text-yellow-100">View your trophies</div>
+                <div className="text-xl font-bold">{t('pages.dashboardPage.achievements')}</div>
+                <div className="text-yellow-100">{t('pages.dashboardPage.viewYourTrophies')}</div>
               </div>
             </div>
           </button>
@@ -475,8 +477,8 @@ const DashboardPage: React.FC = () => {
                 <SparklesIcon className="h-8 w-8" />
               </div>
               <div className="text-left">
-                <div className="text-xl font-bold">NFT Collection</div>
-                <div className="text-purple-100">Manage your NFTs</div>
+                <div className="text-xl font-bold">{t('pages.dashboardPage.nftCollection')}</div>
+                <div className="text-purple-100">{t('pages.dashboardPage.manageYourNFTs')}</div>
               </div>
             </div>
           </button>
@@ -491,8 +493,8 @@ const DashboardPage: React.FC = () => {
                 <UserIcon className="h-8 w-8" />
               </div>
               <div className="text-left">
-                <div className="text-xl font-bold">Profile</div>
-                <div className="text-purple-100">Manage your data</div>
+                <div className="text-xl font-bold">{t('pages.dashboardPage.profile')}</div>
+                <div className="text-purple-100">{t('pages.dashboardPage.manageYourData')}</div>
               </div>
             </div>
           </button>
@@ -501,25 +503,25 @@ const DashboardPage: React.FC = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard 
-            title="Overall Progress" 
+            title={t('pages.dashboardPage.overallProgress')} 
             value={loadingStats ? '...' : `${overallProgress.toFixed(0)}%`} 
             icon={<ArrowTrendingUpIcon className="h-8 w-8 text-blue-500"/>}
             gradient="from-blue-500 to-blue-600"
           />
           <StatCard 
-            title="Modules Completed" 
+            title={t('pages.dashboardPage.modulesCompleted')} 
             value={loadingStats ? '...' : `${completedModulesCount}${totalModules > 0 ? `/${totalModules}` : ''}`} 
             icon={<AcademicCapIcon className="h-8 w-8 text-green-500"/>}
             gradient="from-green-500 to-green-600"
           />
           <StatCard 
-            title="NFTs Earned" 
+            title={t('pages.dashboardPage.nftsEarned')} 
             value={`${safeNfts.length}`} 
             icon={<SparklesIcon className="h-8 w-8 text-yellow-500"/>}
             gradient="from-yellow-500 to-yellow-600"
           />
           <StatCard 
-            title="Learning Streak" 
+            title={t('pages.dashboardPage.learningStreak')} 
             value={loadingStats ? '...' : `${dashboardStats.learningStreak} days`} 
             icon={<FireIcon className="h-8 w-8 text-orange-500"/>}
             gradient="from-orange-500 to-red-500"
@@ -531,17 +533,17 @@ const DashboardPage: React.FC = () => {
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-bold text-gray-800 flex items-center">
               <FireIcon className="h-8 w-8 text-orange-500 mr-3" />
-              Your Learning Path
+              {t('pages.dashboardPage.yourLearningPath')}
             </h2>
             <div className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-              {loadingStats ? 'Loading...' : realEnrollments.length > 0 ? `${realEnrollments.length} enrolled courses` : 'No enrollments yet'}
+              {loadingStats ? t('pages.dashboardPage.loading') : realEnrollments.length > 0 ? t('pages.dashboardPage.loading', { value: realEnrollments.length }) : t('pages.dashboardPage.noEnrollmentsYet')}
             </div>
           </div>
           
           {loadingStats ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600 text-lg">Loading your learning path...</p>
+              <p className="text-gray-600 text-lg">{t('pages.dashboardPage.loadingYourLearningPath')}</p>
             </div>
           ) : realEnrollments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -561,7 +563,7 @@ const DashboardPage: React.FC = () => {
                       {isCompleted && (
                         <div className="flex items-center space-x-1 text-green-600">
                           <CheckCircleIcon className="h-5 w-5" />
-                          <span className="text-sm font-medium">Complete</span>
+                          <span className="text-sm font-medium">{t('pages.dashboardPage.complete')}</span>
                         </div>
                       )}
                     </div>
@@ -570,7 +572,7 @@ const DashboardPage: React.FC = () => {
                     <div className="space-y-4">
                       <div>
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-gray-700">Progress</span>
+                          <span className="text-sm font-medium text-gray-700">{t('pages.dashboardPage.progress')}</span>
                           <span className="text-sm font-bold text-gray-800">{progress}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
@@ -596,7 +598,7 @@ const DashboardPage: React.FC = () => {
                         {isStarted && (
                           <span className="flex items-center text-blue-600">
                             <StarIcon className="h-4 w-4 mr-1" />
-                            {progress}% done
+                            {t('pages.dashboardPage.done', { value: progress })}
                           </span>
                         )}
                       </div>
@@ -611,7 +613,7 @@ const DashboardPage: React.FC = () => {
                             : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700 shadow-lg hover:shadow-xl'
                         }`}
                       >
-                        {isCompleted ? '✓ Review Course' : isStarted ? 'Continue Learning' : 'Start Learning'}
+                        {isCompleted ? '✓ ' + t('pages.dashboardPage.reviewCourse') : isStarted ? t('pages.dashboardPage.continueLearning') : t('pages.dashboardPage.startLearning')}
                       </button>
                     </div>
                   </div>
@@ -632,7 +634,7 @@ const DashboardPage: React.FC = () => {
                       {isCompleted && (
                         <div className="flex items-center space-x-1 text-green-600">
                           <CheckCircleIcon className="h-5 w-5" />
-                          <span className="text-sm font-medium">Complete</span>
+                          <span className="text-sm font-medium">{t('pages.dashboardPage.complete')}</span>
                         </div>
                       )}
                     </div>
@@ -641,7 +643,7 @@ const DashboardPage: React.FC = () => {
                     <div className="space-y-4">
                       <div>
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-gray-700">Progress</span>
+                          <span className="text-sm font-medium text-gray-700">{t('pages.dashboardPage.progress')}</span>
                           <span className="text-sm font-bold text-gray-800">{isCompleted ? 100 : Math.round(moduleKnowledge * 100)}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
@@ -664,7 +666,7 @@ const DashboardPage: React.FC = () => {
                         {isStarted && (
                           <span className="flex items-center text-blue-600">
                             <StarIcon className="h-4 w-4 mr-1" />
-                            {isCompleted ? '100% done' : `${Math.round(moduleKnowledge * 100)}% done`}
+                            {isCompleted ? t('pages.dashboardPage.100done') : `${t('pages.dashboardPage.done', { value: Math.round(moduleKnowledge * 100) })}`}
                           </span>
                         )}
                       </div>
@@ -679,7 +681,7 @@ const DashboardPage: React.FC = () => {
                             : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:from-gray-600 hover:to-gray-700 shadow-lg hover:shadow-xl'
                         }`}
                       >
-                        {isCompleted ? '✓ Completed' : isStarted ? 'Continue Learning' : 'Start Learning'}
+                        {isCompleted ? '✓ ' + t('pages.dashboardPage.Completed') : isStarted ? t('pages.dashboardPage.continueLearning') : t('pages.dashboardPage.startLearning')}
                       </button>
                     </div>
                   </div>
@@ -692,13 +694,13 @@ const DashboardPage: React.FC = () => {
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200 transition-colors">
                     <BookOpenIcon className="h-8 w-8 text-blue-600" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">Browse More Courses</h3>
-                  <p className="text-gray-600 mb-6">Discover new learning opportunities</p>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">{t('pages.dashboardPage.browseMoreCourses')}</h3>
+                  <p className="text-gray-600 mb-6">{t('pages.dashboardPage.discoverNewLearningOpportunities')}</p>
                   <button
                     onClick={() => navigate('/courses')}
                     className="w-full py-3 px-4 rounded-xl font-semibold bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all duration-300"
                   >
-                    Browse Courses
+                    {t('pages.dashboardPage.browseCourses')}
                   </button>
                 </div>
               </div>
@@ -712,13 +714,13 @@ const DashboardPage: React.FC = () => {
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
               <ChartBarIcon className="h-7 w-7 text-green-500 mr-3" />
-              Skills Development
+              {t('pages.dashboardPage.skillDevelopment')}
             </h2>
             
             {loadingStats ? (
               <div className="text-center py-6">
                 <div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-gray-600">Loading skills...</p>
+                <p className="text-gray-600">{t('pages.dashboardPage.loadingSkills')}</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -742,19 +744,19 @@ const DashboardPage: React.FC = () => {
                     return (
                       <>
                         <SkillBar 
-                          name="Problem Solving" 
+                          name={t('pages.dashboardPage.problemSolving')} 
                           value={safeDigitalTwin.skills.problemSolving} 
                           color="from-green-400 to-green-600"
                           icon="🧩"
                         />
                         <SkillBar 
-                          name="Logical Thinking" 
+                          name={t('pages.dashboardPage.logicalThinking')} 
                           value={safeDigitalTwin.skills.logicalThinking} 
                           color="from-blue-400 to-blue-600"
                           icon="🧠"
                         />
                         <SkillBar 
-                          name="Self Learning" 
+                          name={t('pages.dashboardPage.selfLearning')} 
                           value={safeDigitalTwin.skills.selfLearning} 
                           color="from-purple-400 to-purple-600"
                           icon="📚"
@@ -812,13 +814,13 @@ const DashboardPage: React.FC = () => {
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
             <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
               <BookOpenIcon className="h-7 w-7 text-blue-500 mr-3" />
-              Knowledge Areas
+              {t('pages.dashboardPage.knowledgeAreas')}
             </h2>
             
             {loadingStats ? (
               <div className="text-center py-6">
                 <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                <p className="text-gray-600">Loading knowledge areas...</p>
+                <p className="text-gray-600">{t('pages.dashboardPage.loadingKnowledgeAreas')}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -873,7 +875,7 @@ const DashboardPage: React.FC = () => {
                 {realEnrollments.length === 0 && Object.keys(safeDigitalTwin.knowledge).length === 0 && (
                   <div className="text-center py-8">
                     <BookOpenIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">Enroll in courses to build your knowledge areas!</p>
+                    <p className="text-gray-500">{t('pages.dashboardPage.enrollInCoursesToBuildYourKnowledgeAreas')}</p>
                   </div>
                 )}
               </div>
@@ -885,13 +887,13 @@ const DashboardPage: React.FC = () => {
         <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
             <ClockIcon className="h-7 w-7 text-orange-500 mr-3" />
-            Recent Activity
+            {t('pages.dashboardPage.recentActivity')}
           </h2>
           
           {loadingStats ? (
             <div className="text-center py-8">
               <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading recent activity...</p>
+              <p className="text-gray-600">{t('pages.dashboardPage.loadingRecentActivity')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -948,7 +950,7 @@ const DashboardPage: React.FC = () => {
                               onClick={() => navigate(`/course/${course.course_id}/learn`)}
                               className="text-xs text-blue-600 hover:text-blue-800 transition-colors mt-1"
                             >
-                              Continue →
+                              {t('pages.dashboardPage.continue')} →
                             </button>
                           )}
                         </div>
@@ -963,8 +965,8 @@ const DashboardPage: React.FC = () => {
                       <CheckCircleIcon className="h-6 w-6 text-green-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-800">Completed {checkpoint.moduleName || checkpoint.module}</p>
-                      <p className="text-sm text-gray-600">Score: {checkpoint.score}% • {new Date(checkpoint.completedAt).toLocaleDateString()}</p>
+                      <p className="font-semibold text-gray-800">{t('pages.dashboardPage.completed')} {checkpoint.moduleName || checkpoint.module}</p>
+                      <p className="text-sm text-gray-600">{t('pages.dashboardPage.score', { value: checkpoint.score })} • {new Date(checkpoint.completedAt).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-green-600">{checkpoint.score}%</div>
@@ -976,12 +978,12 @@ const DashboardPage: React.FC = () => {
               {realEnrollments.length === 0 && safeDigitalTwin.checkpoints.length === 0 && (
                 <div className="text-center py-12">
                   <div className="text-6xl mb-4">🚀</div>
-                  <p className="text-gray-600 text-lg mb-4">No recent activity. Start learning to see your progress!</p>
+                  <p className="text-gray-600 text-lg mb-4">{t('pages.dashboardPage.noRecentActivityStart')}</p>
                   <button
                     onClick={() => navigate('/courses')}
                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
-                    Browse Courses
+                    {t('pages.dashboardPage.browseCourses')}
                   </button>
                 </div>
               )}
@@ -994,13 +996,13 @@ const DashboardPage: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
               <TrophyIcon className="h-7 w-7 text-yellow-500 mr-3" />
-              Your NFTs
+              {t('pages.dashboardPage.yourNFTs')}
             </h2>
             <NftTabs active={nftTab} onChange={setNftTab} />
           </div>
 
           <NftLists active={nftTab} onVerify={handleVerifyNft} />
-          <div className="mt-4 text-xs text-gray-500">Tags: <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Module Progress NFT</span> <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 ml-2">Learning Achievement NFT</span></div>
+          <div className="mt-4 text-xs text-gray-500">{t('pages.dashboardPage.tags')}: <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">{t('pages.dashboardPage.moduleProgressNFT')}</span> <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 ml-2">{t('pages.dashboardPage.learningAchievementNFT')}</span></div>
         </div>
 
         {/* Achievements Gallery */}
@@ -1008,9 +1010,9 @@ const DashboardPage: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-800 flex items-center">
               <TrophyIcon className="h-7 w-7 text-yellow-500 mr-3" />
-              Achievement Gallery
+              {t('pages.dashboardPage.achievementGallery')}
             </h2>
-            <div className="text-sm text-gray-600">Manage your achievements</div>
+            <div className="text-sm text-gray-600">{t('pages.dashboardPage.manageYourAchievements')}</div>
           </div>
           {safeAchievements && safeAchievements.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -1027,7 +1029,7 @@ const DashboardPage: React.FC = () => {
           ) : (
             <div className="text-center py-8">
               <TrophyIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No achievements yet. Complete courses to earn achievements!</p>
+              <p className="text-gray-500">{t('pages.dashboardPage.noAchievementsYet')}</p>
             </div>
           )}
         </div>
@@ -1037,17 +1039,17 @@ const DashboardPage: React.FC = () => {
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-bold text-gray-800 flex items-center">
               <SparklesIcon className="h-8 w-8 text-purple-500 mr-3" />
-              Recommended for You
+              {t('pages.dashboardPage.recommendedForYou')}
             </h2>
             <div className="text-sm text-gray-600 bg-gradient-to-r from-purple-100 to-pink-100 px-4 py-2 rounded-full border border-purple-200">
-              {loadingStats ? 'Loading...' : 'Courses you haven\'t enrolled in'}
+              {loadingStats ? t('pages.dashboardPage.loading...') : t('pages.dashboardPage.coursesYouHaven\'tEnrolledIn')}
             </div>
           </div>
           
           {loadingStats ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600 text-lg">Finding courses for you...</p>
+              <p className="text-gray-600 text-lg">{t('pages.dashboardPage.findingCourses')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1066,13 +1068,13 @@ const DashboardPage: React.FC = () => {
                   return (
                     <div className="col-span-full text-center py-12">
                       <SparklesIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">All Set!</h3>
-                      <p className="text-gray-600 mb-6">You've explored most of our available courses. Check back later for new content!</p>
+                      <h3 className="text-xl font-semibold text-gray-800 mb-2">{t('pages.dashboardPage.allSet')}</h3>
+                      <p className="text-gray-600 mb-6">{t('pages.dashboardPage.you\'veExploredMostOfOurAvailableCourses')}</p>
                       <button
                         onClick={() => navigate('/courses')}
                         className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
                       >
-                        Browse All Courses
+                        {t('pages.dashboardPage.browseAllCourses')}
                       </button>
                     </div>
                   );
@@ -1127,16 +1129,16 @@ const DashboardPage: React.FC = () => {
                     try {
                       const isConnected = await blockchainService.checkWalletConnection();
                       if (!isConnected) {
-                        toast.error('Please connect your MetaMask wallet before enrolling to enable NFT minting.');
+                        toast.error(t('pages.dashboardPage.pleaseConnectYourMetaMaskWalletBeforeEnrolling'));
                         return;
                       }
                       
                       // Navigate to course overview page where enrollment happens
                       navigate(`/course/${courseId}`);
-                      toast.success(`Navigating to ${course.title}`);
+                      toast.success(t('pages.dashboardPage.navigatingToCourse', { courseTitle: course.title }));
                     } catch (error) {
-                      console.error('Error enrolling in course:', error);
-                      toast.error('Failed to enroll in course. Please try again.');
+                      console.error(t('pages.dashboardPage.errorEnrollingCourse', { courseTitle: course.title }), error);
+                      toast.error(t('pages.dashboardPage.failedToEnrollCoursePleaseTryAgain'));
                     }
                   };
                   
@@ -1176,7 +1178,7 @@ const DashboardPage: React.FC = () => {
                           onClick={handleEnrollCourse}
                           className={`w-full py-3 px-4 bg-gradient-to-r ${getDifficultyGradient(difficulty)} text-white rounded-xl font-semibold hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-xl`}
                         >
-                          Enroll Now
+                          {t('pages.dashboardPage.enrollNow')}
                 </button>
               </div>
             </div>
@@ -1191,23 +1193,23 @@ const DashboardPage: React.FC = () => {
       {/* Verification Modal */}
       <div className={`fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 ${isVerificationModalOpen ? '' : 'hidden'}`}>
         <div className="bg-white rounded-3xl p-8 w-full max-w-md mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">NFT Verification</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">{t('pages.dashboardPage.nftVerification')}</h3>
           <div className="space-y-6">
             <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-2xl">
               <ShieldCheckIcon className="h-8 w-8 text-green-600" />
               <div>
-                <div className="font-semibold text-green-800">Verification Successful</div>
-                <div className="text-sm text-green-600">This NFT is authentic</div>
+                <div className="font-semibold text-green-800">{t('pages.dashboardPage.verificationSuccessful')}</div>
+                <div className="text-sm text-green-600">{t('pages.dashboardPage.thisNftIsAuthentic')}</div>
               </div>
             </div>
             <p className="text-gray-600">
-              This NFT has been verified on the blockchain and is authentic.
+              {t('pages.dashboardPage.thisNftHasBeenVerifiedOnTheBlockchainAndIsAuthentic')}
             </p>
             <button
               onClick={() => setIsVerificationModalOpen(false)}
               className="w-full py-3 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-300"
             >
-              Close
+              {t('pages.dashboardPage.close')}
             </button>
           </div>
         </div>
@@ -1300,26 +1302,12 @@ const NftTabs: React.FC<{ active: 'owned'|'minting'|'all'; onChange: (v: 'owned'
 };
 
 const NftLists: React.FC<{ active: 'owned'|'minting'|'all'; onVerify: (nft: Nft) => void }>= ({ active, onVerify }) => {
+  const { t } = useTranslation();
   const { digitalTwin, nfts } = useAppContext();
   const safeDigitalTwin = digitalTwin || { checkpoints: [], knowledge: {}, skills: { problemSolving: 0, logicalThinking: 0, selfLearning: 0 } };
   const safeNfts = nfts || [];
-  const checkpoints = (safeDigitalTwin.checkpoints || []);
-
-  // Convert checkpoints to NFT-like items for display (module progress)
-  const checkpointNfts: (Nft & { minting?: boolean })[] = checkpoints
-    .filter((cp: any) => (active === 'minting' ? (cp.minting && !cp.tokenized) : true))
-    .filter((cp: any) => (active === 'owned' ? cp.tokenized : true))
-    .map((checkpoint: any) => ({
-      id: checkpoint.nftId || `nft-${checkpoint.moduleId}`,
-      name: `${checkpoint.moduleName || checkpoint.module} Completion`,
-      description: `Certificate for completing ${checkpoint.moduleName || checkpoint.module}`,
-      imageUrl: `https://via.placeholder.com/300x200/0ea5e9/ffffff?text=${encodeURIComponent(checkpoint.moduleName || checkpoint.module)}`,
-      moduleId: checkpoint.moduleId,
-      issuedDate: checkpoint.completedAt,
-      cid: checkpoint.nftCid,
-      nftType: 'module_progress' as const,
-      minting: Boolean(checkpoint.minting)
-    }));
+  // Remove placeholder checkpoint NFTs; rely on real NFTs from context
+  const checkpointNfts: (Nft & { minting?: boolean })[] = [];
 
   // Include NFTs from state (module progress minted or learning achievements)
   const ownedStateNfts: Nft[] = safeNfts.map((n) => ({
@@ -1329,15 +1317,14 @@ const NftLists: React.FC<{ active: 'owned'|'minting'|'all'; onVerify: (nft: Nft)
 
   // Filter by active tab
   const displayNfts: (Nft & { minting?: boolean })[] = [
-    ...checkpointNfts,
     ...(active === 'minting' ? [] : ownedStateNfts)
-  ].filter(n => active === 'all' ? true : active === 'minting' ? n.minting : !n.minting);
+  ].filter(n => active === 'all' ? true : active === 'minting' ? (n as any).minting : !(n as any).minting);
 
   if (displayNfts.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">🏆</div>
-        <p className="text-gray-600 text-lg">Complete modules to earn NFTs!</p>
+        <p className="text-gray-600 text-lg">{t('pages.dashboardPage.completeModulesToEarnNFTs')}</p>
       </div>
     );
   }
@@ -1367,7 +1354,7 @@ const NftLists: React.FC<{ active: 'owned'|'minting'|'all'; onVerify: (nft: Nft)
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 <EyeIcon className="h-4 w-4" />
-                <span>Verify</span>
+                <span>{t('pages.dashboardPage.verify')}</span>
               </button>
             )}
           </div>
