@@ -11,6 +11,10 @@ import os
 import json
 import tempfile
 import shutil
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Import RAG system
 if TYPE_CHECKING:
@@ -72,6 +76,127 @@ class DocumentSearchRequest(BaseModel):
 class DocumentUploadRequest(BaseModel):
     file_name: str
     metadata: Optional[Dict[str, Any]] = None
+
+# Tunable constants 
+MAX_SUBQUERIES = 3
+MAX_CONCURRENCY = 3
+SUBQUERY_TIMEOUT = 8        # seconds per sub-query
+SYNTHESIS_TIMEOUT = 15      # seconds for synthesizer query
+OVERALL_TIMEOUT = 30        # overall endpoint timeout
+SYNTHESIS_PROMPT_HEADER = (
+    "Synthesize the partial answers below into a single concise, coherent answer to the original question. "
+    "Preserve important facts and cite sources if available.\n\n"
+)
+
+def _split_into_subqueries(question: str, max_subqueries: int = MAX_SUBQUERIES) -> List[str]:
+    """
+    Simple decomposition strategy:
+    - Try to split by sentence punctuation.
+    - If only 1 sentence, produce up-to-3 focused variants (explain, steps, example).
+    - Returns 1..max_subqueries sub-queries.
+    """
+    if not question or not question.strip():
+        return [question]
+
+    # split into sentences using punctuation (simple but practical)
+    sentences = [s.strip() for s in re.split(r'(?<=[\.\?\!;])\s+', question) if s.strip()]
+    if len(sentences) >= 2:
+        # collapse to max_subqueries longest sentences (prefer longer ones)
+        sentences = sorted(sentences, key=lambda s: -len(s))[:max_subqueries]
+        return sentences
+
+    # single-sentence question -> produce three tactical subqueries (if room)
+    variants = [question]
+    if max_subqueries >= 2:
+        variants.append(f"Explain: {question}")
+    if max_subqueries >= 3:
+        variants.append(f"Give a step-by-step guide for: {question}")
+    return variants[:max_subqueries]
+
+async def _run_subquery(
+    rag_agent,
+    subquery: str,
+    request: RAGQueryRequest,
+    semaphore: asyncio.Semaphore
+) -> Dict[str, Any]:
+    """
+    Run a single subquery against rag_agent safely:
+    - Use semaphore to bound concurrency
+    - Use asyncio.to_thread to avoid blocking if rag_agent.query is synchronous
+    - Wrap with timeout and catch exceptions
+    """
+    async with semaphore:
+        try:
+            async with asyncio.timeout(SUBQUERY_TIMEOUT):
+                result = await asyncio.to_thread(
+                    rag_agent.query,
+                    question=subquery,
+                    context_type=request.context_type,
+                    max_tokens=request.max_tokens,
+                    temperature=request.temperature,
+                    top_k=request.top_k
+                )
+                return {"subquery": subquery, "result": result, "error": None}
+        except asyncio.TimeoutError:
+            logger.warning("Subquery timeout: %s", subquery[:100])
+            return {"subquery": subquery, "result": None, "error": "timeout"}
+        except Exception as e:
+            logger.exception("Subquery error for: %s", subquery[:80])
+            return {"subquery": subquery, "result": None, "error": str(e)}
+
+def _extract_text_from_result(result: Any) -> str:
+    """
+    Best-effort extraction of human-readable text from rag_agent.query result.
+    Adjust keys according to your agent output shape if needed.
+    """
+    if result is None:
+        return ""
+    # common key guesses (adjust if your RAG agent uses different keys)
+    if isinstance(result, dict):
+        for key in ("answer", "response", "text", "result", "output"):
+            if key in result and isinstance(result[key], str):
+                return result[key].strip()
+        # try nested 'data' etc.
+        if "data" in result and isinstance(result["data"], str):
+            return result["data"].strip()
+    # fallback: string conversion
+    return str(result)
+
+async def _synthesize_results(
+    rag_agent,
+    original_question: str,
+    partial_results: List[Any],
+    request: RAGQueryRequest
+) -> Any:
+    """
+    Synthesize partial_results into a single final rag-like result by
+    asking rag_agent to perform the synthesis. Returns whatever rag_agent.query returns.
+    """
+    # Build synthesis prompt text from partial_results
+    prompt = SYNTHESIS_PROMPT_HEADER
+    prompt += f"Original question: {original_question}\n\nPartial answers:\n"
+    for i, pr in enumerate(partial_results, start=1):
+        text = _extract_text_from_result(pr)
+        prompt += f"{i}) {text}\n\n"
+
+    # Call rag_agent.query with the synthesis prompt (use a slightly smaller max_tokens maybe)
+    try:
+        async with asyncio.timeout(SYNTHESIS_TIMEOUT):
+            synthesis_result = await asyncio.to_thread(
+                rag_agent.query,
+                question=prompt,
+                context_type=request.context_type,
+                max_tokens=request.max_tokens,    # keep same contract; tune if needed
+                temperature=max(0.0, min(0.7, (request.temperature or 0.0) * 0.8)) if request.temperature is not None else request.temperature,
+                top_k=request.top_k
+            )
+            return synthesis_result
+    except asyncio.TimeoutError:
+        logger.warning("Synthesis timed out.")
+        raise
+    except Exception:
+        logger.exception("Synthesis failed.")
+        raise
 
 @router.post("/students")
 def create_student_twin(twin_id: str, config: dict, profile: dict):
@@ -375,51 +500,102 @@ def update_did_data(student_did: str = Body(...), student_address: str = Body(..
         raise HTTPException(status_code=500, detail=f"DID update failed: {str(e)}")
 
 # ===== RAG/AI TUTOR ENDPOINTS =====
-
 @router.post("/ai-tutor/query", response_model=RAGQueryResponse)
 async def query_ai_tutor(
     request: RAGQueryRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
-    Query the AI Tutor with RAG (Retrieval-Augmented Generation)
-    
-    This endpoint provides intelligent tutoring by combining knowledge from uploaded documents
-    with Gemini 2.5 Pro's language capabilities.
+    Query the AI Tutor with RAG (Retrieval-Augmented Generation).
+    Multi-query interpolation: split question -> run sub-queries -> synthesize results -> return final RAGQueryResponse.
+    The input/output contract remains the same as before.
     """
     # Check AI query limit
     from ..services.subscription_service import subscription_service
-    limit_info = await subscription_service.check_ai_query_limit(current_user.did)
-    
-    if not limit_info["can_query"]:
-        raise HTTPException(
-            status_code=429,
-            detail=f"AI Query Limit Reached. You have used {limit_info['queries_used']}/{limit_info['daily_limit']} queries today. Upgrade to {limit_info['plan_name']} for more queries."
-        )
-    
-    rag_agent = get_rag_agent()
-    if not rag_agent:
-        raise HTTPException(
-            status_code=503, 
-            detail="AI Tutor service is not available. Please check RAG system configuration."
-        )
-    
     try:
-        result = rag_agent.query(
-            question=request.question,
-            context_type=request.context_type,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            top_k=request.top_k
-        )
-        
-        # Increment query usage
-        await subscription_service.increment_ai_query_usage(current_user.did)
-        
-        return RAGQueryResponse(**result)
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI Tutor query failed: {str(e)}")
+        # Overall safety timeout for the whole orchestration
+        async with asyncio.timeout(OVERALL_TIMEOUT):
+            # 1) Check limit and load RAG agent in parallel
+            limit_task = subscription_service.check_ai_query_limit(current_user.did)
+            agent_task = asyncio.to_thread(get_rag_agent)
+            try:
+                limit_info, rag_agent = await asyncio.gather(limit_task, agent_task)
+            except Exception:
+                logger.exception("Failed during limit check or agent load.")
+                raise HTTPException(status_code=503, detail="Failed to initialize AI Tutor service.")
+
+            if not limit_info.get("can_query", False):
+                raise HTTPException(
+                    status_code=429,
+                    detail=(
+                        f"AI Query Limit Reached. "
+                        f"You have used {limit_info['queries_used']}/{limit_info['daily_limit']} queries today. "
+                        f"Upgrade to {limit_info['plan_name']} for more queries."
+                    )
+                )
+
+            if rag_agent is None:
+                raise HTTPException(status_code=503, detail="AI Tutor service is unavailable. Check RAG configuration.")
+
+            # 2) Build sub-queries
+            subqueries = _split_into_subqueries(request.question, max_subqueries=MAX_SUBQUERIES)
+            logger.info("Decomposed into %d subqueries for user %s", len(subqueries), current_user.did)
+
+            # 3) Run sub-queries concurrently with bounded concurrency
+            semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
+            tasks = [_run_subquery(rag_agent, sq, request, semaphore) for sq in subqueries]
+            sub_results = await asyncio.gather(*tasks)
+
+            # collect successful partial results
+            successful = [r["result"] for r in sub_results if r.get("result") is not None]
+
+            final_result = None
+
+            if successful:
+                # 4) Try synthesis using the agent (preferred: preserves response schema)
+                try:
+                    final_result = await _synthesize_results(rag_agent, request.question, successful, request)
+                    logger.info("Synthesis successful for user %s", current_user.did)
+                except Exception:
+                    logger.warning("Synthesis failed; falling back to single-query for user %s", current_user.did)
+
+            if not final_result:
+                # 5) Fallback: run a single original query (guarantees compatible output shape)
+                try:
+                    async with asyncio.timeout(SUBQUERY_TIMEOUT + SYNTHESIS_TIMEOUT):
+                        final_result = await asyncio.to_thread(
+                            rag_agent.query,
+                            question=request.question,
+                            context_type=request.context_type,
+                            max_tokens=request.max_tokens,
+                            temperature=request.temperature,
+                            top_k=request.top_k
+                        )
+                    logger.info("Fallback single query succeeded for user %s", current_user.did)
+                except asyncio.TimeoutError:
+                    logger.warning("Fallback single query timed out for user %s", current_user.did)
+                    raise HTTPException(status_code=504, detail="AI Tutor query timed out. Please retry.")
+                except Exception:
+                    logger.exception("Fallback single query failed for user %s", current_user.did)
+                    raise HTTPException(status_code=500, detail="AI Tutor query failed: internal error")
+
+            # 6) Increment usage asynchronously (do not delay response)
+            try:
+                asyncio.create_task(subscription_service.increment_ai_query_usage(current_user.did))
+            except Exception:
+                logger.exception("Failed to schedule increment_ai_query_usage task (non-fatal).")
+
+            # 7) Return final result (must match RAGQueryResponse schema)
+            return RAGQueryResponse(**final_result)
+
+    except asyncio.TimeoutError:
+        logger.warning("Overall AI Tutor orchestration timed out for user %s", getattr(current_user, "did", "<unknown>"))
+        raise HTTPException(status_code=504, detail="AI Tutor query timed out. Please retry.")
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected error during AI Tutor multi-query flow.")
+        raise HTTPException(status_code=500, detail="AI Tutor query failed: internal error")
 
 @router.post("/ai-tutor/upload-document")
 async def upload_document_to_knowledge_base(
