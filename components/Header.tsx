@@ -293,27 +293,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                       {t('subscription.PaymentHistory')}
                     </Link>
                     
-                    <Link
-                      to="/subscription"
-                      className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 
-                               transition-colors border-t border-gray-200 mt-1 pt-2"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      <SparklesIcon className="h-4 w-4 mr-2" />
-                      Upgrade Plan
-                    </Link>
-
-                    <Link
-                      to="/payments"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 
-                               transition-colors"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      {/* simple credit card emoji to avoid adding a new icon import */}
-                      <span className="h-4 w-4 mr-2">💳</span>
-                      Payment History
-                    </Link>
-                    
                     <button
                       onClick={() => {
                         handleLogout();
