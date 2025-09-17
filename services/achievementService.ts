@@ -280,6 +280,48 @@ class AchievementService {
       throw error;
     }
   }
+
+  // module progress report
+  async reportModuleProgress(moduleId: string, progressPercentage: number, moduleTitle?: string) {
+    try {
+      const payload = {
+        module_id: moduleId,
+        progress_percentage: progressPercentage,
+        module_title: moduleTitle
+      };
+
+      const data = await makeAuthenticatedRequest<any>(`${API_BASE}/achievements/report-module-progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // nếu hoàn thành module => notify UI
+      if (progressPercentage >= 100) {
+        window.dispatchEvent(new CustomEvent('moduleCompleted', {
+          detail: { moduleId, moduleTitle, progress: progressPercentage }
+        }));
+      }
+      // backend trả unlocked achievements => dispatch sự kiện achievementUnlocked
+      const unlocked = data?.unlocked || data?.unlocked_achievements;
+      if (unlocked) {
+        const items = Array.isArray(unlocked) ? unlocked : [unlocked];
+        items.forEach((ua: any) => {
+          const detail = {
+            userAchievement: ua,
+            title: ua?.achievement?.title || ua?.title,
+            description: ua?.achievement?.description || ua?.description
+          };
+          window.dispatchEvent(new CustomEvent('achievementUnlocked', { detail }));
+        });
+      }
+
+      return data;
+    } catch (error) {
+      console.error('reportModuleProgress error', error);
+      throw error;
+    }
+  }
 }
 
 export const achievementService = new AchievementService();

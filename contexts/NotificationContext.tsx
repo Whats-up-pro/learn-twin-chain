@@ -64,7 +64,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, [notifications]);
 
-  // Listen for achievement unlock events
+  // Listen for achievement unlock completed module events
   useEffect(() => {
     const handleAchievementUnlocked = (event: CustomEvent) => {
       const { title, description } = event.detail;
@@ -76,9 +76,29 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       });
     };
 
+    const handleModuleCompleted = (event: any) => {
+      const { moduleId, moduleTitle } = event.detail || {};
+      addNotification({
+        type: 'info',
+        title: moduleTitle ? `Hoàn thành: ${moduleTitle}` : 'Hoàn thành module',
+        message: moduleTitle ? `Bạn đã hoàn thành "${moduleTitle}".` : 'Bạn đã hoàn thành một module.'
+      });
+
+      // Trigger a popup modal elsewhere in the app (components can listen to 'showCompletionModal')
+      window.dispatchEvent(new CustomEvent('showCompletionModal', {
+        detail: {
+          title: moduleTitle ? `Chúc mừng!` : 'Chúc mừng!',
+          message: moduleTitle ? `Bạn đã hoàn thành "${moduleTitle}".` : 'Bạn đã hoàn thành một module.'
+        }
+      }));
+    };
+
     window.addEventListener('achievementUnlocked', handleAchievementUnlocked as EventListener);
+    window.addEventListener('moduleCompleted', handleModuleCompleted as EventListener);
     return () => {
       window.removeEventListener('achievementUnlocked', handleAchievementUnlocked as EventListener);
+      window.removeEventListener('moduleCompleted', handleModuleCompleted as EventListener);
+
     };
   }, []);
 
@@ -98,6 +118,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         setNotifications(prev => prev.filter(n => n.id !== newNotification.id));
       }, 30000);
     }
+
+    // show browser notification if allowed
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(newNotification.title, { body: newNotification.message || '' });
+      } catch { /* ignore */ }
+    }    
   };
 
   const markAsRead = (notificationId: string) => {
