@@ -11,6 +11,10 @@ import os
 import json
 import tempfile
 import shutil
+import asyncio
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Import RAG system
 if TYPE_CHECKING:
@@ -382,10 +386,8 @@ async def query_ai_tutor(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Query the AI Tutor with RAG (Retrieval-Augmented Generation)
-    
-    This endpoint provides intelligent tutoring by combining knowledge from uploaded documents
-    with Gemini 2.5 Pro's language capabilities.
+    Query the AI Tutor with RAG (Retrieval-Augmented Generation).
+    Combines uploaded document knowledge with Gemini 2.5 Pro capabilities.
     """
     # Check AI query limit
     from ..services.subscription_service import subscription_service
@@ -397,30 +399,63 @@ async def query_ai_tutor(
             detail=f"AI Query Limit Reached. You have used {limit_info['queries_used']}/{limit_info['daily_limit']} queries today. Upgrade to {limit_info['plan_name']} for more queries."
         )
     
-    rag_agent = get_rag_agent()
-    if not rag_agent:
-        raise HTTPException(
-            status_code=503, 
-            detail="AI Tutor service is not available. Please check RAG system configuration."
-        )
-    
     try:
-        result = rag_agent.query(
-            question=request.question,
-            context_type=request.context_type,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            top_k=request.top_k
-        )
-        
-        # Increment query usage
-        await subscription_service.increment_ai_query_usage(current_user.did)
-        
-        return RAGQueryResponse(**result)
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI Tutor query failed: {str(e)}")
+        # Check query limit and prepare RAG agent in parallel for better performance
+        limit_task = subscription_service.check_ai_query_limit(current_user.did)
+        agent_task = asyncio.to_thread(get_rag_agent)
+        try:
+            limit_info, rag_agent = await asyncio.gather(limit_task, agent_task)
+        except Exception as e:
+            logger.exception("Failed while checking limits or loading RAG agent.")
+            raise HTTPException(status_code=503, detail="Failed to initialize AI Tutor service.")
 
+        if not limit_info.get("can_query", False):
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"AI Query Limit Reached. "
+                    f"You have used {limit_info['queries_used']}/{limit_info['daily_limit']} queries today. "
+                    f"Upgrade to {limit_info['plan_name']} for more queries."
+                )
+            )
+
+        if rag_agent is None:
+            raise HTTPException(
+                status_code=503,
+                detail="AI Tutor service is unavailable. Check RAG configuration."
+            )
+
+        # Perform the RAG query with a timeout to avoid hanging
+        try:
+            async with asyncio.timeout(20):  # 20-second timeout for safety
+                result = await asyncio.to_thread(
+                    rag_agent.query,
+                    question=request.question,
+                    context_type=request.context_type,
+                    max_tokens=request.max_tokens,
+                    temperature=request.temperature,
+                    top_k=request.top_k
+                )
+        except asyncio.TimeoutError:
+            logger.warning("AI Tutor query timed out for user %s", current_user.did)
+            raise HTTPException(status_code=504, detail="AI Tutor query timed out. Please retry.")
+
+        # Increment usage asynchronously to reduce latency
+        asyncio.create_task(subscription_service.increment_ai_query_usage(current_user.did))
+
+        logger.info(
+            "AI Tutor query successful: user=%s, context=%s, tokens=%s",
+            current_user.did, request.context_type, request.max_tokens
+        )
+
+        return RAGQueryResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error during AI Tutor query.")
+        raise HTTPException(status_code=500, detail="AI Tutor query failed: internal error")
+        
 @router.post("/ai-tutor/upload-document")
 async def upload_document_to_knowledge_base(
     file: UploadFile = File(...),
