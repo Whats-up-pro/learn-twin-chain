@@ -70,7 +70,7 @@ const RESPONSE_TEMPLATES = {
   },
   THANKS: "I'm glad I could help. Feel free to ask if you have more questions about Python!",
   FAREWELL: "Happy coding! Come back anytime you need help.",
-  ABOUT_BOT: "🤖 **AI Tutor**\n\nI'm an AI assistant specialized in helping you learn Python programming, System developing.. . I can explain concepts, provide examples, and answer your questions."
+  ABOUT_BOT: "I'm an AI assistant specialized in helping you learn Python programming, System developing.. . I can explain concepts, provide examples, and answer your questions."
 };
 
 type TemplateKey = keyof typeof RESPONSE_TEMPLATES;
