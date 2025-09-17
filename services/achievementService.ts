@@ -120,8 +120,11 @@ class AchievementService {
       if (params?.tier) searchParams.append('tier', params.tier);
       if (params?.skip) searchParams.append('skip', params.skip.toString());
       if (params?.limit) searchParams.append('limit', params.limit.toString());
+      // Ensure we do not include hidden, and default status to active to match backend filters
+      searchParams.append('include_hidden', 'false');
+      searchParams.append('status', 'active');
 
-      return await makeAuthenticatedRequest(`${API_BASE}/achievements?${searchParams}`);
+      return await makeAuthenticatedRequest(`${API_BASE}/achievements/?${searchParams}`);
     } catch (error) {
       console.error('Error getting achievements:', error);
       throw error;
@@ -183,7 +186,27 @@ class AchievementService {
       if (params?.skip) searchParams.append('skip', params.skip.toString());
       if (params?.limit) searchParams.append('limit', params.limit.toString());
 
-      return await makeAuthenticatedRequest(`${API_BASE}/achievements/my?${searchParams}`);
+      // Prefer /achievements/my/earned (available in backend); fallback to /achievements/my for newer builds
+      let response: any;
+      try {
+        const earned = await makeAuthenticatedRequest<any>(`${API_BASE}/achievements/my/earned?${searchParams}`);
+        if (earned && typeof earned === 'object' && 'achievements' in earned) {
+          const e: any = earned as any;
+          response = {
+            user_achievements: e.achievements,
+            total: e.total,
+            skip: Number(params?.skip || 0),
+            limit: Number(params?.limit || 100)
+          };
+        } else {
+          response = earned;
+        }
+      } catch (_e) {
+        // Fallback: older/newer path variant
+        response = await makeAuthenticatedRequest(`${API_BASE}/achievements/my?${searchParams}`);
+      }
+      console.log('User achievements API response:', response);
+      return response;
     } catch (error) {
       console.error('Error getting user achievements:', error);
       throw error;
@@ -293,17 +316,22 @@ class AchievementService {
   // module progress report
   async reportModuleProgress(moduleId: string, progressPercentage: number, moduleTitle?: string) {
     try {
-      const payload = {
-        module_id: moduleId,
-        progress_percentage: progressPercentage,
-        module_title: moduleTitle
-      };
-
-      const data = await makeAuthenticatedRequest<any>(`${API_BASE}/achievements/report-module-progress`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      // Align with backend: update module progress via course API
+      const body: any = {};
+      // When called from quiz completion we can pass assessment_score to help backend analytics
+      if (progressPercentage >= 100) {
+        body.assessment_score = 100;
+      }
+      let data: any = null;
+      try {
+        data = await makeAuthenticatedRequest<any>(`${API_BASE}/courses/modules/${moduleId}/progress`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+      } catch (e) {
+        console.warn('courses/modules progress update failed, continuing with UI events only:', e);
+      }
 
       // nếu hoàn thành module => notify UI
       if (progressPercentage >= 100) {

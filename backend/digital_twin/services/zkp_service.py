@@ -168,28 +168,47 @@ class ZKPService:
             private_inputs = [score, time_spent, attempts, len(study_materials), student_address_int, random_nonce]
             commitment_hash = self._create_commitment_hash(private_inputs)
             
-            # learning_session_hash: prefer provided on-chain session hash if available, otherwise fallback to temp value
-            provided_session_hash = completion_data.get('learning_session_hash')
+            # learning_data_hash: for one-popup flow, bind proof to off-chain data hash instead of session hash
+            # Backward compatible: if 'learning_data_hash' present use it; otherwise keep existing behavior
             learning_session_hash: int
-            if provided_session_hash is not None:
+            provided_learning_data_hash = completion_data.get('learning_data_hash')
+            if provided_learning_data_hash is not None:
                 try:
-                    if isinstance(provided_session_hash, str):
-                        # Accept hex string (with or without 0x)
-                        provided_session_hash = provided_session_hash.lower()
-                        if provided_session_hash.startswith('0x'):
-                            learning_session_hash = int(provided_session_hash, 16)
+                    if isinstance(provided_learning_data_hash, str):
+                        h = provided_learning_data_hash.lower()
+                        if h.startswith('0x'):
+                            learning_session_hash = int(h, 16)
                         else:
-                            learning_session_hash = int(provided_session_hash, 16)
-                    elif isinstance(provided_session_hash, bytes):
-                        # bytes32 to int
-                        learning_session_hash = int.from_bytes(provided_session_hash, byteorder='big')
+                            learning_session_hash = int(h, 16)
+                    elif isinstance(provided_learning_data_hash, bytes):
+                        learning_session_hash = int.from_bytes(provided_learning_data_hash, byteorder='big')
                     else:
-                        learning_session_hash = int(provided_session_hash)
+                        learning_session_hash = int(provided_learning_data_hash)
                 except Exception:
-                    # Fallback if parsing fails
                     learning_session_hash = int(hashlib.sha256((module_id + str(time.time())).encode()).hexdigest()[:16], 16)
             else:
-                learning_session_hash = int(hashlib.sha256((module_id + str(time.time())).encode()).hexdigest()[:16], 16)
+                # Fallback: previous behavior using provided on-chain session hash if any
+                provided_session_hash = completion_data.get('learning_session_hash')
+                if provided_session_hash is not None:
+                    try:
+                        if isinstance(provided_session_hash, str):
+                            h = provided_session_hash.lower()
+                            if h.startswith('0x'):
+                                learning_session_hash = int(h, 16)
+                            else:
+                                learning_session_hash = int(h, 16)
+                        elif isinstance(provided_session_hash, bytes):
+                            learning_session_hash = int.from_bytes(provided_session_hash, byteorder='big')
+                        else:
+                            learning_session_hash = int(provided_session_hash)
+                    except Exception:
+                        learning_session_hash = int(hashlib.sha256((module_id + str(time.time())).encode()).hexdigest()[:16], 16)
+                else:
+                    learning_session_hash = int(hashlib.sha256((module_id + str(time.time())).encode()).hexdigest()[:16], 16)
+            
+            # Generate courseId from module_id (or use a default course mapping)
+            course_id = completion_data.get('course_id', 'default_course')
+            course_id_hash = int(hashlib.sha256(course_id.encode()).hexdigest()[:16], 16)
             
             input_data = {
                 "score": score,
@@ -199,12 +218,14 @@ class ZKPService:
                 "studentAddress": student_address_int,  # Changed from studentPrivateKey
                 "randomNonce": random_nonce,
                 "moduleId": int(hashlib.sha256(module_id.encode()).hexdigest()[:16], 16),
+                "courseId": course_id_hash,  # Added missing courseId
                 "studentHash": int(student_hash),
                 "minScoreRequired": min_score_required,
                 "maxTimeAllowed": max_time_allowed,
                 "maxAttemptsAllowed": max_attempts_allowed,
                 "commitmentHash": int(commitment_hash),
-                "learningSessionHash": learning_session_hash
+                # For one-popup flow, bind to learningDataHash (renamed public input)
+                "learningDataHash": learning_session_hash
             }
             
             # Save input to file
@@ -214,13 +235,13 @@ class ZKPService:
             
             public_inputs = [
                 input_data["moduleId"],
+                input_data["courseId"],  # Added missing courseId
                 input_data["studentHash"],
                 input_data["minScoreRequired"],
                 input_data["maxTimeAllowed"],
                 input_data["maxAttemptsAllowed"],
                 input_data["commitmentHash"],
-                input_data["learningSessionHash"],
-                1  # isValid output (expected to be 1 for valid proofs)
+                input_data["learningDataHash"]
             ]
             public_inputs_file = self.circuits_dir / "module_progress_public.json"
             with open(public_inputs_file, 'w') as f:

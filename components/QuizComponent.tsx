@@ -1,5 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { QuizQuestion } from '../types';
 import { quizService, ApiQuiz, ApiQuizQuestion } from '../services/quizService';
 import toast from 'react-hot-toast';
@@ -38,13 +41,13 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
         let quizData;
         if (quizId) {
           // Load specific quiz
-          const response = await quizService.getQuiz(quizId);
-          quizData = response.quiz;
+          const response = await quizService.getQuiz(quizId) as any;
+          quizData = (response as any).quiz;
         } else if (moduleId) {
           // Load quizzes for module and use the first one
-          const response = await quizService.getModuleQuizzes(moduleId);
-          if (response.quizzes && response.quizzes.length > 0) {
-            quizData = response.quizzes[0];
+          const response = await quizService.getModuleQuizzes(moduleId) as any;
+          if ((response as any).quizzes && (response as any).quizzes.length > 0) {
+            quizData = (response as any).quizzes[0];
           }
         }
 
@@ -54,27 +57,28 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
           // Convert API questions to frontend format
           const convertedQuestions: QuizQuestion[] = quizData.questions.map((apiQ: ApiQuizQuestion) => {
             // Handle MongoDB structure where options are strings and correct_answer is separate
-            let options = [];
+            let options: Array<{ id: string; text: string } | any> = [];
             let correctOptionId = '';
             
             if (Array.isArray(apiQ.options)) {
               if (typeof apiQ.options[0] === 'string') {
                 // MongoDB format: options are array of strings
-                options = apiQ.options.map((optText: string, index: number) => ({
+                options = (apiQ.options as string[]).map((optText: string, index: number) => ({
                   id: `option_${index}`,
                   text: optText
                 }));
                 
                 // Find correct option by matching correct_answer with option text
-                const correctIndex = apiQ.options.findIndex(opt => opt === apiQ.correct_answer);
+                const correctIndex = (apiQ.options as string[]).findIndex((opt: string) => opt === (apiQ as any).correct_answer);
                 correctOptionId = correctIndex >= 0 ? `option_${correctIndex}` : '';
               } else {
                 // Legacy format: options are objects with id/text/is_correct
-                options = apiQ.options.map((opt: any) => ({
+                options = (apiQ.options as any[]).map((opt: any) => ({
                   id: opt.option_id || opt.id,
                   text: opt.text
                 }));
-                correctOptionId = apiQ.options.find((opt: any) => opt.is_correct)?.option_id || apiQ.options.find((opt: any) => opt.is_correct)?.id || '';
+                const found = (apiQ.options as any[]).find((opt: any) => opt.is_correct);
+                correctOptionId = found?.option_id || found?.id || '';
               }
             }
 
@@ -244,7 +248,26 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
               <div key={q.id} className={`p-4 rounded-lg border ${
                 isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
               }`}>
-                <p className="font-medium text-slate-800 mb-2">{index + 1}. {q.text}</p>
+                <div className="font-medium text-slate-800 mb-2 prose max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      code({ className, children, ...props }: any) {
+                        const match = /language-(\w+)/.exec(className || '');
+                        return match ? (
+                          <SyntaxHighlighter style={oneDark as any} language={match[1]} PreTag="div" {...props}>
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
+                        ) : (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        );
+                      }
+                    }}
+                  >
+                    {`${index + 1}. ${q.text}`}
+                  </ReactMarkdown>
+                </div>
                 <p className="text-sm text-slate-600 mb-1">
                   <span className="font-medium">{t('components.quizComponent.YourAnswer')}:</span> {
                     q.options.find(opt => opt.id === selectedAnswers[q.id])?.text || 'Not answered'
@@ -258,9 +281,27 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
                   </p>
                 )}
                 {q.explanation && (
-                  <p className="text-xs text-slate-600 mt-2 p-2 bg-slate-100 rounded italic">
-                    💡 {q.explanation}
-                  </p>
+                  <div className="text-xs text-slate-700 mt-3 p-3 bg-white/70 rounded border border-slate-200">
+                    <div className="font-semibold mb-1">💡 {t('components.quizComponent.Explanation') || 'Explanation'}</div>
+                    <ReactMarkdown
+                      components={{
+                        code({ className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return match ? (
+                            <SyntaxHighlighter style={oneDark as any} language={match[1]} PreTag="div" {...props}>
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        }
+                      }}
+                    >
+                      {q.explanation}
+                    </ReactMarkdown>
+                  </div>
                 )}
               </div>
             );
@@ -334,9 +375,28 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
 
       {/* Question */}
       <div className="mb-8">
-        <h4 className="text-xl font-semibold text-slate-900 mb-6 leading-relaxed">
+        <div className="mb-6">
+          <div className="text-xl font-semibold text-slate-900 leading-relaxed prose max-w-none">
+            <ReactMarkdown
+              components={{
+                code({ className, children, ...props }: any) {
+                  const match = /language-(\w+)/.exec(className || '');
+                  return match ? (
+                    <SyntaxHighlighter style={oneDark as any} language={match[1]} PreTag="div" {...props}>
+                      {String(children).replace(/\n$/, '')}
+                    </SyntaxHighlighter>
+                  ) : (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                }
+              }}
+            >
           {currentQuestion.text}
-        </h4>
+            </ReactMarkdown>
+          </div>
+        </div>
         
         {/* Options */}
         <div className="space-y-3">
@@ -355,7 +415,7 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
                     : 'bg-white border-slate-300 text-slate-700 hover:border-blue-400 hover:bg-blue-50'}
                 `}
               >
-                <div className="flex items-center space-x-3">
+                <div className="flex items-start space-x-3">
                   <div className={`
                     w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
                     ${isSelected 
@@ -364,7 +424,26 @@ const QuizComponent: React.FC<QuizProps> = ({ quizId, moduleId, questions: propQ
                   `}>
                     {optionLetter}
                   </div>
-                  <span className="flex-1 text-base">{option.text}</span>
+                  <div className="flex-1 text-base prose max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        code({ className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return match ? (
+                            <SyntaxHighlighter style={oneDark as any} language={match[1]} PreTag="div" {...props}>
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        }
+                      }}
+                    >
+                      {option.text}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               </button>
             );

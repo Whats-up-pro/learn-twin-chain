@@ -58,6 +58,18 @@ class ZKPCertificateRequest(BaseModel):
     student_address: str
     twin_data: Dict[str, Any]
 
+class CreateSessionTxRequest(BaseModel):
+    module_id: str
+    learning_data_hash_hex: str
+    score: int
+    time_spent: int
+    attempts: int
+
+class PrepareMintTxRequest(BaseModel):
+    student_address: str
+    module_id: str
+    completion_data: Dict[str, Any]
+
 @router.get("/status")
 async def get_blockchain_status():
     """Check blockchain service status"""
@@ -104,6 +116,85 @@ async def mint_learning_achievement_nft(request: AchievementRequest):
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     
+    return result
+
+@router.get("/contracts/meta")
+async def get_contracts_meta():
+    """Return addresses and ABIs for MetaMask interactions + chain id."""
+    return blockchain_service.get_contracts_meta()
+
+@router.post("/learning-session/build-create")
+async def build_create_learning_session_tx(request: CreateSessionTxRequest):
+    """Return {to,data} for createLearningSessionLegacy; frontend sends via MetaMask."""
+    if not blockchain_service.is_available():
+        raise HTTPException(status_code=503, detail="Blockchain service not available")
+    result = blockchain_service.build_create_learning_session_tx(
+        request.module_id,
+        request.learning_data_hash_hex,
+        request.score,
+        request.time_spent,
+        request.attempts
+    )
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('error', 'Failed to build tx'))
+    return result
+
+@router.post("/learning-session/approve")
+async def approve_learning_session(session_hash_hex: str, approved: bool = True):
+    """Backend validator approves the learning session."""
+    if not blockchain_service.is_available():
+        raise HTTPException(status_code=503, detail="Blockchain service not available")
+    result = blockchain_service.approve_learning_session(session_hash_hex, approved)
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('error', 'Approve failed'))
+    return result
+
+@router.get("/learning-session/status")
+async def learning_session_status(session_hash_hex: str):
+    if not blockchain_service.is_available():
+        raise HTTPException(status_code=503, detail="Blockchain service not available")
+    return blockchain_service.get_learning_session_status(session_hash_hex)
+
+@router.get("/learning-session/from-tx")
+async def learning_session_from_tx(tx_hash: str):
+    if not blockchain_service.is_available():
+        raise HTTPException(status_code=503, detail="Blockchain service not available")
+    result = blockchain_service.get_learning_session_from_tx(tx_hash)
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('error', 'Failed to decode tx'))
+    return result
+
+@router.post("/mint/module/prepare-tx")
+async def prepare_module_progress_mint_tx(request: PrepareMintTxRequest):
+    if not blockchain_service.is_available():
+        raise HTTPException(status_code=503, detail="Blockchain service not available")
+    result = blockchain_service.prepare_module_progress_mint_tx(
+        request.student_address,
+        request.module_id,
+        request.completion_data
+    )
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('error', 'Failed to prepare mint'))
+    return result
+
+class PrepareMintWithSessionTxRequest(BaseModel):
+    student_address: str
+    module_id: str
+    learning_data_hash_hex: str
+    completion_data: Dict[str, Any]
+
+@router.post("/mint/module/prepare-tx-combined")
+async def prepare_module_progress_mint_with_session_tx(request: PrepareMintWithSessionTxRequest):
+    if not blockchain_service.is_available():
+        raise HTTPException(status_code=503, detail="Blockchain service not available")
+    result = blockchain_service.prepare_module_progress_mint_with_session_tx(
+        request.student_address,
+        request.module_id,
+        request.learning_data_hash_hex,
+        request.completion_data
+    )
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('error', 'Failed to prepare combined mint'))
     return result
 
 @router.post("/mint/course-completion")

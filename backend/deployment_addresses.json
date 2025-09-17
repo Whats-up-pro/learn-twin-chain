@@ -7,15 +7,15 @@
     "REGISTRY_CONTRACT_ADDRESS": "0xb8030DBeF5A5838fcc4B8c11e29277fa168b2DeD",
     "ZKP_CONTRACT_ADDRESS": "0xCc67C8063d5eeEDB7e5BB2C46fdb8a4CBf675379",
     "ZK_VERIFIER_CONTRACT_ADDRESS": "0xfbDff6a0d8e58B18EC10A8e4Dd5De3562d8A3417",
-    "module_progress_nft": "0x89a8C6E520011Ca666E8a414000b8028d8DDFCcC",
-    "learning_achievement_nft": "0x90f122Cff948f1bBdEe0c431de74FEdF5d3f302E",
-    "learning_achievement_verifier": "0x609F8f949967D3ACB6b1700AdBd842A0E658fcA7",
+    "module_progress_nft": "0x9173e7Ce6E2724a3c45a9a91971B2041cF0C7197",
+    "learning_achievement_nft": "0x2DF31bff4610dad715A2EFe703503ab58c8A631e",
+    "learning_achievement_verifier": "0xf04c1F24e6C787A6b0E0Ca0fb12Ff0F7Ac59D9c6",
     "skill_verification_verifier": "0xfaB510e6fBd40364F44E18DF65756bFFAFad9B03",
-    "zk_learning_verifier": "0x849E289EE8c07e745C170F961Cfa406F2cDe6DE1",
-    "digital_twin_registry": "0xAc046cd8F4E5b031c2148A283a7572fC27Fa3937",
-    "zkp_certificate_registry": "0x603c655C2D99f140013f622Bd0f53712Cae5e0F2",
-    "learning_data_registry": "0x8cEfE03B60d0df6cb4f6383b1d0d610d195b5A7e",
-    "module_progress_verifier": "0xB22A6bA466b3C4bc6a3C31c9fE872Ef6C84ecC58"
+    "zk_learning_verifier": "0x60BBE6Db74410AA4EBD6c617A09da0F9E61233df",
+    "digital_twin_registry": "0xE576dC6818eFE6E20A961949bFe03cDc2800BE66",
+    "zkp_certificate_registry": "0xA37F6e807AC2F4a1Cb5209847064fb5019748F1b",
+    "learning_data_registry": "0xf15e97e24ba48fF77131A25d9557932e261301bA",
+    "module_progress_verifier": "0x9616dB518A171F79175A7C59f276575229E123D7"
   },
-  "timestamp": 1754631926
+  "timestamp": 1758124805
 }

@@ -30,7 +30,7 @@ contract ModuleProgressNFT is ERC1155, ERC1155URIStorage, Ownable, ReentrancyGua
         uint256[2] proofA;
         uint256[2][2] proofB;
         uint256[2] proofC;
-        uint256[8] publicInputs;
+        uint256[9] publicInputs;
     }
 
     // Struct for minting parameters to reduce stack depth
@@ -106,6 +106,47 @@ contract ModuleProgressNFT is ERC1155, ERC1155URIStorage, Ownable, ReentrancyGua
         _processProofAndMint(params, proofData);
     }
 
+    /**
+     * @dev One-transaction flow: creates learning session on registry, then verifies ZK proof and mints
+     * Optimized for single MetaMask confirmation UX.
+     */
+    function mintWithSessionAndZKProof(
+        string calldata moduleId,
+        string calldata metadataURI,
+        uint256 amount,
+        uint256 score,
+        uint256 timeSpent,
+        uint256 attempts,
+        bytes32 learningDataHash,
+        ZKProofData calldata proofData
+    ) external whenNotPaused nonReentrant {
+        require(score >= minScoreThreshold, "Score below threshold");
+        require(amount > 0, "Amount must be greater than 0");
+        require(bytes(metadataURI).length > 0, "Empty metadata URI");
+        require(validModuleIds[moduleId], "Invalid module ID");
+        require(!moduleCompletions[msg.sender][moduleId].isVerified, "Already completed");
+
+        // Create session in registry for msg.sender
+        bytes32 sessionHash = learningDataRegistry.createLearningSessionLegacy(
+            moduleId,
+            learningDataHash,
+            score,
+            timeSpent,
+            attempts
+        );
+
+        // Proceed to ZK verification and mint using the session hash
+        MintParams memory params = MintParams({
+            moduleId: moduleId,
+            metadataURI: metadataURI,
+            amount: amount,
+            score: score,
+            learningSessionHash: sessionHash
+        });
+
+        _processProofAndMint(params, proofData);
+    }
+
     function _validateBasicParams(MintParams calldata params) private view {
         require(params.score >= minScoreThreshold, "Score below threshold");
         require(params.amount > 0, "Amount must be greater than 0");
@@ -117,12 +158,12 @@ contract ModuleProgressNFT is ERC1155, ERC1155URIStorage, Ownable, ReentrancyGua
     function _validateLearningSession(address student, string memory moduleId, bytes32 learningSessionHash) private view {
         require(learningDataRegistry.isSessionVerified(learningSessionHash), "Learning session not verified");
         
-        (address sessionStudent, string memory sessionModuleId,,,,,,,) = learningDataRegistry.getLearningSession(learningSessionHash);
+        (address sessionStudent, , string memory sessionModuleId, , , , , , , , , , ) = learningDataRegistry.getLearningSession(learningSessionHash);
         require(sessionStudent == student, "Learning session not owned by student");
         require(_compareStrings(sessionModuleId, moduleId), "Module ID mismatch");
     }
 
-    function _processProofAndMint(MintParams calldata params, ZKProofData calldata proofData) private {
+    function _processProofAndMint(MintParams memory params, ZKProofData calldata proofData) private {
         bytes32 proofHash = _calculateProofHash(proofData, params.learningSessionHash);
         require(!usedProofs[proofHash], "Proof already used");
 
@@ -141,7 +182,7 @@ contract ModuleProgressNFT is ERC1155, ERC1155URIStorage, Ownable, ReentrancyGua
         _executeMint(params, proofHash);
     }
 
-    function _executeMint(MintParams calldata params, bytes32 proofHash) private {
+    function _executeMint(MintParams memory params, bytes32 proofHash) private {
         usedProofs[proofHash] = true;
         
         // Store completion data

@@ -53,7 +53,28 @@ const PaymentSuccessPage: React.FC = () => {
         }
 
         setMessage('Payment confirmed. Updating your subscription...');
-        setTimeout(() => navigate('/subscription', { replace: true }), 1200);
+
+        // Proactively refresh subscription server-side and notify UI
+        try {
+          await subscriptionService.getCurrentSubscription();
+        } catch {}
+        try {
+          localStorage.setItem('subscription_updated_at', Date.now().toString());
+          window.dispatchEvent(new CustomEvent('subscriptionUpdated'));
+        } catch {}
+
+        // Navigate to Subscription page and ensure UI updates without manual refresh
+        setTimeout(() => {
+          navigate('/subscription', { replace: true });
+          // As a final fallback, hard-reload shortly after navigation to reflect latest plan
+          setTimeout(() => {
+            try {
+              if (window.location.pathname === '/subscription') {
+                window.location.reload();
+              }
+            } catch {}
+          }, 600);
+        }, 800);
       } catch (e: any) {
         setError(e?.message || 'Failed to verify payment');
       }

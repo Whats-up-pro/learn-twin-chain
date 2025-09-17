@@ -21,6 +21,10 @@ class BlockchainService:
         self.contracts = {}
         self.zkp_service = ZKPService()
         self.ipfs_service = IPFSService()
+        # Transaction queue management primitives
+        self.tx_queue = []
+        self.last_nonce = None
+        self.tx_lock = threading.Lock()
         self._initialize_blockchain()
         # Helpers for deterministic hashing
         self._json_sort_separators = (',', ':')
@@ -46,7 +50,7 @@ class BlockchainService:
             except Exception:
                 priority_fee = self.w3.to_wei(3, 'gwei')
             max_priority_fee = int(priority_fee * 2)
-            max_fee_per_gas = int(base_fee * 3 + max_priority_fee)
+            max_fee_per_gas = int(base_fee * 5 + max_priority_fee)
             pending_nonce = self.w3.eth.get_transaction_count(self.account.address, 'pending')
             fn_add = module_nft.functions.addValidModule(module_id)
             gas_est = fn_add.estimate_gas({'from': self.account.address})
@@ -54,7 +58,7 @@ class BlockchainService:
                 'from': self.account.address,
                 'nonce': pending_nonce,
                 'type': 2,
-                'gas': int(gas_est * 2),
+                'gas': int(gas_est * 3),
                 'maxFeePerGas': max_fee_per_gas,
                 'maxPriorityFeePerGas': max_priority_fee,
                 'chainId': self.w3.eth.chain_id
@@ -348,9 +352,9 @@ class BlockchainService:
                 base_fee = self.w3.eth.get_block('latest')['baseFeePerGas']
                 priority_fee = self.w3.eth.max_priority_fee
                 
-                # Increase priority fee by 50% for better inclusion
-                max_priority_fee = int(priority_fee * 1.5)
-                max_fee_per_gas = int(base_fee * 3 + max_priority_fee)  # Increased fee multiplier
+                # Increase priority fee aggressively for inclusion
+                max_priority_fee = int(priority_fee * 2)
+                max_fee_per_gas = int(base_fee * 5 + max_priority_fee)  # Higher headroom
                 
                 # Build transaction with EIP-1559 gas pricing
                 tx = contract_function(*args).build_transaction({
@@ -369,8 +373,8 @@ class BlockchainService:
                     'maxPriorityFeePerGas': max_priority_fee
                 })
                 
-                # Add 50% buffer to gas estimate for complex ZK operations
-                tx['gas'] = int(estimated_gas * 2.5)  # Increased gas multiplier for better reliability
+                # Add larger buffer to gas estimate for complex ZK operations
+                tx['gas'] = int(estimated_gas * 3.0)
                 
                 print(f"   🔧 Transaction details:")
                 print(f"      Gas limit: {tx['gas']}")
@@ -421,8 +425,8 @@ class BlockchainService:
                     # Increase gas price for retry
                     base_fee = self.w3.eth.get_block('latest')['baseFeePerGas']
                     priority_fee = self.w3.eth.max_priority_fee
-                    max_priority_fee = int(priority_fee * (1.5 + retry_count * 0.5))
-                    max_fee_per_gas = int(base_fee * (3 + retry_count * 0.8) + max_priority_fee)  # Higher gas for retries
+                    max_priority_fee = int(priority_fee * (2 + retry_count * 0.5))
+                    max_fee_per_gas = int(base_fee * (5 + retry_count * 0.8) + max_priority_fee)  # Higher gas for retries
                 else:
                     return {
                         'success': False,
@@ -549,8 +553,13 @@ class BlockchainService:
             except Exception:
                 pass
 
-            # Generate ZK proof for module progress (allow passing on-chain learning_session_hash)
-            zk_proof = self.zkp_service.generate_module_progress_proof(completion_data)
+            # Generate ZK proof for module progress (ensure required fields present)
+            completion_input = {
+                **completion_data,
+                'student_address': student_address,
+                'module_id': module_id
+            }
+            zk_proof = self.zkp_service.generate_module_progress_proof(completion_input)
             
             if not zk_proof['success']:
                 return {
@@ -564,19 +573,8 @@ class BlockchainService:
                 'module_id': module_id
             }, zk_proof.get('commitment_hash'))
             
-            # Use on-chain verification with ModuleProgressNFT
-            if use_student_wallet and completion_data.get('student_private_key'):
-                result = self.mint_module_progress_with_zkp_proof_from_wallet(
-                    student_private_key=completion_data['student_private_key'],
-                    student_address=student_address,
-                    proof=zk_proof['proof'],
-                    public_inputs=zk_proof['public_inputs'],
-                    module_id=module_id,
-                    metadata_uri=metadata_uri,
-                    score=completion_data.get('score', 0)
-                )
-            else:
-                result = self.mint_module_progress_with_zkp_proof(
+            # Use on-chain verification with ModuleProgressNFT (service account path)
+            result = self.mint_module_progress_with_zkp_proof(
                     student_address=student_address,
                     proof=zk_proof['proof'],
                     public_inputs=zk_proof['public_inputs'],
@@ -1102,6 +1100,13 @@ class BlockchainService:
                             args = ev['args']
                             module_id = args.get('moduleId') if 'moduleId' in args else ''
                             token_id = args.get('tokenId') if 'tokenId' in args else None
+                            # proofHash may be bytes32; convert to 0x-hex string to avoid FastAPI bytes decoding
+                            proof_hash_val = args.get('proofHash') if 'proofHash' in args else None
+                            if isinstance(proof_hash_val, (bytes, bytearray)):
+                                try:
+                                    proof_hash_val = '0x' + proof_hash_val.hex()
+                                except Exception:
+                                    proof_hash_val = None
                             module_completions.append({
                                 'module_id': module_id,
                                 'token_id': token_id,
@@ -1109,7 +1114,7 @@ class BlockchainService:
                                 'mint_date': int(args.get('completionTime', 0)) or int(time.time()),
                                 'tx_hash': ev['transactionHash'].hex(),
                                 'contract_address': mp.address,
-                                'metadata': {'properties': {'verification': {'proof_hash': args.get('proofHash')}}}
+                                'metadata': {'properties': {'verification': {'proof_hash': proof_hash_val}}}
                             })
                     except Exception as _e:
                         print(f"Module event query failed: {_e}")
@@ -1492,112 +1497,6 @@ class BlockchainService:
                 'error': f"Error minting ModuleProgressNFT with ZK proof: {str(e)}"
             }
 
-    def mint_module_progress_with_zkp_proof_from_wallet(
-        self,
-        student_private_key: str,
-        student_address: str,
-        proof: Dict[str, Any],
-        public_inputs: List[int],
-        module_id: str,
-        metadata_uri: str,
-        score: int
-    ) -> Dict[str, Any]:
-        """
-        Mint ModuleProgressNFT using student's wallet (msg.sender = student) to satisfy ownership checks
-        """
-        try:
-            # Extract proof components
-            a = proof.get('pi_a', [])
-            b = proof.get('pi_b', [])
-            c = proof.get('pi_c', [])
-            proof_a = [int(a[0]), int(a[1])] if len(a) >= 2 else [0, 0]
-            proof_b = [[int(b[0][1]), int(b[0][0])], [int(b[1][1]), int(b[1][0])]] if len(b) >= 2 and len(b[0]) >= 2 and len(b[1]) >= 2 else [[0, 0], [0, 0]]
-            proof_c = [int(c[0]), int(c[1])] if len(c) >= 2 else [0, 0]
-
-            if len(public_inputs) != 8:
-                return {
-                    'success': False,
-                    'error': f'Invalid number of public inputs. Expected 8, got {len(public_inputs)}'
-                }
-            public_inputs_int = [int(x) for x in public_inputs]
-
-            # learning session hash as bytes32
-            learning_session_hash_int = int(public_inputs_int[6])
-            learning_session_hash_bytes32 = learning_session_hash_int.to_bytes(32, byteorder='big')
-            mint_params = (
-                module_id,
-                metadata_uri,
-                1,
-                score,
-                learning_session_hash_bytes32
-            )
-            zk_proof_data = (
-                proof_a,
-                proof_b,
-                proof_c,
-                public_inputs_int
-            )
-
-            # Build tx from student's wallet
-            student_acct = self.w3.eth.account.from_key(student_private_key)
-            fn = self.contracts['module_progress_nft'].functions.mintWithZKProof(mint_params, zk_proof_data)
-            gas_estimate = fn.estimate_gas({'from': student_acct.address})
-            latest_block = self.w3.eth.get_block('latest')
-            base_fee = latest_block.get('baseFeePerGas', 0) or 0
-            try:
-                priority_fee = self.w3.eth.max_priority_fee
-            except Exception:
-                priority_fee = self.w3.to_wei(3, 'gwei')
-            max_priority_fee = int(priority_fee * 2)
-            max_fee_per_gas = int(base_fee * 3 + max_priority_fee)
-            tx = fn.build_transaction({
-                'from': student_acct.address,
-                'nonce': self.w3.eth.get_transaction_count(student_acct.address, 'pending'),
-                'type': 2,
-                'gas': int(gas_estimate * 2),
-                'maxFeePerGas': max_fee_per_gas,
-                'maxPriorityFeePerGas': max_priority_fee,
-                'chainId': self.w3.eth.chain_id
-            })
-            signed_tx = self.w3.eth.account.sign_transaction(tx, private_key=student_private_key)
-            tx_hash = self.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=300)
-
-            if receipt.status == 1:
-                token_id = None
-                proof_hash = None
-                for log in receipt.logs:
-                    if log.address.lower() == self.contracts['module_progress_nft'].address.lower():
-                        try:
-                            event = self.contracts['module_progress_nft'].events.ModuleCompleted().process_log(log)
-                            token_id = event['args'].get('tokenId', None)
-                            if 'proofHash' in event['args']:
-                                proof_hash = event['args']['proofHash'].hex()
-                            break
-                        except Exception:
-                            continue
-
-                return {
-                    'success': True,
-                    'tx_hash': tx_hash.hex(),
-                    'verified': True,
-                    'circuit_type': 'module_progress',
-                    'verification_timestamp': int(time.time()),
-                    'block_number': receipt.blockNumber,
-                    'proof_hash': proof_hash or self._calculate_proof_hash(proof_a, proof_b, proof_c, public_inputs),
-                    'token_id': token_id,
-                    'etherscan_link': self._get_etherscan_link(tx_hash.hex())
-                }
-            else:
-                return {
-                    'success': False,
-                    'error': 'Transaction reverted'
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f"Error minting ModuleProgressNFT with ZK proof (student wallet): {str(e)}"
-            }
 
 
     def mint_learning_achievement_nft_with_zkp_proof(
@@ -2040,3 +1939,410 @@ class BlockchainService:
                 self.last_nonce = max(self.last_nonce + 1, current_nonce)
             
             return self.last_nonce
+
+    # ===== MetaMask-first helpers (return tx data for client signing) =====
+    def get_contracts_meta(self) -> Dict[str, Any]:
+        """Expose contract addresses and ABIs for frontend MetaMask interactions."""
+        try:
+            base_path = os.path.join(os.path.dirname(__file__), '..', '..', 'contracts', 'abi')
+            def _read_abi(name: str) -> Any:
+                with open(os.path.join(base_path, f"{name}.json"), 'r') as f:
+                    return json.load(f)['abi']
+            return {
+                'success': True,
+                'chain_id': self.w3.eth.chain_id if self.w3 else None,
+                'addresses': {
+                    'MODULE_PROGRESS_NFT': os.getenv('MODULE_PROGRESS_NFT'),
+                    'LEARNING_DATA_REGISTRY': os.getenv('LEARNING_DATA_REGISTRY'),
+                    'ZK_LEARNING_VERIFIER': os.getenv('ZK_LEARNING_VERIFIER')
+                },
+                'abis': {
+                    'ModuleProgressNFT': _read_abi('ModuleProgressNFT'),
+                    'LearningDataRegistry': _read_abi('LearningDataRegistry'),
+                    'ZKLearningVerifier': _read_abi('ZKLearningVerifier')
+                }
+            }
+        except Exception as e:
+            return {'success': False, 'error': f'Failed to load ABIs: {str(e)}'}
+
+    def build_create_learning_session_tx(
+        self,
+        module_id: str,
+        learning_data_hash_hex: str,
+        score: int,
+        time_spent: int,
+        attempts: int
+    ) -> Dict[str, Any]:
+        """Return {to,data} for LearningDataRegistry.createLearningSessionLegacy so wallet can send it."""
+        try:
+            if 'learning_data_registry' not in self.contracts:
+                return {'success': False, 'error': 'LearningDataRegistry not loaded'}
+            # bytes32 as hex string with 0x prefix
+            if not learning_data_hash_hex.startswith('0x'):
+                learning_data_hash_hex = '0x' + learning_data_hash_hex
+            # Normalize length to 32 bytes (64 hex chars after 0x)
+            hex_no_prefix = learning_data_hash_hex[2:]
+            if len(hex_no_prefix) != 64:
+                # pad or trim to 32 bytes
+                hex_no_prefix = hex_no_prefix.rjust(64, '0')[:64]
+                learning_data_hash_hex = '0x' + hex_no_prefix
+            fn = self.contracts['learning_data_registry'].functions.createLearningSession(
+                module_id,
+                learning_data_hash_hex,
+                int(score),
+                int(time_spent),
+                int(attempts)
+            )
+            # Encode ABI for data field without building full transaction
+            try:
+                data = fn._encode_transaction_data()
+            except Exception:
+                # Fallback to build_transaction to retrieve 'data'
+                tx = fn.build_transaction({'from': self.account.address})
+                data = tx.get('data')
+            return {
+                'success': True,
+                'to': self.contracts['learning_data_registry'].address,
+                'data': data
+            }
+        except Exception as e:
+            return {'success': False, 'error': f'Failed to build create session tx: {str(e)}'}
+
+    def approve_learning_session(self, session_hash_hex: str, approved: bool = True) -> Dict[str, Any]:
+        """Backend validator approves a learning session."""
+        if not self.is_available():
+            return {'success': False, 'error': 'Blockchain service not available'}
+        try:
+            if 'learning_data_registry' not in self.contracts:
+                return {'success': False, 'error': 'LearningDataRegistry not loaded'}
+            if not session_hash_hex.startswith('0x'):
+                session_hash_hex = '0x' + session_hash_hex
+            return self._send_transaction(
+                self.contracts['learning_data_registry'].functions.validateLearningSession,
+                self.contracts['learning_data_registry'].address,
+                session_hash_hex,
+                bool(approved)
+            )
+        except Exception as e:
+            return {'success': False, 'error': f'Approve session failed: {str(e)}'}
+
+    def get_learning_session_status(self, session_hash_hex: str) -> Dict[str, Any]:
+        """Return verification status and session details if available."""
+        try:
+            if 'learning_data_registry' not in self.contracts:
+                return {'success': False, 'error': 'LearningDataRegistry not loaded'}
+            if not session_hash_hex.startswith('0x'):
+                session_hash_hex = '0x' + session_hash_hex
+            is_verified = self.contracts['learning_data_registry'].functions.isSessionVerified(session_hash_hex).call()
+            try:
+                session = self.contracts['learning_data_registry'].functions.getLearningSession(session_hash_hex).call()
+                session_dict = {
+                    'student': session[0],
+                    'courseId': session[1],
+                    'moduleId': session[2],
+                    'lessonId': session[3],
+                    'quizId': session[4],
+                    'sessionType': int(session[5]) if isinstance(session[5], (int,)) else session[5],
+                    'learningDataHash': session[6],
+                    'timestamp': int(session[7]),
+                    'score': int(session[8]),
+                    'timeSpent': int(session[9]),
+                    'attempts': int(session[10]),
+                    'isVerified': bool(session[11]),
+                    'approvalCount': int(session[12])
+                }
+            except Exception:
+                session_dict = None
+            return {'success': True, 'is_verified': bool(is_verified), 'session': session_dict}
+        except Exception as e:
+            return {'success': False, 'error': f'Get session status failed: {str(e)}'}
+
+    def get_learning_session_from_tx(self, tx_hash: str) -> Dict[str, Any]:
+        """Decode LearningSessionCreated event from a transaction to obtain sessionHash."""
+        if not self.is_available():
+            return {'success': False, 'error': 'Blockchain service not available'}
+        try:
+            if 'learning_data_registry' not in self.contracts:
+                return {'success': False, 'error': 'LearningDataRegistry not loaded'}
+            # Wait for receipt to avoid race where tx is broadcast but not yet indexed by the node
+            try:
+                receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120, poll_latency=2)
+            except Exception as e:
+                # Fallback single-shot get in case wait failed due to timeout but receipt is already available
+                try:
+                    receipt = self.w3.eth.get_transaction_receipt(tx_hash)
+                except Exception:
+                    return {'success': False, 'error': f'Failed to decode session from tx: {str(e)}'}
+            for log in receipt.logs:
+                if log.address.lower() == self.contracts['learning_data_registry'].address.lower():
+                    try:
+                        event = self.contracts['learning_data_registry'].events.LearningSessionCreated().process_log(log)
+                        # The event args should contain sessionHash via learningDataHash or computed sessionHash depending on ABI
+                        # Enhanced contract may not include sessionHash directly; if not present, try to compute topic param
+                        args = event['args']
+                        # Some ABIs might name it differently; attempt sensible keys
+                        for key in ['sessionHash', 'learningDataHash', 'session_hash']:
+                            if key in args:
+                                val = args[key]
+                                if isinstance(val, (bytes, bytearray)):
+                                    val = '0x' + val.hex()
+                                return {'success': True, 'session_hash': val}
+                    except Exception:
+                        continue
+            return {'success': False, 'error': 'LearningSessionCreated event not found in tx'}
+        except Exception as e:
+            return {'success': False, 'error': f'Failed to decode session from tx: {str(e)}'}
+
+    def prepare_module_progress_mint_tx(
+        self,
+        student_address: str,
+        module_id: str,
+        completion_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate ZK proof and return encoded tx data for ModuleProgressNFT.mintWithZKProof for MetaMask."""
+        try:
+            if 'module_progress_nft' not in self.contracts:
+                return {'success': False, 'error': 'ModuleProgressNFT not loaded'}
+
+            checksum_student = self.w3.to_checksum_address(student_address)
+            module_nft = self.contracts['module_progress_nft']
+
+            # Contract state checks
+            try:
+                if hasattr(module_nft.functions, 'paused') and module_nft.functions.paused().call():
+                    return {'success': False, 'error': 'ModuleProgressNFT is paused'}
+            except Exception:
+                pass
+
+            # Strict whitelist check
+            try:
+                is_valid = module_nft.functions.validModuleIds(module_id).call()
+            except Exception:
+                is_valid = True
+            if not is_valid:
+                try:
+                    self._ensure_module_whitelisted(module_id)
+                    try:
+                        is_valid = module_nft.functions.validModuleIds(module_id).call()
+                    except Exception:
+                        is_valid = True
+                except Exception:
+                    pass
+                if not is_valid:
+                    return {'success': False, 'error': 'Module not whitelisted'}
+
+            # Optional min score threshold
+            try:
+                min_threshold = int(module_nft.functions.minScoreThreshold().call())
+                if int(completion_data.get('score', 0)) < min_threshold:
+                    return {'success': False, 'error': f'Score below threshold: {completion_data.get("score", 0)} < {min_threshold}'}
+            except Exception:
+                pass
+
+            # Optionally verify signature
+            use_student_wallet = completion_data.get('use_student_wallet', True)
+            student_signature = completion_data.get('student_signature', '')
+            challenge_nonce = completion_data.get('challenge_nonce', '')
+            if use_student_wallet and student_signature and challenge_nonce:
+                if not self._verify_student_signature(student_address, challenge_nonce, student_signature):
+                    return {'success': False, 'error': 'Invalid student signature verification'}
+
+            # Generate ZK proof
+            zk_proof = self.zkp_service.generate_module_progress_proof({
+                **completion_data,
+                'student_address': student_address,
+                'module_id': module_id
+            })
+            if not zk_proof.get('success'):
+                return {'success': False, 'error': f"ZK proof generation failed: {zk_proof.get('error', 'Unknown error')}"}
+
+            proof = zk_proof['proof']
+            public_inputs = zk_proof['public_inputs']
+            # Validate public inputs
+            try:
+                if not isinstance(public_inputs, list) or len(public_inputs) != 8:
+                    return {'success': False, 'error': 'Invalid public inputs: expected 8 values'}
+                public_inputs = [int(x) for x in public_inputs]
+            except Exception:
+                return {'success': False, 'error': 'Public inputs must be uint256 integers'}
+            a = proof.get('pi_a', [])
+            b = proof.get('pi_b', [])
+            c = proof.get('pi_c', [])
+            proof_a = [int(a[0]), int(a[1])] if len(a) >= 2 else [0, 0]
+            proof_b = [[int(b[0][1]), int(b[0][0])], [int(b[1][1]), int(b[1][0])]] if len(b) >= 2 and len(b[0]) >= 2 and len(b[1]) >= 2 else [[0, 0], [0, 0]]
+            proof_c = [int(c[0]), int(c[1])] if len(c) >= 2 else [0, 0]
+
+            # Metadata
+            metadata_uri = self._create_metadata_ipfs({
+                **completion_data,
+                'module_id': module_id
+            }, zk_proof.get('commitment_hash'))
+
+            # learning_session_hash from public inputs index 6
+            learning_session_hash_int = int(public_inputs[6])
+            learning_session_hash_bytes32 = learning_session_hash_int.to_bytes(32, byteorder='big')
+
+            # Duplicate proof prevention (best-effort)
+            try:
+                proof_hash_int = int(zk_proof.get('commitment_hash')) if zk_proof.get('commitment_hash') is not None else None
+                if proof_hash_int is not None and hasattr(module_nft.functions, 'usedProofs'):
+                    used = module_nft.functions.usedProofs(proof_hash_int.to_bytes(32, 'big')).call()
+                    if used:
+                        return {'success': False, 'error': 'Proof already used'}
+            except Exception:
+                pass
+
+            mint_params = (
+                module_id,
+                metadata_uri,
+                1,
+                int(completion_data.get('score', 0)),
+                learning_session_hash_bytes32
+            )
+            zk_proof_data = (
+                proof_a,
+                proof_b,
+                proof_c,
+                public_inputs
+            )
+
+            fn = module_nft.functions.mintWithZKProof(mint_params, zk_proof_data)
+
+            # Encode ABI without backend estimation; fallback build using student address
+            try:
+                data = fn._encode_transaction_data()
+            except Exception:
+                tx = fn.build_transaction({'from': checksum_student})
+                data = tx.get('data')
+
+            # Preflight call to surface revert reasons early
+            try:
+                self.w3.eth.call({'to': module_nft.address, 'from': checksum_student, 'data': data})
+            except Exception as e:
+                return {'success': False, 'error': f'Mint preflight failed: {str(e)}'}
+
+            return {
+                'success': True,
+                'to': module_nft.address,
+                'data': data,
+                'metadata_uri': metadata_uri,
+                'public_inputs': public_inputs,
+                'zk_proof_hash': zk_proof.get('commitment_hash')
+            }
+        except Exception as e:
+            return {'success': False, 'error': f'Prepare mint tx failed: {str(e)}'}
+
+    def prepare_module_progress_mint_with_session_tx(
+        self,
+        student_address: str,
+        module_id: str,
+        learning_data_hash_hex: str,
+        completion_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Encode single-call mint: create session + verify ZK + mint.
+        Requires circuit to bind proof to learningDataHash instead of on-chain session hash.
+        Returns {to,data} for MetaMask.
+        """
+        try:
+            if 'module_progress_nft' not in self.contracts:
+                return {'success': False, 'error': 'ModuleProgressNFT not loaded'}
+
+            checksum_student = self.w3.to_checksum_address(student_address)
+            module_nft = self.contracts['module_progress_nft']
+
+            # Basic checks
+            try:
+                if hasattr(module_nft.functions, 'paused') and module_nft.functions.paused().call():
+                    return {'success': False, 'error': 'ModuleProgressNFT is paused'}
+            except Exception:
+                pass
+            try:
+                if not module_nft.functions.validModuleIds(module_id).call():
+                    self._ensure_module_whitelisted(module_id)
+                    if not module_nft.functions.validModuleIds(module_id).call():
+                        return {'success': False, 'error': 'Module not whitelisted'}
+            except Exception:
+                pass
+
+            # Generate ZK proof bound to learningDataHash (circuit must be updated accordingly)
+            zk_input = {
+                **completion_data,
+                'student_address': student_address,
+                'module_id': module_id,
+                'learning_data_hash': learning_data_hash_hex
+            }
+            zk_proof = self.zkp_service.generate_module_progress_proof(zk_input)
+            if not zk_proof.get('success'):
+                return {'success': False, 'error': f"ZK proof generation failed: {zk_proof.get('error', 'Unknown error')}"}
+
+            proof = zk_proof['proof']
+            public_inputs = zk_proof['public_inputs']
+            # Expect 8 inputs with index 6 equal to learningDataHash (uint256)
+            if not isinstance(public_inputs, list) or len(public_inputs) != 8:
+                return {'success': False, 'error': 'Invalid public inputs: expected 8 values'}
+            try:
+                public_inputs = [int(x) for x in public_inputs]
+            except Exception:
+                return {'success': False, 'error': 'Public inputs must be uint256 integers'}
+
+            a = proof.get('pi_a', [])
+            b = proof.get('pi_b', [])
+            c = proof.get('pi_c', [])
+            proof_a = [int(a[0]), int(a[1])] if len(a) >= 2 else [0, 0]
+            proof_b = [[int(b[0][1]), int(b[0][0])], [int(b[1][1]), int(b[1][0])]] if len(b) >= 2 and len(b[0]) >= 2 and len(b[1]) >= 2 else [[0, 0], [0, 0]]
+            proof_c = [int(c[0]), int(c[1])] if len(c) >= 2 else [0, 0]
+
+            # Metadata IPFS
+            metadata_uri = self._create_metadata_ipfs({
+                **completion_data,
+                'module_id': module_id
+            }, zk_proof.get('commitment_hash'))
+
+            # Prepare function call
+            score = int(completion_data.get('score', 0))
+            time_spent = int(completion_data.get('time_spent', 0))
+            attempts = int(completion_data.get('attempts', 1))
+            amount = 1
+
+            # learning_data_hash -> bytes32 input for combined call
+            if not learning_data_hash_hex.startswith('0x'):
+                learning_data_hash_hex = '0x' + learning_data_hash_hex
+            ld_hex = learning_data_hash_hex[2:]
+            if len(ld_hex) != 64:
+                ld_hex = ld_hex.rjust(64, '0')[:64]
+            learning_data_hash_bytes32 = bytes.fromhex(ld_hex)
+
+            proof_data = (proof_a, proof_b, proof_c, public_inputs)
+
+            fn = module_nft.functions.mintWithSessionAndZKProof(
+                module_id,
+                metadata_uri,
+                amount,
+                score,
+                time_spent,
+                attempts,
+                learning_data_hash_bytes32,
+                proof_data
+            )
+
+            # Encode and preflight
+            try:
+                data = fn._encode_transaction_data()
+            except Exception:
+                tx = fn.build_transaction({'from': checksum_student})
+                data = tx.get('data')
+            try:
+                self.w3.eth.call({'to': module_nft.address, 'from': checksum_student, 'data': data})
+            except Exception as e:
+                return {'success': False, 'error': f'Combined mint preflight failed: {str(e)}'}
+
+            return {
+                'success': True,
+                'to': module_nft.address,
+                'data': data,
+                'metadata_uri': metadata_uri,
+                'public_inputs': public_inputs,
+                'zk_proof_hash': zk_proof.get('commitment_hash')
+            }
+        except Exception as e:
+            return {'success': False, 'error': f'Prepare combined mint tx failed: {str(e)}'}

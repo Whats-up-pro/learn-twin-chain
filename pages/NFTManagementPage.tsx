@@ -7,13 +7,13 @@ import {
   CubeIcon, 
   ClockIcon,
   CheckCircleIcon,
-  TrophyIcon,
+  ExclamationTriangleIcon,
   RocketLaunchIcon
 } from '@heroicons/react/24/outline';
 import { 
   SparklesIcon as SparklesIconSolid
 } from '@heroicons/react/24/solid';
-import toast from 'react-hot-toast';
+// import toast from 'react-hot-toast';
 import { useTranslation } from '../src/hooks/useTranslation';
 
 interface NFT {
@@ -42,7 +42,7 @@ const NFTManagementPage: React.FC = () => {
   const { t } = useTranslation();
   const { digitalTwin } = useAppContext();
   const [nfts, setNfts] = useState<NFT[]>([]);
-  const [selectedTab, setSelectedTab] = useState<'all' | 'minting' | 'minted' | 'achievements'>('all');
+  const [selectedTab, setSelectedTab] = useState<'minting' | 'minted' | 'failed'>('minted');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -83,7 +83,91 @@ const NFTManagementPage: React.FC = () => {
             metadata: n.metadata
           } as NFT;
         });
-        setNfts(unified);
+        // Also enrich with on-chain ERC-1155 balances
+        // Derive tokenIds to check: use backend token_ids if present, else map module completions
+        const tokenIds: string[] = Array.from(
+          new Set(
+            (data?.module_completions || [])
+              .map((mc: any) => mc.token_id)
+              .filter((x: any) => x !== undefined && x !== null)
+              .map((x: any) => String(x))
+          )
+        );
+        // If no ids derived, try known token from module ids
+        if (tokenIds.length === 0) {
+          (data?.module_completions || []).forEach((mc: any) => {
+            if (mc.module_id) tokenIds.push(String(mc.module_id));
+          });
+        }
+        let onchain: any[] = [];
+        try {
+          if (tokenIds.length > 0) {
+            const meta = await blockchainService.getContractsMeta();
+            const moduleNftAddress = meta?.addresses?.MODULE_PROGRESS_NFT || '';
+            const res = await blockchainService.getErc1155BalancesAndMetadata(studentAddress, tokenIds);
+            onchain = res
+              .filter(r => r.balance > 0n)
+              .map(r => ({
+                id: r.tokenId,
+                name: r.metadata?.name || 'Module Completion',
+                description: r.metadata?.description || '',
+                type: 'module_progress' as const,
+                status: 'minted' as const,
+                imageUrl: r.metadata?.image || '',
+                attributes: {
+                  course: r.metadata?.attributes?.find((a: any) => a.trait_type === 'Course')?.value || 'Course',
+                  module: r.metadata?.attributes?.find((a: any) => a.trait_type === 'Module ID')?.value,
+                  score: r.metadata?.attributes?.find((a: any) => a.trait_type === 'Score')?.value,
+                  completionDate: new Date().toISOString(),
+                  difficulty: r.metadata?.attributes?.find((a: any) => a.trait_type === 'Difficulty')?.value || 'N/A',
+                  rarity: r.metadata?.attributes?.find((a: any) => a.trait_type === 'Rarity')?.value || 'Common'
+                },
+                tokenId: r.tokenId,
+                blockchainAddress: moduleNftAddress,
+                metadata: r.metadata
+              }));
+          }
+        } catch (e) {
+          console.warn('On-chain ERC-1155 read failed:', e);
+        }
+        // Merge by tokenId, prefer on-chain metadata when available
+        const mergedByToken: Record<string, NFT> = {};
+        [...unified, ...onchain].forEach((item: any) => {
+          const key = String(item.tokenId || item.id);
+          if (!mergedByToken[key]) mergedByToken[key] = item;
+          else {
+            mergedByToken[key] = { ...mergedByToken[key], ...item };
+          }
+        });
+        // Merge local in-progress/failed tickets from digital twin checkpoints
+        const localTickets: NFT[] = (digitalTwin?.checkpoints || [])
+          .filter((cp: any) => cp.minting || cp.mintFailed)
+          .map((cp: any) => ({
+            id: cp.moduleId,
+            name: cp.moduleName || 'Module Completion',
+            description: 'Module completion minting ticket',
+            type: 'module_progress' as const,
+            status: cp.minting ? 'minting' as const : 'failed' as const,
+            imageUrl: '',
+            attributes: {
+              course: 'Course',
+              module: cp.moduleId,
+              score: cp.score,
+              completionDate: cp.completedAt,
+              difficulty: 'N/A',
+              rarity: 'Common'
+            },
+            tokenId: cp.tokenId ? String(cp.tokenId) : undefined,
+            transactionHash: cp.txHash,
+            mintedAt: undefined,
+            blockchainAddress: cp.contractAddress,
+            metadata: undefined
+          }));
+        const merged = Object.values(mergedByToken);
+        // Ensure no duplicates by id
+        const existingIds = new Set(merged.map((n: any) => String(n.id)));
+        const withLocal = [...localTickets.filter(t => !existingIds.has(String(t.id))), ...merged];
+        setNfts(withLocal);
       } catch (e) {
         console.warn('Failed to load real NFTs:', e);
         setNfts([]);
@@ -96,24 +180,22 @@ const NFTManagementPage: React.FC = () => {
 
 
   const tabs = [
-    { id: 'all', name: 'All NFTs', icon: SparklesIcon },
     { id: 'minting', name: 'Minting', icon: ClockIcon },
-    { id: 'minted', name: 'Collection', icon: CubeIcon },
-    { id: 'achievements', name: 'Achievements', icon: TrophyIcon }
+    { id: 'minted', name: 'Minted', icon: CubeIcon },
+    { id: 'failed', name: 'Failed', icon: ExclamationTriangleIcon }
   ];
 
   const filteredNFTs = nfts.filter(nft => {
     switch (selectedTab) {
       case 'minting': return nft.status === 'minting';
       case 'minted': return nft.status === 'minted';
-      case 'achievements': return nft.type === 'learning_achievement';
+      case 'failed': return nft.status === 'failed';
       default: return true;
     }
   });
 
   const mintingCount = nfts.filter(n => n.status === 'minting').length;
   const mintedCount = nfts.filter(n => n.status === 'minted').length;
-  const achievementCount = nfts.filter(n => n.type === 'learning_achievement' && n.status === 'minted').length;
 
   if (loading) {
     return (
@@ -139,26 +221,36 @@ const NFTManagementPage: React.FC = () => {
               </h1>
               <p className="text-gray-600 mt-2">{t('pages.nftManagementPage.manageYourLearningAchievementNFTsAndModuleProgressTokens')}</p>
             </div>
-            <Link 
-              to="/dashboard"
-              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
-            >
-              {t('pages.nftManagementPage.backToDashboard')}
-            </Link>
+            <div className="flex space-x-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const { blockchainService } = await import('../services/blockchainService');
+                    const studentAddress = await blockchainService.getStudentAddress();
+                    if (studentAddress) {
+                      await blockchainService.detectAndRefreshNFTs(studentAddress);
+                      // Reload the page data
+                      window.location.reload();
+                    }
+                  } catch (error) {
+                    console.error('Failed to detect NFTs:', error);
+                  }
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+              >
+                🔍 Auto-Detect NFTs
+              </button>
+              <Link 
+                to="/dashboard"
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold"
+              >
+                {t('pages.nftManagementPage.backToDashboard')}
+              </Link>
+            </div>
           </div>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-100 text-sm font-medium">{t('pages.nftManagementPage.TotalNFTs')}</p>
-                  <p className="text-3xl font-bold">{nfts.length}</p>
-                </div>
-                <SparklesIconSolid className="h-12 w-12 text-purple-200" />
-              </div>
-            </div>
-
+          {/* Stats Overview: Only Minting and Minted */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
@@ -176,16 +268,6 @@ const NFTManagementPage: React.FC = () => {
                   <p className="text-3xl font-bold">{mintedCount}</p>
                 </div>
                 <CheckCircleIcon className="h-12 w-12 text-emerald-200" />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl p-6 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-sm font-medium">{t('pages.nftManagementPage.Achievements')}</p>
-                  <p className="text-3xl font-bold">{achievementCount}</p>
-                </div>
-                <TrophyIcon className="h-12 w-12 text-blue-200" />
               </div>
             </div>
           </div>

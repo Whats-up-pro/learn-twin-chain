@@ -12,7 +12,7 @@ template ModuleProgress() {
     signal input maxTimeAllowed;
     signal input maxAttemptsAllowed;
     signal input commitmentHash;
-    signal input learningSessionHash;
+    signal input learningDataHash;
 
     // Private inputs
     signal input score;
@@ -58,4 +58,4 @@ template ModuleProgress() {
     isValid <== temp2 * hashCheck.out;
 }
 
-component main { public [moduleId, courseId, studentHash, minScoreRequired, maxTimeAllowed, maxAttemptsAllowed, commitmentHash, learningSessionHash] } = ModuleProgress(); 
+component main { public [moduleId, courseId, studentHash, minScoreRequired, maxTimeAllowed, maxAttemptsAllowed, commitmentHash, learningDataHash] } = ModuleProgress();

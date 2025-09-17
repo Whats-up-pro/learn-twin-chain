@@ -390,11 +390,15 @@ async def get_ranking_stats(
                 user_achievement_position = user.get("rank")
                 break
         
+        # Get total active users (users who have logged in recently or have any activity)
+        total_active_users = await User.find({"is_active": True}).count()
+        
         return {
             "success": True,
             "stats": {
                 "total_users_with_certificates": len([u for u in cert_leaderboard if u.get("total_certificates", 0) > 0]),
                 "total_users_with_achievements": len([u for u in achievement_leaderboard if u.get("total_achievements", 0) > 0]),
+                "total_active_users": total_active_users,
                 "total_certificates_issued": total_certificates,
                 "total_achievements_earned": total_achievements,
                 "total_points_earned": total_points,

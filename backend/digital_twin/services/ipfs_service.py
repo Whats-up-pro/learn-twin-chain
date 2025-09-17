@@ -430,17 +430,95 @@ class IPFSService:
         
         return health
     
-    # Backward compatibility methods
-    def upload_json(self, data: Dict[str, Any], name: str = None) -> str:
-        """Synchronous wrapper for pin_json - DEPRECATED"""
-        import asyncio
-        
+    # Synchronous helpers (safe in FastAPI context)
+    def upload_file(self, file_path: str, metadata: Dict[str, Any] = None) -> str:
+        """Synchronously upload a file from disk to IPFS and return CID."""
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(self.pin_json(data, name))
-            loop.close()
-            return result
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+            # Prefer Pinata
+            if self.pinata_api_key:
+                url = f"{self.pinata_base_url}/pinning/pinFileToIPFS"
+                form_data = MultipartEncoder({
+                    'file': (os.path.basename(file_path), file_data, 'application/octet-stream'),
+                    'pinataMetadata': json.dumps({
+                        'name': os.path.basename(file_path),
+                        'keyvalues': {
+                            'filename': os.path.basename(file_path),
+                            'timestamp': datetime.now(timezone.utc).isoformat(),
+                            **(metadata or {})
+                        }
+                    }),
+                    'pinataOptions': json.dumps({'cidVersion': 1})
+                })
+                headers = {
+                    'pinata_api_key': self.pinata_api_key,
+                    'pinata_secret_api_key': self.pinata_secret_key,
+                    'Content-Type': form_data.content_type
+                }
+                resp = requests.post(url, data=form_data, headers=headers, timeout=60)
+                resp.raise_for_status()
+                cid = resp.json()['IpfsHash']
+                logger.info(f"File pinned to Pinata: {cid}")
+                return cid
+            # Fallback to Web3.Storage
+            if self.web3_storage_token:
+                url = 'https://api.web3.storage/upload'
+                headers = { 'Authorization': f'Bearer {self.web3_storage_token}' }
+                files = { 'file': (os.path.basename(file_path), file_data, 'application/octet-stream') }
+                resp = requests.post(url, files=files, headers=headers, timeout=60)
+                resp.raise_for_status()
+                cid = resp.json()['cid']
+                logger.info(f"File pinned to Web3.Storage: {cid}")
+                return cid
+            raise Exception('No IPFS service available')
+        except Exception as e:
+            logger.error(f"Synchronous file upload failed: {e}")
+            raise
+
+    def upload_json(self, data: Dict[str, Any], name: str = None, metadata: Dict[str, Any] = None) -> str:
+        """Synchronously upload JSON to IPFS and return CID (no asyncio)."""
+        try:
+            json_str = json.dumps(data, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+            content_hash = hashlib.sha256(json_str.encode('utf-8')).hexdigest()
+            # Prefer Pinata
+            if self.pinata_api_key:
+                url = f"{self.pinata_base_url}/pinning/pinJSONToIPFS"
+                headers = {
+                    'pinata_api_key': self.pinata_api_key,
+                    'pinata_secret_api_key': self.pinata_secret_key,
+                    'Content-Type': 'application/json'
+                }
+                payload = {
+                    'pinataContent': json.loads(json_str),
+                    'pinataMetadata': {
+                        'name': name or f"json_{datetime.now(timezone.utc).isoformat()}",
+                        'keyvalues': {
+                            'content_hash': content_hash,
+                            'timestamp': datetime.now(timezone.utc).isoformat(),
+                            **(metadata or {})
+                        }
+                    },
+                    'pinataOptions': { 'cidVersion': 1 }
+                }
+                resp = requests.post(url, json=payload, headers=headers, timeout=30)
+                resp.raise_for_status()
+                cid = resp.json()['IpfsHash']
+                logger.info(f"JSON pinned to Pinata: {cid}")
+                return cid
+            # Fallback to Web3.Storage
+            if self.web3_storage_token:
+                url = 'https://api.web3.storage/upload'
+                headers = {
+                    'Authorization': f'Bearer {self.web3_storage_token}',
+                    'Content-Type': 'application/json'
+                }
+                resp = requests.post(url, data=json_str.encode('utf-8'), headers=headers, timeout=30)
+                resp.raise_for_status()
+                cid = resp.json()['cid']
+                logger.info(f"JSON pinned to Web3.Storage: {cid}")
+                return cid
+            raise Exception('No IPFS service available')
         except Exception as e:
             logger.error(f"Synchronous JSON upload failed: {e}")
             raise

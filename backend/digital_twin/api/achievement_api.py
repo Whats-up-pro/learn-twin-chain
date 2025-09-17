@@ -330,6 +330,7 @@ async def get_user_achievements(
     """Get current user's achievements with progress"""
     try:
         target_user_id = user_id if user_id and current_user.role in ["admin", "institution_admin"] else current_user.did
+        logger.info(f"Getting achievements for user: {target_user_id}, current_user.did: {current_user.did}")
         
         # Build aggregation pipeline for user achievements with achievement details
         pipeline = [
@@ -377,6 +378,7 @@ async def get_user_achievements(
             user_achievements = await UserAchievement.aggregate(pipeline).to_list()
             # Count total user achievements
             total = len(user_achievements)
+            logger.info(f"Found {total} user achievements for user {target_user_id}")
         except Exception as agg_error:
             logger.debug(f"Achievement aggregation failed, returning empty list: {agg_error}")
             user_achievements = []

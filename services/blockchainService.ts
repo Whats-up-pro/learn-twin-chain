@@ -133,6 +133,225 @@ export class BlockchainService {
     }
   }
 
+  // Ensure MetaMask is on the correct chain
+  async ensureChain(chainIdDecimal: number): Promise<void> {
+    const hexChainId = '0x' + chainIdDecimal.toString(16);
+    const current = await window.ethereum.request({ method: 'eth_chainId' });
+    if (current !== hexChainId) {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: hexChainId }]
+      });
+    }
+  }
+
+  async getContractsMeta(): Promise<any> {
+    const res = await fetch(`${API_BASE}/blockchain/contracts/meta`);
+    return res.json();
+  }
+
+  // Build and send create learning session via MetaMask
+  async createLearningSessionViaWallet(params: {
+    module_id: string;
+    learning_data_hash_hex: string; // bytes32 hex 0x...
+    score: number;
+    time_spent: number;
+    attempts: number;
+  }): Promise<string> {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const from = accounts[0];
+    const meta = await this.getContractsMeta();
+    if (!meta.success) throw new Error('Failed to load contracts meta');
+    await this.ensureChain(meta.chain_id);
+    const buildRes = await fetch(`${API_BASE}/blockchain/learning-session/build-create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    const txDesc = await buildRes.json();
+    if (!txDesc.success) throw new Error(txDesc.error || 'Failed to build transaction');
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{ from, to: txDesc.to, data: txDesc.data }]
+    });
+    return txHash;
+  }
+
+  // Backend validator approves session
+  async approveLearningSession(sessionHashHex: string, approved = true): Promise<any> {
+    const url = `${API_BASE}/blockchain/learning-session/approve?session_hash_hex=${encodeURIComponent(sessionHashHex)}&approved=${approved}`;
+    let lastErr: any = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(url, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `Approve failed (attempt ${attempt})`);
+        }
+        return await res.json();
+      } catch (e) {
+        lastErr = e;
+        // brief backoff: 1s, 2s
+        if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
+      }
+    }
+    throw new Error(`Transaction failed after 3 attempts: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`);
+  }
+
+  async getLearningSessionStatus(sessionHashHex: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/blockchain/learning-session/status?session_hash_hex=${encodeURIComponent(sessionHashHex)}`);
+    return res.json();
+  }
+
+  // Prepare module mint tx data, then send via MetaMask
+  async mintModuleViaWallet(args: {
+    student_address: string;
+    module_id: string;
+    completion_data: any;
+  }): Promise<string> {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const from = accounts[0];
+    const meta = await this.getContractsMeta();
+    if (!meta.success) throw new Error('Failed to load contracts meta');
+    await this.ensureChain(meta.chain_id);
+    const res = await fetch(`${API_BASE}/blockchain/mint/module/prepare-tx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(args)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to prepare mint');
+    }
+    const prep = await res.json();
+    if (!prep.success) throw new Error(prep.error || 'Failed to prepare mint');
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{ from, to: prep.to, data: prep.data }]
+    });
+    return txHash;
+  }
+
+  // Combined single-popup mint flow
+  async mintModuleCombinedViaWallet(args: {
+    student_address: string;
+    module_id: string;
+    learning_data_hash_hex: string;
+    completion_data: any; // must include score, time_spent, attempts
+  }): Promise<string> {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const from = accounts[0];
+    const meta = await this.getContractsMeta();
+    if (!meta.success) throw new Error('Failed to load contracts meta');
+    await this.ensureChain(meta.chain_id);
+    const res = await fetch(`${API_BASE}/blockchain/mint/module/prepare-tx-combined`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(args)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to prepare combined mint');
+    }
+    const prep = await res.json();
+    if (!prep.success) throw new Error(prep.error || 'Failed to prepare combined mint');
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{ from, to: prep.to, data: prep.data }]
+    });
+    return txHash;
+  }
+
+  // ---------- ERC-1155 On-chain Reads ----------
+  private padTo32Bytes(hexNoPrefix: string): string {
+    return hexNoPrefix.padStart(64, '0');
+  }
+
+  private toHexNoPrefix(value: string | number | bigint): string {
+    const hex = BigInt(value).toString(16);
+    return hex;
+  }
+
+  private encodeAddress(address: string): string {
+    return this.padTo32Bytes(address.toLowerCase().replace('0x', ''));
+  }
+
+  private async ethCall(to: string, data: string): Promise<string> {
+    const result = await window.ethereum.request({
+      method: 'eth_call',
+      params: [{ to, data }, 'latest']
+    });
+    return result as string; // 0x...
+  }
+
+  // balanceOf(address,uint256) -> selector 0x00fdd58e
+  async erc1155BalanceOf(contract: string, account: string, tokenId: string | number | bigint): Promise<bigint> {
+    const selector = '0x00fdd58e';
+    const data = selector
+      + this.encodeAddress(account)
+      + this.padTo32Bytes(this.toHexNoPrefix(tokenId));
+    const raw = await this.ethCall(contract, data);
+    return BigInt(raw);
+  }
+
+  // uri(uint256) -> selector 0x0e89341c
+  async erc1155TokenURI(contract: string, tokenId: string | number | bigint): Promise<string | null> {
+    const selector = '0x0e89341c';
+    const data = selector + this.padTo32Bytes(this.toHexNoPrefix(tokenId));
+    const raw = await this.ethCall(contract, data);
+    if (!raw || raw === '0x') return null;
+    try {
+      // decode string: ABI dynamic string encoding; simplest approach: skip offset and read length
+      // raw layout: 0x + 64 offset + 64 length + data (padded)
+      const hex = raw.replace(/^0x/, '');
+      const lengthHex = hex.slice(64, 128);
+      const length = parseInt(lengthHex, 16) * 2; // in hex chars
+      const dataHex = hex.slice(128, 128 + length);
+      const decoded = decodeURIComponent(dataHex.replace(/(..)/g, '%$1'));
+      return decoded;
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchJsonFromUri(uri: string): Promise<any | null> {
+    try {
+      let url = uri;
+      if (uri.startsWith('ipfs://')) {
+        url = `https://ipfs.io/ipfs/${uri.replace('ipfs://', '')}`;
+      }
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+
+  async getErc1155BalancesAndMetadata(studentAddress: string, tokenIds: Array<string | number | bigint>): Promise<{
+    tokenId: string;
+    balance: bigint;
+    uri: string | null;
+    metadata: any | null;
+  }[]> {
+    const meta = await this.getContractsMeta();
+    if (!meta.success) throw new Error('Failed to load contracts meta');
+    await this.ensureChain(meta.chain_id);
+    const contract = meta.addresses.MODULE_PROGRESS_NFT;
+    const results: any[] = [];
+    for (const id of tokenIds) {
+      const bal = await this.erc1155BalanceOf(contract, studentAddress, id);
+      let uri = await this.erc1155TokenURI(contract, id);
+      if (uri && uri.includes('{id}')) {
+        const idHex = this.toHexNoPrefix(id).padStart(64, '0');
+        uri = uri.replace('{id}', idHex);
+      }
+      const metadata = uri ? await this.fetchJsonFromUri(uri) : null;
+      results.push({ tokenId: String(id), balance: bal, uri, metadata });
+    }
+    return results;
+  }
+
   // Get ZKP challenge from backend
   async getZKPChallenge(moduleId: string): Promise<string | null> {
     try {
@@ -360,20 +579,78 @@ export class BlockchainService {
   }
 
   // Helper method to get default student address (fallback)
-  getDefaultStudentAddress(did: string): string {
+  getDefaultStudentAddress(_did: string): string {
     // Use the real student address for testing
     return "0x7603d3159104dE72884273D14827D9BF07242B21";
   }
 
-  private simpleHash(input: string): string {
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+  // Automatically notify MetaMask about new NFTs (ERC-1155)
+  async notifyMetaMaskAboutNFT(contractAddress: string, _tokenId: string | number, _metadata?: any): Promise<boolean> {
+    try {
+      if (typeof window.ethereum === 'undefined') {
+        console.warn('MetaMask not available for NFT notification');
+        return false;
+      }
+
+      // For ERC-1155, we can't use wallet_watchAsset directly, but we can trigger a refresh
+      // MetaMask will automatically detect ERC-1155 tokens when the user visits the NFTs tab
+      
+      // Show a notification to the user
+      toast.success(`NFT minted! Check your MetaMask NFTs tab or refresh the page.`, {
+        duration: 8000
+      });
+
+      // Open Etherscan for the contract
+      setTimeout(() => {
+        window.open(`https://sepolia.etherscan.io/token/${contractAddress}`, '_blank');
+      }, 1000);
+
+      return true;
+    } catch (error) {
+      console.error('Failed to notify MetaMask about NFT:', error);
+      return false;
     }
-    return Math.abs(hash).toString(16).padStart(40, '0');
   }
+
+  // Enhanced NFT detection with automatic refresh
+  async detectAndRefreshNFTs(studentAddress: string): Promise<void> {
+    try {
+      const meta = await this.getContractsMeta();
+      if (!meta.success) return;
+
+      const contractAddress = meta.addresses.MODULE_PROGRESS_NFT;
+      if (!contractAddress) return;
+
+      // Get all possible token IDs (you might want to expand this range)
+      const possibleTokenIds = Array.from({ length: 100 }, (_, i) => i + 1);
+      
+      const balances = await this.getErc1155BalancesAndMetadata(studentAddress, possibleTokenIds);
+      const ownedTokens = balances.filter(b => b.balance > 0n);
+
+      if (ownedTokens.length > 0) {
+        console.log(`🎉 Detected ${ownedTokens.length} NFTs in wallet:`, ownedTokens);
+        
+        // Notify user about detected NFTs
+        toast.success(`Found ${ownedTokens.length} NFT(s) in your wallet!`, {
+          duration: 5000
+        });
+      }
+
+      return;
+    } catch (error) {
+      console.error('Failed to detect NFTs:', error);
+    }
+  }
+
+  // private simpleHash(input: string): string {
+  //   let hash = 0;
+  //   for (let i = 0; i < input.length; i++) {
+  //     const char = input.charCodeAt(i);
+  //     hash = ((hash << 5) - hash) + char;
+  //     hash = hash & hash; // Convert to 32-bit integer
+  //   }
+  //   return Math.abs(hash).toString(16).padStart(40, '0');
+  // }
 }
 
 // Export singleton instance

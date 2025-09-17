@@ -3,9 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   CheckIcon, 
   StarIcon, 
-  CreditCardIcon, 
-  BanknotesIcon,
-  DevicePhoneMobileIcon,
   ShieldCheckIcon,
   BoltIcon,
   AcademicCapIcon,
@@ -60,6 +57,15 @@ const SubscriptionPage: React.FC = () => {
 
   useEffect(() => {
     loadSubscriptionData();
+  }, []);
+
+  // Listen for subscription updates triggered elsewhere (e.g., PaymentSuccessPage)
+  useEffect(() => {
+    const onUpdated = () => {
+      loadSubscriptionData();
+    };
+    window.addEventListener('subscriptionUpdated', onUpdated as EventListener);
+    return () => window.removeEventListener('subscriptionUpdated', onUpdated as EventListener);
   }, []);
 
   const loadSubscriptionData = async () => {
@@ -226,7 +232,7 @@ const SubscriptionPage: React.FC = () => {
               {t('subscription.Yearly')}
               <span className="absolute -top-2 -right-2 bg-gradient-to-r from-green-400 to-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                 <GiftIcon className="w-3 h-3 inline mr-1" />
-                {t('subscription.Save', {count: '20%'})}
+                {t('subscription.Save', {count: 20})}%
               </span>
             </button>
           </div>

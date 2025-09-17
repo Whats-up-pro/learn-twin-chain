@@ -46,11 +46,92 @@ const AchievementsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    loadAchievements();
-    loadUserAchievements();
-    loadStats();
+    loadAll();
   }, []);
 
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [allRes, userRes, statsRes] = await Promise.allSettled([
+        achievementService.getAllAchievements({ limit: 100 }),
+        achievementService.getUserAchievements({ include_progress: true, limit: 100 }),
+        achievementService.getUserAchievementStats()
+      ]);
+
+      const allAchievements = (allRes.status === 'fulfilled' && (allRes.value as any)?.achievements)
+        ? (allRes.value as any).achievements
+        : [];
+
+      const userAchievements = (userRes.status === 'fulfilled' && (userRes.value as any)?.user_achievements)
+        ? (userRes.value as any).user_achievements as ApiUserAchievement[]
+        : [];
+
+      if (statsRes.status === 'fulfilled' && (statsRes.value as any)?.stats) {
+        setStats((statsRes.value as any).stats);
+      }
+
+      // Build a map of user's earned achievements by achievement_id for fast lookup
+      const earnedById = new Map<string, ApiUserAchievement>();
+      userAchievements.forEach((ua) => earnedById.set(ua.achievement_id, ua));
+
+      // Merge: show all available achievements, marking unlocked ones based on user data
+      const merged: AchievementDisplayData[] = allAchievements.map((a: any) => {
+        const ua = earnedById.get(a.achievement_id);
+        const isUnlocked = Boolean(ua);
+        return {
+          id: a.achievement_id,
+          title: a.title || t('pages.achievementsPage.UnknownAchievement'),
+          description: a.description || '',
+          type: a.achievement_type || 'learning',
+          tier: a.tier || 'bronze',
+          category: a.category || 'general',
+          points: (a.points_awarded ?? (a as any).points_reward) || 0,
+          icon: a.icon_url || getTierIcon(a.tier || 'bronze'),
+          badgeColor: a.badge_color || getTierColor(a.tier || 'bronze'),
+          isUnlocked,
+          isCompleted: isUnlocked ? true : false,
+          progress: isUnlocked ? 100 : 0,
+          unlockedAt: ua?.unlocked_at,
+          nftMinted: ua?.nft_minted,
+          tags: a.tags || []
+        };
+      });
+
+      // If backend has user achievements not found in current catalog (edge case), append them
+      const knownIds = new Set(merged.map(m => m.id));
+      userAchievements.forEach((ua) => {
+        if (!knownIds.has(ua.achievement_id)) {
+          merged.push({
+            id: ua.achievement_id,
+            title: ua.achievement?.title || t('pages.achievementsPage.UnknownAchievement'),
+            description: ua.achievement?.description || '',
+            type: ua.achievement?.achievement_type || 'learning',
+            tier: ua.achievement?.tier || 'bronze',
+            category: ua.achievement?.category || 'general',
+            points: (ua.achievement?.points_awarded ?? (ua.achievement as any)?.points_reward) || 0,
+            icon: ua.achievement?.icon_url || getTierIcon(ua.achievement?.tier || 'bronze'),
+            badgeColor: ua.achievement?.badge_color || getTierColor(ua.achievement?.tier || 'bronze'),
+            isUnlocked: true,
+            isCompleted: true,
+            progress: 100,
+            unlockedAt: ua.unlocked_at,
+            nftMinted: ua.nft_minted,
+            tags: ua.achievement?.tags || []
+          });
+        }
+      });
+
+      setAchievements(merged);
+    } catch (e) {
+      console.error('Failed to load achievements:', e);
+      // fallback placeholders
+      setAchievements(getPlaceholderAchievements());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Legacy loaders retained for reference but unused after loadAll()
   const loadAchievements = async () => {
     try {
       const response = await achievementService.getAllAchievements({
@@ -69,7 +150,7 @@ const AchievementsPage: React.FC = () => {
             type: achievement.achievement_type || t('pages.achievementsPage.learning'),
             tier: achievement.tier || t('pages.achievementsPage.bronze'),
             category: achievement.category || t('pages.achievementsPage.general'),
-            points: achievement.points_reward || 0,
+            points: (achievement.points_awarded ?? (achievement as any).points_reward) || 0,
             icon: getTierIcon(achievement.tier || t('pages.achievementsPage.bronze')),
             badgeColor: getTierColor(achievement.tier || t('pages.achievementsPage.bronze')),
             isUnlocked: false, // Not earned yet
@@ -99,32 +180,43 @@ const AchievementsPage: React.FC = () => {
         limit: 100
       });
       
+      console.log('Achievements page - API response:', response);
+      
       if (response && typeof response === 'object' && response !== null && 'user_achievements' in response) {
         const userAchievements = (response as any).user_achievements as ApiUserAchievement[];
+        console.log('User achievements found:', userAchievements.length);
         setUserAchievements(userAchievements);
         
-        // Convert to display format
-        const displayData: AchievementDisplayData[] = userAchievements.map((ua: ApiUserAchievement) => ({
-          id: ua.achievement_id,
-          title: ua.achievement?.title || t('pages.achievementsPage.UnknownAchievement'),
-          description: ua.achievement?.description || '',
-          type: ua.achievement?.achievement_type || 'learning',
-          tier: ua.achievement?.tier || 'bronze',
-          category: ua.achievement?.category || 'general',
-          points: ua.achievement?.points_reward || ua.achievement?.points_awarded || 0,
-          icon: ua.achievement?.icon_url || getTierIcon(ua.achievement?.tier || 'bronze'),
-          badgeColor: ua.achievement?.badge_color || getTierColor(ua.achievement?.tier || 'bronze'),
-          isUnlocked: true, // If user has this achievement, it's unlocked
-          isCompleted: ua.is_completed || true, // All earned achievements are completed
-          progress: 100, // All earned achievements are 100% complete
-          unlockedAt: ua.unlocked_at || ua.earned_at,
-          nftMinted: ua.nft_minted,
-          tags: ua.achievement?.tags || []
-        }));
-        
-        setAchievements(displayData);
+        if (userAchievements.length > 0) {
+          // Convert to display format
+          const displayData: AchievementDisplayData[] = userAchievements.map((ua: ApiUserAchievement) => ({
+            id: ua.achievement_id,
+            title: ua.achievement?.title || t('pages.achievementsPage.UnknownAchievement'),
+            description: ua.achievement?.description || '',
+            type: ua.achievement?.achievement_type || 'learning',
+            tier: ua.achievement?.tier || 'bronze',
+            category: ua.achievement?.category || 'general',
+            points: (ua.achievement?.points_awarded ?? (ua.achievement as any)?.points_reward) || 0,
+            icon: ua.achievement?.icon_url || getTierIcon(ua.achievement?.tier || 'bronze'),
+            badgeColor: ua.achievement?.badge_color || getTierColor(ua.achievement?.tier || 'bronze'),
+            isUnlocked: true, // If user has this achievement, it's unlocked
+            isCompleted: ua.is_completed || true, // All earned achievements are completed
+            progress: 100, // All earned achievements are 100% complete
+            unlockedAt: ua.unlocked_at,
+            nftMinted: ua.nft_minted,
+            tags: ua.achievement?.tags || []
+          }));
+          
+          console.log('Display data created:', displayData.length);
+          setAchievements(displayData);
+        } else {
+          // No user achievements, show placeholder
+          console.log('No user achievements, showing placeholders');
+          setAchievements(getPlaceholderAchievements());
+        }
       } else {
         // Show placeholder achievements when no user achievements
+        console.log('No user_achievements in response, showing placeholders');
         setAchievements(getPlaceholderAchievements());
       }
     } catch (error) {

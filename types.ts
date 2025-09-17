@@ -41,6 +41,10 @@ export interface LearningCheckpoint {
   blockchainMinted?: boolean; // Whether NFT was actually minted on blockchain
   tokenId?: number; // Blockchain token ID
   contractAddress?: string; // Smart contract address
+  // Local UI/flow state for minting lifecycle
+  minting?: boolean; // true while mint in progress
+  mintFailed?: boolean; // true if last mint attempt failed
+  mintError?: string; // optional error message for last failure
 }
 
 export interface DigitalTwin {

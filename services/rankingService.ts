@@ -68,6 +68,7 @@ export interface RankingStats {
   stats: {
     total_users_with_certificates: number;
     total_users_with_achievements: number;
+    total_active_users: number;
     total_certificates_issued: number;
     total_achievements_earned: number;
     total_points_earned: number;

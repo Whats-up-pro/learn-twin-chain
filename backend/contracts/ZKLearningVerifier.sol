@@ -86,7 +86,7 @@ contract ZKLearningVerifier is Ownable, ReentrancyGuard, Pausable {
         uint256[2] memory a,
         uint256[2][2] memory b,
         uint256[2] memory c,
-        uint256[8] memory publicInputs, // moduleId, studentHash, minScore, maxTime, maxAttempts, commitmentHash, score, extraField
+        uint256[9] memory publicInputs, // moduleId, studentHash, minScore, maxTime, maxAttempts, commitmentHash, score, extraField, extra
         string memory metadataUri,
         uint256 score
     ) public whenNotPaused nonReentrant rateLimited returns (bool) {
@@ -189,7 +189,7 @@ contract ZKLearningVerifier is Ownable, ReentrancyGuard, Pausable {
         uint256[2][] memory a,
         uint256[2][2][] memory b,
         uint256[2][] memory c,
-        uint256[8][] memory publicInputs,
+        uint256[9][] memory publicInputs,
         string[] memory metadataUris,
         uint256[] memory scores
     ) public whenNotPaused nonReentrant returns (bool[] memory) {

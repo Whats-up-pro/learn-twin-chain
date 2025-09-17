@@ -237,7 +237,7 @@ const RankingPage: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-slate-600">Active Learners</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.stats.total_users_with_certificates}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.stats.total_active_users}</p>
                 </div>
               </div>
             </div>

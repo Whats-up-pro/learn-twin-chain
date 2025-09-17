@@ -246,15 +246,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           time_spent: 3600, // Default 1 hour
           attempts: 1,
           completed_at: getCurrentVietnamTimeISO(),
-          use_student_wallet: true
+          use_student_wallet: true,
+          course_id: 'default_course'  // Add course_id for ZK proof
         }
       };
 
-      // Mark checkpoint as minting
+      // Mark checkpoint as minting (and clear previous failure flags)
       updateDigitalTwinState(prevTwin => ({
         ...prevTwin,
         checkpoints: prevTwin.checkpoints.map(cp => 
-          cp.moduleId === moduleId ? { ...cp, minting: true } : cp
+          cp.moduleId === moduleId ? { ...cp, minting: true, mintFailed: false, mintError: undefined } : cp
         )
       }));
 
@@ -276,11 +277,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             } : cp
           )
         }));
+        
+        // Automatically notify MetaMask and detect NFTs
+        try {
+          const { blockchainService } = await import('../services/blockchainService');
+          await blockchainService.notifyMetaMaskAboutNFT(
+            result.contract_address || '0x9173e7Ce6E2724a3c45a9a91971B2041cF0C7197',
+            result.nft_token_id || result.tokenId,
+            result.metadata
+          );
+          
+          // Auto-detect NFTs in wallet
+          setTimeout(async () => {
+            await blockchainService.detectAndRefreshNFTs(studentAddress);
+          }, 2000);
+        } catch (notificationError) {
+          console.warn('Failed to notify MetaMask:', notificationError);
+        }
+        
         toast.success(`NFT minted for "${moduleName}"!`);
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error minting NFT:', error);
-      toast.error(`Failed to mint NFT: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to mint NFT: ${message}`);
+      // Reflect failure state in checkpoint
+      updateDigitalTwinState(prevTwin => ({
+        ...prevTwin,
+        checkpoints: prevTwin.checkpoints.map(cp => 
+          cp.moduleId === moduleId ? { ...cp, minting: false, mintFailed: true, mintError: message } : cp
+        )
+      }));
     }
   }, [nfts, updateDigitalTwinState, digitalTwin.learnerDid]);
 

@@ -5,8 +5,12 @@ import { quizService } from '../services/quizService';
 import { videoSettingsService, VideoSession } from '../services/videoSettingsService';
 import { discussionService } from '../services/discussionService';
 import DiscussionPanel from '../components/DiscussionPanel';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import VideoSettingsPanel from '../components/VideoSettingsPanel';
 import CourseCompletionPopup from '../components/CourseCompletionPopup';
+import AchievementUnlockedPopup from '../components/AchievementUnlockedPopup';
 import NFTMintingTicketPopup from '../components/NFTMintingTicketPopup';
 import { ApiCourse, ApiModule } from '../types';
 import VideoPlayer from '../components/VideoPlayer';
@@ -118,6 +122,28 @@ const CourseLearnPage: React.FC = () => {
     tokenId?: string;
     transactionHash?: string;
   } | null>(null);
+  const [showAchievementPopup, setShowAchievementPopup] = useState(false);
+  const [achievementPopupTitle, setAchievementPopupTitle] = useState<string>('');
+  const [achievementPopupDesc, setAchievementPopupDesc] = useState<string>('');
+
+  // Listen for achievement unlocked events to show popup while learning
+  useEffect(() => {
+    const onAchievementUnlocked = (event: any) => {
+      try {
+        const { title, description } = (event && event.detail) || {};
+        if (title) {
+          setAchievementPopupTitle(title);
+          setAchievementPopupDesc(description || '');
+          setShowAchievementPopup(true);
+        }
+      } catch {}
+    };
+
+    window.addEventListener('achievementUnlocked', onAchievementUnlocked as EventListener);
+    return () => {
+      window.removeEventListener('achievementUnlocked', onAchievementUnlocked as EventListener);
+    };
+  }, []);
 
   // Load course data from API
   useEffect(() => {
@@ -675,26 +701,24 @@ const CourseLearnPage: React.FC = () => {
           icon: '🎯'
         });
         
-        // Check for NFT earning for excellent quiz performance
-        if (score >= 90) {
-          addNotification({
-            type: 'achievement',
-            title: '🏆 Excellent Score!',
-            message: `Outstanding performance! You scored ${score.toFixed(1)}% on "${currentQuiz.title}"`,
-            icon: '🏆'
-          });
-
-          // Check if this is the last quiz in the module and module is now complete
+        // Regardless of score, if module is now fully completed (lessons + quizzes), mint NFT
           if (currentModule) {
             const moduleHasQuizzes = currentModule.quizzes && currentModule.quizzes.length > 0;
-            const allQuizzesCompleted = moduleHasQuizzes ? 
-              currentModule.quizzes!.every(quiz => completedQuizzes.has(quiz.quiz_id)) : true;
-            const allLessonsCompleted = currentModule.lessons.every(lesson => lesson.completed);
+          // Include the current quiz as completed in this check to avoid state race conditions
+          const allQuizzesCompletedNow = moduleHasQuizzes ? 
+            currentModule.quizzes!.every(quiz => 
+              quiz.quiz_id === currentQuiz.quiz_id || completedQuizzes.has(quiz.quiz_id)
+            ) : true;
+          const allLessonsCompletedNow = currentModule.lessons.every(lesson => lesson.completed);
 
-            // If module is now fully completed (lessons + quizzes), mint NFT
-            if (allLessonsCompleted && allQuizzesCompleted) {
+          if (allLessonsCompletedNow && allQuizzesCompletedNow) {
+            try {
+              // Inform backend and dispatch global moduleCompleted/achievement events
               try {
-                // Show NFT minting ticket popup
+                await achievementService.reportModuleProgress(currentModule.id, 100, currentModule.title);
+              } catch (e) { console.warn('reportModuleProgress on final quiz failed:', e); }
+
+              // Show NFT minting ticket popup immediately
                 setNftMintingData({
                   moduleTitle: currentModule.title,
                   courseTitle: course?.title || 'Course',
@@ -702,7 +726,7 @@ const CourseLearnPage: React.FC = () => {
                 });
                 setShowNFTMintingPopup(true);
 
-                // Show NFT minting notification
+              // Header notification for NFT
                 addNotification({
                   type: 'achievement',
                   title: '🎫 NFT Ticket Generated!',
@@ -710,8 +734,44 @@ const CourseLearnPage: React.FC = () => {
                   icon: '🎫'
                 });
 
-                // Start NFT minting process
-                await mintNftForModule(currentModule.id, currentModule.title, score);
+              // Ensure wallet is connected before mint; attempt to connect if needed
+              try {
+                const { blockchainService } = await import('../services/blockchainService');
+                const connected = await blockchainService.checkWalletConnection();
+                if (!connected) {
+                  await blockchainService.connectWallet();
+                }
+
+                // 1) Create learning session via MetaMask (student wallet)
+                const studentAddress = await blockchainService.getStudentAddress();
+                if (!studentAddress) throw new Error('No wallet connected');
+
+                // Compute a learning data hash (bytes32 hex) using Web Crypto
+                const computeHashHex = async (input: string) => {
+                  const enc = new TextEncoder().encode(input);
+                  const buf = await crypto.subtle.digest('SHA-256', enc);
+                  const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                  return '0x' + hex;
+                };
+                const learningDataHashHex = await computeHashHex(`${currentModule.id}:${currentQuiz.quiz_id}:${Date.now()}`);
+
+                // Single-popup combined mint
+                await blockchainService.mintModuleCombinedViaWallet({
+                  student_address: studentAddress,
+                  module_id: currentModule.id,
+                  learning_data_hash_hex: learningDataHashHex,
+                  completion_data: {
+                    score: Math.round(score),
+                    time_spent: 1800,
+                    attempts: 1,
+                    use_student_wallet: true,
+                    course_id: course?.id || 'default_course'  // Add course_id for ZK proof
+                  }
+                });
+              } catch (walletFlowError) {
+                console.error('MetaMask module mint flow failed:', walletFlowError);
+                throw walletFlowError;
+              }
                 
                 // Update popup with success status
                 setNftMintingData(prev => prev ? {
@@ -721,7 +781,7 @@ const CourseLearnPage: React.FC = () => {
                   transactionHash: `tx_${currentModule.id}_${Date.now()}`
                 } : null);
                 
-                // Show success notification after minting
+              // Follow-up success notification
                 setTimeout(() => {
                   addNotification({
                     type: 'achievement',
@@ -733,20 +793,13 @@ const CourseLearnPage: React.FC = () => {
 
               } catch (error) {
                 console.error('Failed to mint NFT for module:', error);
-                
-                // Update popup with failed status
-                setNftMintingData(prev => prev ? {
-                  ...prev,
-                  status: 'failed'
-                } : null);
-                
+              setNftMintingData(prev => prev ? { ...prev, status: 'failed' } : null);
                 addNotification({
                   type: 'achievement',
                   title: '⚠️ NFT Minting Failed',
                   message: `Failed to mint NFT for "${currentModule.title}". Please try again later.`,
                   icon: '⚠️'
                 });
-              }
             }
           }
         }
@@ -964,6 +1017,13 @@ const CourseLearnPage: React.FC = () => {
           message: `Great job! You've completed the module "${module.title}"`,
           icon: '📚'
         });
+
+        // Inform backend + dispatch global events for achievements/module completion
+        try {
+          await achievementService.reportModuleProgress(module.id, 100, module.title);
+        } catch (e) {
+          console.warn('reportModuleProgress failed:', e);
+        }
 
         // Check if module has quizzes and if they're all completed
         const moduleHasQuizzes = module.quizzes && module.quizzes.length > 0;
@@ -1612,44 +1672,83 @@ const CourseLearnPage: React.FC = () => {
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">
                           {t('pages.courseLearnPage.questionOF', { count: index + 1, value: quizQuestions.length })}
                         </h3>
-                        <p className="text-gray-700 leading-relaxed">
-                          {question.question_text}
-                        </p>
+                        <div className="text-gray-700 leading-relaxed prose max-w-none">
+                          <ReactMarkdown
+                            components={{
+                              code({ className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || '');
+                                return match ? (
+                                  <SyntaxHighlighter style={oneDark as any} language={match[1]} PreTag="div" {...props}>
+                                    {String(children).replace(/\n$/, '')}
+                                  </SyntaxHighlighter>
+                                ) : (
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              }
+                            }}
+                          >
+                            {question.question_text}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                       
                       <div className="space-y-3">
-                        {question.options.map((option: string, optionIndex: number) => (
-                          <label
-                            key={optionIndex}
-                            className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                              quizAnswers[question.question_id] === option
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name={question.question_id}
-                              value={option}
-                              checked={quizAnswers[question.question_id] === option}
-                              onChange={(e) => setQuizAnswers(prev => ({
-                                ...prev,
-                                [question.question_id]: e.target.value
-                              }))}
-                              className="sr-only"
-                            />
-                            <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center ${
-                              quizAnswers[question.question_id] === option
-                                ? 'border-blue-500 bg-blue-500'
-                                : 'border-gray-300'
-                            }`}>
-                              {quizAnswers[question.question_id] === option && (
-                                <div className="w-2 h-2 rounded-full bg-white"></div>
-                              )}
-                            </div>
-                            <span className="text-gray-700">{option}</span>
-                          </label>
-                        ))}
+                        {question.options.map((option: string, optionIndex: number) => {
+                          const optionLetter = String.fromCharCode(65 + optionIndex); // A, B, C, D...
+                          const isSelected = quizAnswers[question.question_id] === option;
+                          
+                          return (
+                            <label
+                              key={optionIndex}
+                              className={`flex items-start p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${
+                                isSelected
+                                  ? 'border-blue-500 bg-blue-50 shadow-md transform scale-[1.02]'
+                                  : 'border-gray-200 hover:border-blue-300 hover:bg-blue-25'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={question.question_id}
+                                value={option}
+                                checked={isSelected}
+                                onChange={(e) => setQuizAnswers(prev => ({
+                                  ...prev,
+                                  [question.question_id]: e.target.value
+                                }))}
+                                className="sr-only"
+                              />
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-4 transition-colors ${
+                                isSelected
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-100 text-gray-600 group-hover:bg-blue-100'
+                              }`}>
+                                {optionLetter}
+                              </div>
+                              <div className="flex-1 text-gray-700 prose max-w-none">
+                                <ReactMarkdown
+                                  components={{
+                                    code({ className, children, ...props }: any) {
+                                      const match = /language-(\w+)/.exec(className || '');
+                                      return match ? (
+                                        <SyntaxHighlighter style={oneDark as any} language={match[1]} PreTag="div" {...props}>
+                                          {String(children).replace(/\n$/, '')}
+                                        </SyntaxHighlighter>
+                                      ) : (
+                                        <code className={className} {...props}>
+                                          {children}
+                                        </code>
+                                      );
+                                    }
+                                  }}
+                                >
+                                  {option}
+                                </ReactMarkdown>
+                              </div>
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -1711,7 +1810,26 @@ const CourseLearnPage: React.FC = () => {
                             {result.isCorrect ? '✓ ' + t('pages.courseLearnPage.correct') : '✗ ' + t('pages.courseLearnPage.incorrect')}
                           </span>
                         </div>
-                        <p className="text-gray-700 mb-2">{result.question.question_text}</p>
+                        <div className="text-gray-700 mb-2 prose max-w-none">
+                          <ReactMarkdown
+                            components={{
+                              code({ className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || '');
+                                return match ? (
+                                  <SyntaxHighlighter style={oneDark as any} language={match[1]} PreTag="div" {...props}>
+                                    {String(children).replace(/\n$/, '')}
+                                  </SyntaxHighlighter>
+                                ) : (
+                                  <code className={className} {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              }
+                            }}
+                          >
+                            {result.question.question_text}
+                          </ReactMarkdown>
+                        </div>
                         <div className="text-sm">
                           <p className="text-gray-600">
                             <span className="font-medium">{t('pages.courseLearnPage.yourAnswer')}</span> {result.userAnswer || t('pages.courseLearnPage.noAnswer')}
@@ -1785,6 +1903,18 @@ const CourseLearnPage: React.FC = () => {
         onContinueLearning={() => {
           setShowCourseCompletionPopup(false);
           navigate('/dashboard');
+        }}
+      />
+
+      {/* Achievement Unlocked Popup */}
+      <AchievementUnlockedPopup
+        isOpen={showAchievementPopup}
+        onClose={() => setShowAchievementPopup(false)}
+        title={achievementPopupTitle}
+        description={achievementPopupDesc}
+        onViewAchievements={() => {
+          setShowAchievementPopup(false);
+          navigate('/achievements');
         }}
       />
 
