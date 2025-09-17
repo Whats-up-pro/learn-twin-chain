@@ -1306,23 +1306,8 @@ const NftLists: React.FC<{ active: 'owned'|'minting'|'all'; onVerify: (nft: Nft)
   const { digitalTwin, nfts } = useAppContext();
   const safeDigitalTwin = digitalTwin || { checkpoints: [], knowledge: {}, skills: { problemSolving: 0, logicalThinking: 0, selfLearning: 0 } };
   const safeNfts = nfts || [];
-  const checkpoints = (safeDigitalTwin.checkpoints || []);
-
-  // Convert checkpoints to NFT-like items for display (module progress)
-  const checkpointNfts: (Nft & { minting?: boolean })[] = checkpoints
-    .filter((cp: any) => (active === 'minting' ? (cp.minting && !cp.tokenized) : true))
-    .filter((cp: any) => (active === 'owned' ? cp.tokenized : true))
-    .map((checkpoint: any) => ({
-      id: checkpoint.nftId || `nft-${checkpoint.moduleId}`,
-      name: `${checkpoint.moduleName || checkpoint.module} Completion`,
-      description: `Certificate for completing ${checkpoint.moduleName || checkpoint.module}`,
-      imageUrl: `https://via.placeholder.com/300x200/0ea5e9/ffffff?text=${encodeURIComponent(checkpoint.moduleName || checkpoint.module)}`,
-      moduleId: checkpoint.moduleId,
-      issuedDate: checkpoint.completedAt,
-      cid: checkpoint.nftCid,
-      nftType: 'module_progress' as const,
-      minting: Boolean(checkpoint.minting)
-    }));
+  // Remove placeholder checkpoint NFTs; rely on real NFTs from context
+  const checkpointNfts: (Nft & { minting?: boolean })[] = [];
 
   // Include NFTs from state (module progress minted or learning achievements)
   const ownedStateNfts: Nft[] = safeNfts.map((n) => ({
@@ -1332,9 +1317,8 @@ const NftLists: React.FC<{ active: 'owned'|'minting'|'all'; onVerify: (nft: Nft)
 
   // Filter by active tab
   const displayNfts: (Nft & { minting?: boolean })[] = [
-    ...checkpointNfts,
     ...(active === 'minting' ? [] : ownedStateNfts)
-  ].filter(n => active === 'all' ? true : active === 'minting' ? n.minting : !n.minting);
+  ].filter(n => active === 'all' ? true : active === 'minting' ? (n as any).minting : !(n as any).minting);
 
   if (displayNfts.length === 0) {
     return (

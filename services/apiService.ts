@@ -295,6 +295,27 @@ export class ApiService {
     });
   }
 
+  async getMyBlockchainData() {
+    // Get current user's blockchain data
+    const userProfile = JSON.parse(localStorage.getItem('learnerProfile') || '{}');
+    if (!userProfile.did) {
+      throw new Error('User not logged in');
+    }
+    
+    // For now, return empty data structure
+    // This would typically call the blockchain API with user's wallet address
+    return {
+      success: true,
+      student_address: userProfile.wallet_address || '',
+      student_did: userProfile.did,
+      module_completions: [],
+      total_achievements: 0,
+      skills_verified: [],
+      certificates: [],
+      message: 'Blockchain data not available'
+    };
+  }
+
   // Digital Twin API
   async getStudents() {
     return this.makeRequest('/learning/students');

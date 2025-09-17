@@ -559,6 +559,67 @@ class CourseService:
                     if module_progresses:
                         total_score = sum(mp.best_score for mp in module_progresses)
                         enrollment.final_grade = total_score / len(module_progresses)
+
+                    # Mint course completion ZKP certificate (ERC-721) if wallet linked
+                    try:
+                        from ..models.wallet import WalletLink
+                        from .blockchain_service import BlockchainService
+                        from ..models.user import User
+                        from ..models.course import Course
+
+                        # Fetch primary wallet
+                        wallet_link = await WalletLink.find_one({
+                            "user_did": user_id,
+                            "is_primary": True
+                        })
+                        if wallet_link:
+                            student_address = wallet_link.wallet_address
+                            # Resolve user name and course title
+                            user_obj = await User.find_one({"did": user_id})
+                            course_obj = await Course.find_one({"course_id": course_id})
+                            student_name = (user_obj.full_name if user_obj and getattr(user_obj, 'full_name', None) else user_id)
+                            course_title = (course_obj.title if course_obj else course_id)
+
+                            blockchain = BlockchainService()
+                            if blockchain.is_available():
+                                result = blockchain.mint_course_completion_certificate(
+                                    student_address=student_address,
+                                    student_did=user_id,
+                                    course_name=course_title,
+                                    course_data={
+                                        'student_name': student_name,
+                                        'average_score': int(enrollment.final_grade or 0),
+                                        'total_modules': total_modules,
+                                        'completed_at': int(enrollment.completed_at.timestamp()),
+                                        'issuer': 'LearnTwinChain'
+                                    }
+                                )
+                                if result.get('success'):
+                                    logger.info(f"Course completion certificate minted successfully for {user_id}:{course_id}")
+                                    # Update enrollment with certificate info
+                                    enrollment.certificate_issued = True
+                                    enrollment.certificate_nft_token_id = result.get('token_id')
+                                    
+                                    # Send notification to user about certificate
+                                    try:
+                                        from .notification_service import NotificationService
+                                        notification_service = NotificationService()
+                                        await notification_service.send_course_completion_notification(
+                                            user_id=user_id,
+                                            course_title=course_title,
+                                            certificate_title=f"Course Completion: {course_title}",
+                                            certificate_type="course_completion"
+                                        )
+                                    except Exception as notif_err:
+                                        logger.warning(f"Failed to send course completion notification: {notif_err}")
+                                else:
+                                    logger.warning(f"Course certificate mint failed for {user_id}:{course_id}: {result.get('error')}")
+                            else:
+                                logger.info("Blockchain service not available, skipping course certificate mint")
+                        else:
+                            logger.info(f"No primary wallet linked for user {user_id}, skipping certificate mint")
+                    except Exception as mint_err:
+                        logger.error(f"Error minting course completion certificate: {mint_err}")
             
             await enrollment.save()
             

@@ -337,3 +337,263 @@ class EmailService:
         except Exception as e:
             logger.error(f"Failed to send notification email to {email}: {e}")
             raise
+    
+    async def send_course_completion_email(self, to_email: str, user_name: str, course_title: str, certificate_title: str):
+        """Send course completion notification email"""
+        if not self.fastmail:
+            logger.warning("Email service not configured - course completion email not sent")
+            return
+            
+        try:
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Course Completed - LearnTwinChain</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; text-align: center; }}
+                    .content {{ padding: 20px; background: #f9f9f9; }}
+                    .certificate {{ background: white; padding: 20px; margin: 20px 0; border-radius: 10px; border: 2px solid #10b981; text-align: center; }}
+                    .button {{ display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                    .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🎉 Course Completed!</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hello {user_name},</p>
+                        <p>Congratulations! You have successfully completed the course:</p>
+                        <h2 style="color: #10b981;">{course_title}</h2>
+                        
+                        <div class="certificate">
+                            <h3>🏆 Certificate Earned</h3>
+                            <p><strong>{certificate_title}</strong></p>
+                            <p>Your certificate has been minted as an NFT and is now part of your digital learning portfolio!</p>
+                        </div>
+                        
+                        <p>You can view and share your certificate in your dashboard.</p>
+                        
+                        <p style="text-align: center;">
+                            <a href="{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/certificates" class="button">View Certificates</a>
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>&copy; 2024 LearnTwinChain. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            message = MessageSchema(
+                subject=f"Course Completed: {course_title} - LearnTwinChain",
+                recipients=[to_email],
+                body=html_content,
+                subtype=MessageType.html
+            )
+            
+            await self.fastmail.send_message(message)
+            logger.info(f"Course completion email sent to: {to_email}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send course completion email to {to_email}: {e}")
+            raise
+    
+    async def send_achievement_email(self, to_email: str, user_name: str, achievement_title: str, points_earned: int = 0):
+        """Send achievement notification email"""
+        if not self.fastmail:
+            logger.warning("Email service not configured - achievement email not sent")
+            return
+            
+        try:
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Achievement Unlocked - LearnTwinChain</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; text-align: center; }}
+                    .content {{ padding: 20px; background: #f9f9f9; }}
+                    .achievement {{ background: white; padding: 20px; margin: 20px 0; border-radius: 10px; border: 2px solid #f59e0b; text-align: center; }}
+                    .button {{ display: inline-block; background: #f59e0b; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                    .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🏆 Achievement Unlocked!</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hello {user_name},</p>
+                        <p>Great job! You've earned a new achievement:</p>
+                        
+                        <div class="achievement">
+                            <h3>🎖️ {achievement_title}</h3>
+                            {f'<p><strong>Points Earned: {points_earned}</strong></p>' if points_earned > 0 else ''}
+                            <p>Keep up the excellent work!</p>
+                        </div>
+                        
+                        <p style="text-align: center;">
+                            <a href="{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/achievements" class="button">View Achievements</a>
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>&copy; 2024 LearnTwinChain. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            message = MessageSchema(
+                subject=f"Achievement Unlocked: {achievement_title} - LearnTwinChain",
+                recipients=[to_email],
+                body=html_content,
+                subtype=MessageType.html
+            )
+            
+            await self.fastmail.send_message(message)
+            logger.info(f"Achievement email sent to: {to_email}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send achievement email to {to_email}: {e}")
+            raise
+    
+    async def send_certificate_email(self, to_email: str, user_name: str, certificate_title: str, certificate_type: str, issuer: str = "LearnTwinChain"):
+        """Send certificate notification email"""
+        if not self.fastmail:
+            logger.warning("Email service not configured - certificate email not sent")
+            return
+            
+        try:
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Certificate Earned - LearnTwinChain</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 20px; text-align: center; }}
+                    .content {{ padding: 20px; background: #f9f9f9; }}
+                    .certificate {{ background: white; padding: 20px; margin: 20px 0; border-radius: 10px; border: 2px solid #3b82f6; text-align: center; }}
+                    .button {{ display: inline-block; background: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                    .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>📜 Certificate Earned!</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hello {user_name},</p>
+                        <p>Congratulations! You have earned a new certificate:</p>
+                        
+                        <div class="certificate">
+                            <h3>🎓 {certificate_title}</h3>
+                            <p><strong>Type:</strong> {certificate_type.replace('_', ' ').title()}</p>
+                            <p><strong>Issuer:</strong> {issuer}</p>
+                            <p>Your certificate has been securely stored on the blockchain!</p>
+                        </div>
+                        
+                        <p style="text-align: center;">
+                            <a href="{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/certificates" class="button">View Certificates</a>
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>&copy; 2024 LearnTwinChain. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            message = MessageSchema(
+                subject=f"Certificate Earned: {certificate_title} - LearnTwinChain",
+                recipients=[to_email],
+                body=html_content,
+                subtype=MessageType.html
+            )
+            
+            await self.fastmail.send_message(message)
+            logger.info(f"Certificate email sent to: {to_email}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send certificate email to {to_email}: {e}")
+            raise
+    
+    async def send_milestone_email(self, to_email: str, user_name: str, milestone_title: str, milestone_description: str):
+        """Send milestone notification email"""
+        if not self.fastmail:
+            logger.warning("Email service not configured - milestone email not sent")
+            return
+            
+        try:
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>Learning Milestone - LearnTwinChain</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 20px; text-align: center; }}
+                    .content {{ padding: 20px; background: #f9f9f9; }}
+                    .milestone {{ background: white; padding: 20px; margin: 20px 0; border-radius: 10px; border: 2px solid #8b5cf6; text-align: center; }}
+                    .button {{ display: inline-block; background: #8b5cf6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                    .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>🎯 Milestone Reached!</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hello {user_name},</p>
+                        <p>Amazing progress! You've reached a learning milestone:</p>
+                        
+                        <div class="milestone">
+                            <h3>🌟 {milestone_title}</h3>
+                            <p>{milestone_description}</p>
+                            <p>Keep up the fantastic work!</p>
+                        </div>
+                        
+                        <p style="text-align: center;">
+                            <a href="{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/dashboard" class="button">View Progress</a>
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>&copy; 2024 LearnTwinChain. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            message = MessageSchema(
+                subject=f"Milestone Reached: {milestone_title} - LearnTwinChain",
+                recipients=[to_email],
+                body=html_content,
+                subtype=MessageType.html
+            )
+            
+            await self.fastmail.send_message(message)
+            logger.info(f"Milestone email sent to: {to_email}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send milestone email to {to_email}: {e}")
+            raise

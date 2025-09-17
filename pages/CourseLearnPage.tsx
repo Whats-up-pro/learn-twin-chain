@@ -6,9 +6,15 @@ import { videoSettingsService, VideoSession } from '../services/videoSettingsSer
 import { discussionService } from '../services/discussionService';
 import DiscussionPanel from '../components/DiscussionPanel';
 import VideoSettingsPanel from '../components/VideoSettingsPanel';
+import CourseCompletionPopup from '../components/CourseCompletionPopup';
+import NFTMintingTicketPopup from '../components/NFTMintingTicketPopup';
 import { ApiCourse, ApiModule } from '../types';
 import VideoPlayer from '../components/VideoPlayer';
 import { apiService } from '../services/apiService';
+import { achievementService } from '../services/achievementService';
+import { notificationService } from '../services/notificationService';
+import { useNotifications } from '../contexts/NotificationContext';
+import { useAppContext } from '../contexts/AppContext';
 import { 
   PlayIcon, 
   ClockIcon,
@@ -70,13 +76,15 @@ const CourseLearnPage: React.FC = () => {
   const { t } = useTranslation();
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
+  const { addNotification } = useNotifications();
+  const { mintNftForModule } = useAppContext();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [, setIsPlaying] = useState(false);
   // Removed legacy YouTube player state
   const [isCompletingLesson, setIsCompletingLesson] = useState(false);
   const [completedQuizzes, setCompletedQuizzes] = useState<Set<string>>(new Set());
@@ -101,6 +109,15 @@ const CourseLearnPage: React.FC = () => {
   const [streamingUrl, setStreamingUrl] = useState<string>('');
   const [qualities, setQualities] = useState<any[]>([]);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>(undefined);
+  const [showCourseCompletionPopup, setShowCourseCompletionPopup] = useState(false);
+  const [showNFTMintingPopup, setShowNFTMintingPopup] = useState(false);
+  const [nftMintingData, setNftMintingData] = useState<{
+    moduleTitle: string;
+    courseTitle: string;
+    status: 'minting' | 'minted' | 'failed';
+    tokenId?: string;
+    transactionHash?: string;
+  } | null>(null);
 
   // Load course data from API
   useEffect(() => {
@@ -190,6 +207,7 @@ const CourseLearnPage: React.FC = () => {
                   } catch (error) {
                     console.error(`❌${t('pages.courseLearnPage.failToLoadQuizzes')} ${apiModule.module_id}:`, error);
                   }
+                  
                   
                   // Calculate module progress based on completed lessons
                   const completedCount = lessons.filter(l => l.completed).length;
@@ -462,19 +480,58 @@ const CourseLearnPage: React.FC = () => {
     try {
       const completedQuizIds = new Set<string>();
       
+      // First try to load from localStorage as fallback
+      try {
+        const storedQuizzes = localStorage.getItem(`completed_quizzes_${courseData.id}`);
+        if (storedQuizzes) {
+          const storedIds = JSON.parse(storedQuizzes);
+          storedIds.forEach((id: string) => completedQuizIds.add(id));
+          console.log('Loaded completed quizzes from localStorage:', storedIds);
+        }
+      } catch (error) {
+        console.warn('Failed to load from localStorage:', error);
+      }
+      
       // Get all quiz attempts for this user
       const attemptsResponse = await quizService.getQuizAttempts(courseData.id) as any;
+      console.log('Quiz attempts response:', attemptsResponse);
+      
       if (attemptsResponse && attemptsResponse.attempts) {
         attemptsResponse.attempts.forEach((attempt: any) => {
-          if (attempt.passed && attempt.status === 'submitted') {
+          console.log('Quiz attempt:', attempt);
+          // Check multiple conditions for completion
+          const isCompleted = (
+            (attempt.passed === true) ||
+            (attempt.status === 'completed') ||
+            (attempt.status === 'submitted' && attempt.percentage >= 70) ||
+            (attempt.score >= 70) // Assuming 70% is passing
+          );
+          
+          if (isCompleted) {
             completedQuizIds.add(attempt.quiz_id);
+            console.log(`Quiz ${attempt.quiz_id} marked as completed`);
           }
         });
       }
       
+      console.log('Completed quiz IDs:', Array.from(completedQuizIds));
       setCompletedQuizzes(completedQuizIds);
+      
+      // Also save to localStorage as backup
+      localStorage.setItem(`completed_quizzes_${courseData.id}`, JSON.stringify(Array.from(completedQuizIds)));
     } catch (error) {
-      console.warn(`${t('pages.courseLearnPage.failToLoadQuizStatus')}`, error);
+      console.warn('Failed to load quiz completion status:', error);
+      // Fallback to localStorage only
+      try {
+        const storedQuizzes = localStorage.getItem(`completed_quizzes_${courseData.id}`);
+        if (storedQuizzes) {
+          const storedIds = JSON.parse(storedQuizzes);
+          setCompletedQuizzes(new Set(storedIds));
+          console.log('Using localStorage fallback for completed quizzes:', storedIds);
+        }
+      } catch (fallbackError) {
+        console.warn('Failed to load from localStorage fallback:', fallbackError);
+      }
     }
   };
 
@@ -574,9 +631,169 @@ const CourseLearnPage: React.FC = () => {
       setQuizScore(score);
       setQuizResults({ results, passed, correctAnswers, totalQuestions: quizQuestions.length });
       
+      // Submit quiz attempt to backend
+      try {
+        // First start a quiz attempt
+        const startResponse = await quizService.startQuizAttempt(currentQuiz.quiz_id);
+        console.log('Quiz attempt started:', startResponse);
+        
+        // Then submit the attempt with answers
+        const attemptId = startResponse.attempt_id || `attempt_${Date.now()}`;
+        const submitResponse = await quizService.submitQuizAttempt(attemptId, quizAnswers);
+        console.log('Quiz attempt submitted:', submitResponse);
+        
+        // Update module progress with quiz score
+        if (currentModule && passed) {
+          await courseService.updateModuleProgress(currentModule.id, {
+            assessment_score: score,
+            assessment_id: currentQuiz.quiz_id
+          });
+        }
+        
+      } catch (apiError) {
+        console.warn('Failed to submit quiz to backend:', apiError);
+        // Continue with local logic even if backend fails
+      }
+      
       // Mark quiz as completed if passed
       if (passed) {
-        setCompletedQuizzes(prev => new Set([...prev, currentQuiz.quiz_id]));
+        setCompletedQuizzes(prev => {
+          const newSet = new Set([...prev, currentQuiz.quiz_id]);
+          // Also save to localStorage immediately
+          if (course) {
+            localStorage.setItem(`completed_quizzes_${course.id}`, JSON.stringify(Array.from(newSet)));
+          }
+          return newSet;
+        });
+        
+        // Show achievement notifications
+        notificationService.showQuizCompletionNotification(currentQuiz.title, score);
+        addNotification({
+          type: 'achievement',
+          title: '🎯 Quiz Completed!',
+          message: `Great job! You passed "${currentQuiz.title}" with ${score.toFixed(1)}%`,
+          icon: '🎯'
+        });
+        
+        // Check for NFT earning for excellent quiz performance
+        if (score >= 90) {
+          addNotification({
+            type: 'achievement',
+            title: '🏆 Excellent Score!',
+            message: `Outstanding performance! You scored ${score.toFixed(1)}% on "${currentQuiz.title}"`,
+            icon: '🏆'
+          });
+
+          // Check if this is the last quiz in the module and module is now complete
+          if (currentModule) {
+            const moduleHasQuizzes = currentModule.quizzes && currentModule.quizzes.length > 0;
+            const allQuizzesCompleted = moduleHasQuizzes ? 
+              currentModule.quizzes!.every(quiz => completedQuizzes.has(quiz.quiz_id)) : true;
+            const allLessonsCompleted = currentModule.lessons.every(lesson => lesson.completed);
+
+            // If module is now fully completed (lessons + quizzes), mint NFT
+            if (allLessonsCompleted && allQuizzesCompleted) {
+              try {
+                // Show NFT minting ticket popup
+                setNftMintingData({
+                  moduleTitle: currentModule.title,
+                  courseTitle: course?.title || 'Course',
+                  status: 'minting'
+                });
+                setShowNFTMintingPopup(true);
+
+                // Show NFT minting notification
+                addNotification({
+                  type: 'achievement',
+                  title: '🎫 NFT Ticket Generated!',
+                  message: `Congratulations! You've earned an NFT for completing "${currentModule.title}"`,
+                  icon: '🎫'
+                });
+
+                // Start NFT minting process
+                await mintNftForModule(currentModule.id, currentModule.title, score);
+                
+                // Update popup with success status
+                setNftMintingData(prev => prev ? {
+                  ...prev,
+                  status: 'minted',
+                  tokenId: `token_${currentModule.id}`,
+                  transactionHash: `tx_${currentModule.id}_${Date.now()}`
+                } : null);
+                
+                // Show success notification after minting
+                setTimeout(() => {
+                  addNotification({
+                    type: 'achievement',
+                    title: '🎉 NFT Minted Successfully!',
+                    message: `Your module completion NFT for "${currentModule.title}" has been minted!`,
+                    icon: '🎉'
+                  });
+                }, 1000);
+
+              } catch (error) {
+                console.error('Failed to mint NFT for module:', error);
+                
+                // Update popup with failed status
+                setNftMintingData(prev => prev ? {
+                  ...prev,
+                  status: 'failed'
+                } : null);
+                
+                addNotification({
+                  type: 'achievement',
+                  title: '⚠️ NFT Minting Failed',
+                  message: `Failed to mint NFT for "${currentModule.title}". Please try again later.`,
+                  icon: '⚠️'
+                });
+              }
+            }
+          }
+        }
+        
+        // Check for recent achievements
+        try {
+          const response = await achievementService.getRecentAchievements(1);
+          if (response && (response as any).recent_achievements) {
+            (response as any).recent_achievements.forEach((achievement: any) => {
+              notificationService.showAchievementNotification(achievement.title);
+              addNotification({
+                type: 'achievement',
+                title: `🏆 Achievement Unlocked!`,
+                message: achievement.description || `You've earned: ${achievement.title}`,
+                icon: '🏆'
+              });
+            });
+          }
+        } catch (error) {
+          console.warn('Failed to check for new achievements:', error);
+        }
+        
+        // Refresh quiz completion status to ensure UI is updated
+        if (course) {
+          await loadQuizCompletionStatus(course);
+          
+          // Check if course is now completed after quiz completion
+          const isCourseCompleted = await checkCourseCompletion(course);
+          if (isCourseCompleted) {
+            // Course completed! Show certificate notification
+            setTimeout(() => {
+              notificationService.showCourseCompletionNotification(course.title);
+              addNotification({
+                type: 'achievement',
+                title: '🎓 Course Completed!',
+                message: `Congratulations! You've completed "${course.title}" and earned a certificate!`,
+                icon: '🎓'
+              });
+              toast.success(`🎉 Congratulations! You've completed "${course.title}" and earned a certificate!`, {
+                duration: 6000,
+              });
+              
+              // Show completion popup
+              setShowCourseCompletionPopup(true);
+            }, 1500);
+          }
+        }
       }
       
       // Show result message
@@ -701,10 +918,148 @@ const CourseLearnPage: React.FC = () => {
         total_lessons: courseData.modules.reduce((acc, m) => acc + m.lessons.length, 0),
         last_updated: new Date().toISOString()
       });
-      console.log(`✅ ${t('pages.courseLearnPage.syncCourseProgress', {
-        progress: courseData.progress.toFixed(1),
-        title: courseData.title
-      })}`);
+      console.log(`✅ Synced course progress: ${courseData.progress.toFixed(1)}% for "${courseData.title}"`);
+    } catch (error) {
+      console.warn('Failed to sync course progress to dashboard:', error);
+    }
+  };
+
+  const checkCourseCompletion = async (courseData: Course): Promise<boolean> => {
+    try {
+      // Check if all lessons are completed
+      const allLessonsCompleted = courseData.modules.every(module => 
+        module.lessons.every(lesson => lesson.completed)
+      );
+      
+      if (!allLessonsCompleted) {
+        return false;
+      }
+      
+      // Check if all quizzes are completed
+      const allQuizzesCompleted = courseData.modules.every(module => {
+        if (!module.quizzes || module.quizzes.length === 0) {
+          return true; // No quizzes in this module
+        }
+        return module.quizzes.every(quiz => completedQuizzes.has(quiz.quiz_id));
+      });
+      
+      return allQuizzesCompleted;
+    } catch (error) {
+      console.error('Failed to check course completion:', error);
+      return false;
+    }
+  };
+
+  const checkModuleCompletionAndAchievements = async (module: Module, course: Course | null) => {
+    try {
+      // Check if module is completed (all lessons completed)
+      const allLessonsCompleted = module.lessons.every(lesson => lesson.completed);
+      
+      if (allLessonsCompleted && module.progress >= 100) {
+        // Module completed! Show notification
+        notificationService.showLessonCompletionNotification(module.title);
+        addNotification({
+          type: 'achievement',
+          title: '📚 Module Completed!',
+          message: `Great job! You've completed the module "${module.title}"`,
+          icon: '📚'
+        });
+
+        // Check if module has quizzes and if they're all completed
+        const moduleHasQuizzes = module.quizzes && module.quizzes.length > 0;
+        const allQuizzesCompleted = moduleHasQuizzes ? 
+          module.quizzes!.every(quiz => completedQuizzes.has(quiz.quiz_id)) : true;
+
+        // If module is fully completed (lessons + quizzes), mint NFT
+        if (allQuizzesCompleted) {
+          try {
+            // Show NFT minting ticket popup
+            setNftMintingData({
+              moduleTitle: module.title,
+              courseTitle: course?.title || 'Course',
+              status: 'minting'
+            });
+            setShowNFTMintingPopup(true);
+
+            // Show NFT minting notification
+            addNotification({
+              type: 'achievement',
+              title: '🎫 NFT Ticket Generated!',
+              message: `Congratulations! You've earned an NFT for completing "${module.title}"`,
+              icon: '🎫'
+            });
+
+            // Start NFT minting process
+            await mintNftForModule(module.id, module.title, 100);
+            
+            // Update popup with success status
+            setNftMintingData(prev => prev ? {
+              ...prev,
+              status: 'minted',
+              tokenId: `token_${module.id}`,
+              transactionHash: `tx_${module.id}_${Date.now()}`
+            } : null);
+            
+            // Show success notification after minting
+            setTimeout(() => {
+              addNotification({
+                type: 'achievement',
+                title: '🎉 NFT Minted Successfully!',
+                message: `Your module completion NFT for "${module.title}" has been minted!`,
+                icon: '🎉'
+              });
+            }, 1000);
+
+          } catch (error) {
+            console.error('Failed to mint NFT for module:', error);
+            
+            // Update popup with failed status
+            setNftMintingData(prev => prev ? {
+              ...prev,
+              status: 'failed'
+            } : null);
+            
+            addNotification({
+              type: 'achievement',
+              title: '⚠️ NFT Minting Failed',
+              message: `Failed to mint NFT for "${module.title}". Please try again later.`,
+              icon: '⚠️'
+            });
+          }
+        }
+
+        // Check for achievements related to this module
+        if (course) {
+          try {
+            const response = await achievementService.getRecentAchievements(5); // Last 5 minutes
+
+            if (response && (response as any).recent_achievements) {
+              // Show notifications for new achievements
+              (response as any).recent_achievements.forEach((achievement: any) => {
+                notificationService.showAchievementNotification(achievement.title);
+                addNotification({
+                  type: 'achievement',
+                  title: `🏆 Achievement Unlocked!`,
+                  message: achievement.description || `You've earned: ${achievement.title}`,
+                  icon: '🏆'
+                });
+
+                // Dispatch custom event for other components
+                window.dispatchEvent(new CustomEvent('achievementUnlocked', {
+                  detail: {
+                    title: achievement.title,
+                    description: achievement.description,
+                    tier: achievement.tier,
+                    points: achievement.points_reward
+                  }
+                }));
+              });
+            }
+          } catch (error) {
+            console.warn('Failed to check for new achievements:', error);
+          }
+        }
+      }
     } catch (error) {
       console.warn(`${t('pages.courseLearnPage.failToSyncCourseProgress')}`, error);
     }
@@ -777,6 +1132,30 @@ const CourseLearnPage: React.FC = () => {
               progress: Math.round(updatedCourse.progress)
             }
           }));
+
+          // Check for module completion and achievements
+          await checkModuleCompletionAndAchievements(updatedModule, updatedCourse);
+
+          // Check if course is completed (all lessons AND all quizzes)
+          const isCourseCompleted = await checkCourseCompletion(updatedCourse);
+          if (isCourseCompleted) {
+            // Course completed! Show certificate notification
+            setTimeout(() => {
+              notificationService.showCourseCompletionNotification(updatedCourse.title);
+              addNotification({
+                type: 'achievement',
+                title: '🎓 Course Completed!',
+                message: `Congratulations! You've completed "${updatedCourse.title}" and earned a certificate!`,
+                icon: '🎓'
+              });
+              toast.success(`🎉 Congratulations! You've completed "${updatedCourse.title}" and earned a certificate!`, {
+                duration: 6000,
+              });
+              
+              // Show completion popup
+              setShowCourseCompletionPopup(true);
+            }, 1500);
+          }
         }
         
         toast.success(t('pages.courseLearnPage.lessionCompleted'));
@@ -1391,6 +1770,42 @@ const CourseLearnPage: React.FC = () => {
         <VideoSettingsPanel
           isOpen={showVideoSettingsPanel}
           onClose={() => setShowVideoSettingsPanel(false)}
+        />
+      )}
+
+      {/* Course Completion Popup */}
+      <CourseCompletionPopup
+        isOpen={showCourseCompletionPopup}
+        onClose={() => setShowCourseCompletionPopup(false)}
+        courseTitle={course?.title || ''}
+        onViewCertificate={() => {
+          setShowCourseCompletionPopup(false);
+          navigate('/certificates');
+        }}
+        onContinueLearning={() => {
+          setShowCourseCompletionPopup(false);
+          navigate('/dashboard');
+        }}
+      />
+
+      {/* NFT Minting Ticket Popup */}
+      {nftMintingData && (
+        <NFTMintingTicketPopup
+          isOpen={showNFTMintingPopup}
+          onClose={() => {
+            setShowNFTMintingPopup(false);
+            setNftMintingData(null);
+          }}
+          moduleTitle={nftMintingData.moduleTitle}
+          courseTitle={nftMintingData.courseTitle}
+          status={nftMintingData.status}
+          tokenId={nftMintingData.tokenId}
+          transactionHash={nftMintingData.transactionHash}
+          onViewNFT={() => {
+            setShowNFTMintingPopup(false);
+            setNftMintingData(null);
+            navigate('/nfts');
+          }}
         />
       )}
     </div>
