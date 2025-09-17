@@ -279,7 +279,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                       onClick={() => setShowUserMenu(false)}
                     >
                       <SparklesIcon className="h-4 w-4 mr-2" />
-                      Upgrade Plan
+                      {t('subscription.UpgradePlan')}
                     </Link>
 
                     <Link
@@ -290,7 +290,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuToggle, showSidebar = false }) =>
                     >
                       {/* simple credit card emoji to avoid adding a new icon import */}
                       <span className="h-4 w-4 mr-2">💳</span>
-                      Payment History
+                      {t('subscription.PaymentHistory')}
                     </Link>
                     
                     <button

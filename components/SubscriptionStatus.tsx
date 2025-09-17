@@ -8,6 +8,7 @@ import {
   StarIcon,
   AcademicCapIcon
 } from '@heroicons/react/24/outline';
+import { useTranslation } from '../src/hooks/useTranslation';
 
 interface SubscriptionStatusProps {
   className?: string;
@@ -18,6 +19,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
   className = '', 
   showUpgrade = true 
 }) => {
+  const { t } = useTranslation();
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +51,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
       <div className={`flex items-center space-x-2 ${className}`}>
         <div className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium flex items-center">
           <UserIcon className="w-4 h-4 mr-1" />
-          Free Plan
+          {t('subscription.FreePlan')}
         </div>
         {showUpgrade && (
           <Link
@@ -57,7 +59,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
             className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-1 rounded-full text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center"
           >
             <SparklesIcon className="w-4 h-4 mr-1" />
-            Upgrade
+            {t('subscription.Upgrade')}
           </Link>
         )}
       </div>
@@ -112,7 +114,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
       
       {isExpiringSoon && (
         <div className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium">
-          Expires in {daysRemaining} days
+          {t('subscription.ExpiresIn', {count: daysRemaining})}
         </div>
       )}
       
@@ -122,7 +124,7 @@ const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
           className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium hover:from-yellow-500 hover:to-orange-600 transition-all duration-200 flex items-center"
         >
           <SparklesIcon className="w-3 h-3 mr-1" />
-          Upgrade
+          {t('subscription.Upgrade')}
         </Link>
       )}
     </div>

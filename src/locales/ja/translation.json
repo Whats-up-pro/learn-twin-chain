@@ -961,6 +961,51 @@
             "ModuleMaster": "モジュールマスター",
             "CompletedTitleModule": "「{{moduleTitle}}」モジュールを修了しました！"
         }
-      }
-  }
+    },
+    "subscription": {
+      "subscriptionServiceIsCurrentlyUnavailable": "サブスクリプションサービスは現在利用できません。後ほど再度お試しいただくか、サポートにお問い合わせください。",
+      "subscriptionFailed": "サブスクリプションに失敗しました: ",
+      "LoadingSubscriptionPlans": "サブスクリプションプランを読み込み中...",
+      "ChooseYourLearningPlan": "あなたの学習プランを選択",
+      "EnhanceYourBlockchainAndWeb3Skills": "あらゆるレベルに合わせて特別に設計されたパッケージで、Blockchain & Web3スキルを強化しましょう",
+      "TopGradeSecurity": "最高水準のセキュリティ",
+      "247Support": "24/7 サポート",
+      "MoneyBackGuarantee": "返金保証",
+      "CurrentPlan": "現在のプラン",
+      "Selected": "選択済み",
+      "dayRemaining": "残り{{count}}日",
+      "Renewal": "更新日: {{date}}",
+      "Active": "有効",
+      "Monthly": "月額",
+      "Yearly": "年額",
+      "Save": "{{count}}お得",
+      "MostPopular": "最も人気",
+      "StartYourJourney": "旅を始めよう",
+      "ProfessionalAdvance": "プロフェッショナルアドバンス",
+      "IncludedFeatures": "含まれる機能",
+      "ExclusiveFeatures": "限定機能",
+      "EarlyAccessToNewCourses": "新コースへの早期アクセス",
+      "Mentoring11WithExperts": "専門家との1対1メンタリング",
+      "NFTTradingMarketplace": "NFT取引マーケットプレイス",
+      "year": "年",
+      "month": "月",
+      "PrioritySupport247": "24/7 優先サポート",
+      "ChoosePaymentMethod": "お支払い方法を選択",
+      "YouWillBeRedirectedToTheSecurePaymentPage": "安全な決済ページにリダイレクトされます",
+      "Processing": "処理中...",
+      "StartNow": "今すぐ始める",
+      "LoginToContinue": "続行するにはログイン",
+      "FreePlan": "無料プラン",
+      "Upgrade": "アップグレード",
+      "ExpiresIn": "あと{{count}}日で期限切れ",
+      "UpgradePlan": "プランをアップグレード",
+      "PaymentHistory": "支払い履歴",
+      "NoPaymentsYet": "まだ支払いがありません",
+      "Date": "日付",
+      "Description": "説明",
+      "Method": "方法",
+      "Amount": "金額",
+      "Status": "ステータス"
+    }
+}
   

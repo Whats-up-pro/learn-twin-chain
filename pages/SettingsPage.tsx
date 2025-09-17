@@ -255,10 +255,10 @@ const SettingsPage: React.FC = () => {
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Español', flag: '🇪🇸' },
     { code: 'fr', name: 'Français', flag: '🇫🇷' },
-    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-    { code: 'zh', name: '中文', flag: '🇨🇳' },
+    // { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+    // { code: 'zh', name: '中文', flag: '🇨🇳' },
     { code: 'ja', name: '日本語', flag: '🇯🇵' },
-    { code: 'ko', name: '한국어', flag: '🇰🇷' },
+    // { code: 'ko', name: '한국어', flag: '🇰🇷' },
     { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
   ];
 
@@ -283,7 +283,8 @@ const SettingsPage: React.FC = () => {
     onChange: (enabled: boolean) => void; 
     label: string;
     description?: string;
-  }> = ({ enabled, onChange, label, description }) => (
+    hideButton?: boolean;
+  }> = ({ enabled, onChange, label, description, hideButton = false }) => (
     <div className="flex items-center justify-between py-3">
       <div className="flex-1">
         <p className="text-sm font-medium text-gray-900">{label}</p>
@@ -291,6 +292,7 @@ const SettingsPage: React.FC = () => {
           <p className="text-sm text-gray-500 mt-1">{description}</p>
         )}
       </div>
+      {!hideButton && (
       <button
         onClick={() => onChange(!enabled)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -303,6 +305,7 @@ const SettingsPage: React.FC = () => {
           }`}
         />
       </button>
+      )}
     </div>
   );
 
@@ -355,7 +358,7 @@ const SettingsPage: React.FC = () => {
 
           {/* Appearance Settings */}
           <SettingSection
-            title={t('settings.appearance')}
+            title={t('settings.appearance') + ' (Not available in this version)'}
             icon={<SunIcon className="h-6 w-6 text-blue-600" />}
           >
             <div className="space-y-4">
@@ -364,6 +367,7 @@ const SettingsPage: React.FC = () => {
                 onChange={handleDarkModeChange}
                 label={t('settings.darkMode')}
                 description={t('settings.switchToDark')}
+                hideButton={true}
               />
             </div>
           </SettingSection>
