@@ -33,6 +33,7 @@ from digital_twin.api.discussion_api import router as discussion_router
 from digital_twin.api.video_settings_api import router as video_settings_router
 from digital_twin.api.search_api import router as search_router
 from digital_twin.api.subscription_api import router as subscription_router
+from digital_twin.api.ranking_api import router as ranking_router
 
 # Import configuration and services
 from .config.config import config
@@ -151,6 +152,7 @@ app.include_router(discussion_router, prefix="/api/v1", tags=["Discussions"])
 app.include_router(video_settings_router, prefix="/api/v1", tags=["Video Settings"])
 app.include_router(subscription_router, prefix="/api/v1", tags=["Subscription"])
 app.include_router(search_router, prefix="/api/v1", tags=["Search"])
+app.include_router(ranking_router, prefix="/api/v1", tags=["Ranking"])
 
 @app.get("/")
 async def root():

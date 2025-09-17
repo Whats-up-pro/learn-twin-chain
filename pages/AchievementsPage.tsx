@@ -109,13 +109,13 @@ const AchievementsPage: React.FC = () => {
           type: ua.achievement?.achievement_type || 'learning',
           tier: ua.achievement?.tier || 'bronze',
           category: ua.achievement?.category || 'general',
-          points: ua.achievement?.points_awarded || 0,
+          points: ua.achievement?.points_reward || ua.achievement?.points_awarded || 0,
           icon: ua.achievement?.icon_url || getTierIcon(ua.achievement?.tier || 'bronze'),
           badgeColor: ua.achievement?.badge_color || getTierColor(ua.achievement?.tier || 'bronze'),
-          isUnlocked: ua.progress_percentage > 0,
-          isCompleted: ua.is_completed,
-          progress: ua.progress_percentage,
-          unlockedAt: ua.is_completed ? ua.unlocked_at : undefined,
+          isUnlocked: true, // If user has this achievement, it's unlocked
+          isCompleted: ua.is_completed || true, // All earned achievements are completed
+          progress: 100, // All earned achievements are 100% complete
+          unlockedAt: ua.unlocked_at || ua.earned_at,
           nftMinted: ua.nft_minted,
           tags: ua.achievement?.tags || []
         }));

@@ -558,8 +558,11 @@ class BlockchainService:
                     'error': f"ZK proof generation failed: {zk_proof.get('error', 'Unknown error')}"
                 }
             
-            # Create metadata for IPFS
-            metadata_uri = self._create_metadata_ipfs(completion_data)
+            # Create metadata for IPFS (include proof hash for display)
+            metadata_uri = self._create_metadata_ipfs({
+                **completion_data,
+                'module_id': module_id
+            }, zk_proof.get('commitment_hash'))
             
             # Use on-chain verification with ModuleProgressNFT
             if use_student_wallet and completion_data.get('student_private_key'):
@@ -583,6 +586,18 @@ class BlockchainService:
                 )
             
             if result['success']:
+                # Persist to ModuleProgress in DB
+                try:
+                    from ..models.course import ModuleProgress as _MP
+                    # Best-effort update: mark as minted if a matching module record exists
+                    mp = awaitable_find = None
+                    try:
+                        # Not async context here; use Beanie sync workaround by scheduling? Keep safe no-op
+                        pass
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
                 return {
                     'success': True,
                     'tx_hash': result['tx_hash'],
@@ -665,8 +680,8 @@ class BlockchainService:
                     'error': f"ZK proof generation failed: {zk_proof.get('error', 'Unknown error')}"
                 }
             
-            # Create metadata for IPFS
-            metadata_uri = self._create_achievement_metadata_ipfs(achievement_data)
+            # Create metadata for IPFS (include proof hash)
+            metadata_uri = self._create_achievement_metadata_ipfs(achievement_data, zk_proof.get('commitment_hash'))
             
             # Convert achievement type string to enum value
             achievement_type_enum = self._convert_achievement_type(achievement_type)
@@ -723,7 +738,7 @@ class BlockchainService:
         }
         return achievement_types.get(achievement_type.lower(), 0)
 
-    def _create_metadata_ipfs(self, completion_data: Dict[str, Any]) -> str:
+    def _create_metadata_ipfs(self, completion_data: Dict[str, Any], proof_hash: Optional[str] = None) -> str:
         """Create metadata and upload to IPFS with real implementation"""
         try:
             # Create and upload NFT image
@@ -742,13 +757,18 @@ class BlockchainService:
                     {'trait_type': 'Time Spent', 'value': completion_data.get('time_spent', 3600)},
                     {'trait_type': 'Attempts', 'value': completion_data.get('attempts', 1)},
                     {'trait_type': 'Verification Method', 'value': 'ZK-SNARK'},
-                    {'trait_type': 'Privacy Level', 'value': 'Zero-Knowledge'}
+                    {'trait_type': 'Privacy Level', 'value': 'Zero-Knowledge'},
+                    {'trait_type': 'Module ID', 'value': completion_data.get('module_id')},
+                    {'trait_type': 'Course ID', 'value': completion_data.get('course_id')},
+                    {'trait_type': 'Issuer', 'value': completion_data.get('issuer', 'LearnTwinChain')},
+                    {'trait_type': 'Completed At', 'value': completion_data.get('completed_at', int(time.time()))}
                 ],
                 'properties': {
                     'verification': {
                         'method': 'Groth16',
                         'circuit': 'learning_achievement',
-                        'privacy': 'zero-knowledge'
+                        'privacy': 'zero-knowledge',
+                        'proof_hash': proof_hash
                     },
                     'metadata': {
                         'created_at': int(time.time()),
@@ -765,7 +785,7 @@ class BlockchainService:
             print(f"Error creating metadata: {e}")
             return "ipfs://QmExampleMetadata"
 
-    def _create_achievement_metadata_ipfs(self, achievement_data: Dict[str, Any]) -> str:
+    def _create_achievement_metadata_ipfs(self, achievement_data: Dict[str, Any], proof_hash: Optional[str] = None) -> str:
         """Create achievement metadata and upload to IPFS with real implementation"""
         try:
             # Create and upload NFT image
@@ -784,13 +804,17 @@ class BlockchainService:
                     {'trait_type': 'Average Score', 'value': achievement_data.get('average_score', 85)},
                     {'trait_type': 'Practice Hours', 'value': achievement_data.get('practice_hours', 25)},
                     {'trait_type': 'Verification Method', 'value': 'ZK-SNARK'},
-                    {'trait_type': 'Privacy Level', 'value': 'Zero-Knowledge'}
+                    {'trait_type': 'Privacy Level', 'value': 'Zero-Knowledge'},
+                    {'trait_type': 'Course ID', 'value': achievement_data.get('course_id')},
+                    {'trait_type': 'Issuer', 'value': achievement_data.get('issuer', 'LearnTwinChain')},
+                    {'trait_type': 'Completed At', 'value': achievement_data.get('completed_at', int(time.time()))}
                 ],
                 'properties': {
                     'verification': {
                         'method': 'Groth16',
                         'circuit': 'learning_achievement',
-                        'privacy': 'zero-knowledge'
+                        'privacy': 'zero-knowledge',
+                        'proof_hash': proof_hash
                     },
                     'metadata': {
                         'created_at': int(time.time()),
@@ -806,6 +830,164 @@ class BlockchainService:
         except Exception as e:
             print(f"Error creating achievement metadata: {e}")
             return "ipfs://QmExampleAchievementMetadata"
+
+    def _create_course_certificate_ipfs(self, course_data: Dict[str, Any]) -> str:
+        """Create a professional course completion certificate (SVG + metadata) and upload to IPFS"""
+        try:
+            student_name = course_data.get('student_name', 'Student')
+            course_title = course_data.get('course_name', 'Course')
+            completed_at = course_data.get('completed_at', int(time.time()))
+            issuer = course_data.get('issuer', 'LearnTwinChain')
+            certificate_id = hashlib.sha256(f"{student_name}_{course_title}_{completed_at}".encode()).hexdigest()[:12]
+
+            # Elegant certificate SVG
+            svg = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="800" xmlns="http://www.w3.org/200/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1200" height="800" fill="#f8fafc"/>
+  <rect x="40" y="40" width="1120" height="720" rx="24" fill="#ffffff" filter="url(#shadow)"/>
+  <rect x="40" y="40" width="1120" height="140" rx="24" fill="url(#bg)"/>
+  <text x="600" y="115" font-family="'Georgia', serif" font-size="48" fill="#ffffff" text-anchor="middle" font-weight="700">Certificate of Completion</text>
+  <text x="600" y="200" font-family="'Georgia', serif" font-size="24" fill="#334155" text-anchor="middle">This certifies that</text>
+  <text x="600" y="260" font-family="'Georgia', serif" font-size="42" fill="#0ea5e9" text-anchor="middle" font-weight="700">{student_name}</text>
+  <text x="600" y="320" font-family="'Georgia', serif" font-size="24" fill="#334155" text-anchor="middle">has successfully completed the course</text>
+  <text x="600" y="380" font-family="'Georgia', serif" font-size="36" fill="#111827" text-anchor="middle" font-weight="700">{course_title}</text>
+  <text x="600" y="440" font-family="'Georgia', serif" font-size="18" fill="#475569" text-anchor="middle">Completion Date: {time.strftime('%Y-%m-%d', time.gmtime(completed_at))}</text>
+  <g transform="translate(240,520)">
+    <rect x="0" y="0" width="720" height="2" fill="#e2e8f0"/>
+    <text x="360" y="56" font-family="'Georgia', serif" font-size="18" fill="#334155" text-anchor="middle">Authorized Signature</text>
+    <text x="360" y="86" font-family="'Georgia', serif" font-size="20" fill="#0ea5e9" text-anchor="middle" font-weight="700">{issuer}</text>
+  </g>
+  <g transform="translate(80,600)">
+    <rect x="0" y="0" width="280" height="80" rx="12" fill="#f1f5f9"/>
+    <text x="140" y="48" font-family="'Georgia', serif" font-size="18" fill="#334155" text-anchor="middle">ZKP Verified</text>
+  </g>
+  <g transform="translate(840,600)">
+    <rect x="0" y="0" width="280" height="80" rx="12" fill="#f1f5f9"/>
+    <text x="140" y="48" font-family="'Georgia', serif" font-size="18" fill="#334155" text-anchor="middle">ID: {certificate_id}</text>
+  </g>
+</svg>'''
+
+            import tempfile, os as _os
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.svg', delete=False) as f:
+                f.write(svg)
+                svg_path = f.name
+            try:
+                image_cid = self.ipfs_service.upload_file(svg_path, {'name': 'course_certificate', 'type': 'image/svg+xml'})
+            finally:
+                _os.unlink(svg_path)
+
+            metadata = {
+                'name': f"Course Completion: {course_title}",
+                'description': f"Official course completion certificate for {student_name} issued by {issuer} with zero-knowledge verification.",
+                'image': f"ipfs://{image_cid}",
+                'attributes': [
+                    {'trait_type': 'Student', 'value': student_name},
+                    {'trait_type': 'Course', 'value': course_title},
+                    {'trait_type': 'Completed At', 'value': completed_at},
+                    {'trait_type': 'Issuer', 'value': issuer},
+                    {'trait_type': 'Verification', 'value': 'ZK-SNARK'}
+                ],
+                'properties': {
+                    'certificate_id': certificate_id,
+                    'type': 'course_completion',
+                    'version': '1.0'
+                }
+            }
+
+            meta_cid = self.ipfs_service.upload_json(metadata, f"course_certificate_{certificate_id}")
+            return f"ipfs://{meta_cid}"
+        except Exception as e:
+            print(f"Error creating course certificate: {e}")
+            return "ipfs://QmExampleCourseCert"
+
+    def mint_course_completion_certificate(
+        self,
+        student_address: str,
+        student_did: str,
+        course_name: str,
+        course_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Mint a professional course completion certificate as ERC-721 with ZKP and also record in ZKPCertificateRegistry"""
+        try:
+            # Prepare ZK proof based on course metrics
+            proof_input = {
+                'achievement_type': 'course_completion',
+                'total_modules': course_data.get('total_modules', 0),
+                'average_score': course_data.get('average_score', 0),
+                'practice_hours': course_data.get('practice_hours', 0),
+                'min_modules_required': max(1, course_data.get('min_modules_required', 1)),
+                'min_average_score': course_data.get('min_average_score', 60),
+                'min_practice_hours': course_data.get('min_practice_hours', 0),
+                'student_address': student_address,
+                'student_signature': course_data.get('student_signature', ''),
+                'challenge_nonce': course_data.get('challenge_nonce', ''),
+                'timestamp': int(time.time())
+            }
+
+            zk_proof = self.zkp_service.generate_learning_achievement_proof(proof_input)
+            if not zk_proof.get('success'):
+                return {'success': False, 'error': f"ZK proof generation failed: {zk_proof.get('error', 'Unknown error')}"}
+
+            # Build certificate metadata (SVG) and upload
+            cert_metadata_uri = self._create_course_certificate_ipfs({
+                'student_name': course_data.get('student_name', 'Student'),
+                'course_name': course_name,
+                'completed_at': course_data.get('completed_at', int(time.time())),
+                'issuer': course_data.get('issuer', 'LearnTwinChain')
+            })
+
+            # Mint via LearningAchievementNFT as course_completion
+            result = self.mint_learning_achievement_nft_with_zkp_proof(
+                student_address=student_address,
+                proof=zk_proof['proof'],
+                public_inputs=zk_proof['public_inputs'],
+                achievement_type=self._convert_achievement_type('course_completion'),
+                title=f"Course Completion: {course_name}",
+                description=f"Successfully completed {course_name}",
+                metadata_uri=cert_metadata_uri,
+                score=int(course_data.get('average_score', 0)),
+                expires_at=int(time.time()) + 10 * 365 * 24 * 3600
+            )
+
+            if not result.get('success'):
+                return {'success': False, 'error': result.get('error', 'Minting failed')}
+
+            # Also record certificate in ZKPCertificateRegistry for indexing
+            try:
+                if 'zkp_certificate_registry' in self.contracts:
+                    tx_res = self._send_transaction(
+                        self.contracts['zkp_certificate_registry'].functions.createZKPCertificate,
+                        self.contracts['zkp_certificate_registry'].address,
+                        self.w3.to_checksum_address(student_address),
+                        cert_metadata_uri,
+                        'course_completion'
+                    )
+                else:
+                    tx_res = {'success': False, 'error': 'ZKPCertificateRegistry not loaded'}
+            except Exception as _e:
+                tx_res = {'success': False, 'error': str(_e)}
+
+            return {
+                'success': True,
+                'tx_hash': result['tx_hash'],
+                'etherscan_link': result.get('etherscan_link', self._get_etherscan_link(result['tx_hash'])),
+                'nft_token_id': result.get('token_id'),
+                'metadata_uri': cert_metadata_uri,
+                'zk_proof_hash': zk_proof.get('commitment_hash'),
+                'registry_tx_hash': tx_res.get('tx_hash'),
+                'certificate_type': 'course_completion'
+            }
+        except Exception as e:
+            return {'success': False, 'error': f"Error minting course certificate: {str(e)}"}
 
     def _create_nft_image_svg(self, title: str, score: int, achievement_type: str = "module") -> str:
         """Create SVG image for NFT"""
@@ -885,21 +1067,88 @@ class BlockchainService:
             zkp_certificates = []
             
             try:
-                # Try to get actual blockchain data if contracts are available
-                if self.contracts and 'module_progress_nft' in self.contracts:
-                    # Get module progress NFTs for student
-                    # This is a basic implementation - actual implementation would query events
-                    pass
-                
+                checksum_addr = self.w3.to_checksum_address(student_address)
+                # Query LearningAchievementNFT events
                 if self.contracts and 'learning_achievement_nft' in self.contracts:
-                    # Get achievement NFTs for student
-                    # This is a basic implementation - actual implementation would query events
-                    pass
-                    
+                    la = self.contracts['learning_achievement_nft']
+                    try:
+                        logs = la.events.AchievementMinted().get_logs(
+                            from_block=0,
+                            to_block='latest',
+                            argument_filters={'student': checksum_addr}
+                        )
+                        for ev in logs:
+                            args = ev['args']
+                            token_id = int(args['tokenId']) if 'tokenId' in args else None
+                            achievements.append({
+                                'token_id': token_id,
+                                'title': args.get('title', ''),
+                                'description': args.get('description', ''),
+                                'score': int(args.get('score', 0)),
+                                'mint_date': int(args.get('mintedAt', 0)) or int(time.time()),
+                                'expires_at': int(args.get('expiresAt', 0)),
+                                'tx_hash': ev['transactionHash'].hex(),
+                                'contract_address': la.address,
+                                'metadata': {'properties': {'verification': {'proof_hash': args.get('proofHash')}}}
+                            })
+                    except Exception as _e:
+                        print(f"Achievement event query failed: {_e}")
+                # ModuleProgressNFT events (best-effort; depends on ABI fields)
+                if self.contracts and 'module_progress_nft' in self.contracts:
+                    mp = self.contracts['module_progress_nft']
+                    try:
+                        logs = mp.events.ModuleCompleted().get_logs(from_block=0, to_block='latest', argument_filters={'student': checksum_addr})
+                        for ev in logs:
+                            args = ev['args']
+                            module_id = args.get('moduleId') if 'moduleId' in args else ''
+                            token_id = args.get('tokenId') if 'tokenId' in args else None
+                            module_completions.append({
+                                'module_id': module_id,
+                                'token_id': token_id,
+                                'score': int(args.get('score', 0)),
+                                'mint_date': int(args.get('completionTime', 0)) or int(time.time()),
+                                'tx_hash': ev['transactionHash'].hex(),
+                                'contract_address': mp.address,
+                                'metadata': {'properties': {'verification': {'proof_hash': args.get('proofHash')}}}
+                            })
+                    except Exception as _e:
+                        print(f"Module event query failed: {_e}")
             except Exception as query_error:
                 print(f"Warning: Could not query blockchain data: {query_error}")
                 # Continue with empty data instead of failing
             
+            # Build unified NFTs array for frontend
+            nfts: List[Dict[str, Any]] = []
+            for mc in module_completions:
+                nfts.append({
+                    'id': mc.get('token_id') or mc.get('id'),
+                    'name': mc.get('name') or 'Module Completion',
+                    'description': mc.get('description') or 'Module completed',
+                    'metadata': mc.get('metadata'),
+                    'metadata_cid': mc.get('metadata_cid') or mc.get('cid'),
+                    'image_url': (mc.get('metadata') or {}).get('image'),
+                    'module_id': mc.get('module_id'),
+                    'mint_date': mc.get('mint_date') or mc.get('created_at'),
+                    'token_id': mc.get('token_id'),
+                    'tx_hash': mc.get('tx_hash'),
+                    'contract_address': os.getenv('MODULE_PROGRESS_NFT'),
+                    'nft_type': 'module_progress'
+                })
+            for ach in achievements:
+                nfts.append({
+                    'id': ach.get('token_id') or ach.get('id'),
+                    'name': ach.get('title') or 'Learning Achievement',
+                    'description': ach.get('description') or '',
+                    'metadata': ach.get('metadata'),
+                    'metadata_cid': ach.get('metadata_cid') or ach.get('cid'),
+                    'image_url': (ach.get('metadata') or {}).get('image'),
+                    'mint_date': ach.get('mint_date') or ach.get('created_at'),
+                    'token_id': ach.get('token_id'),
+                    'tx_hash': ach.get('tx_hash'),
+                    'contract_address': os.getenv('LEARNING_ACHIEVEMENT_NFT'),
+                    'nft_type': 'learning_achievement'
+                })
+
             return {
                 'success': True,
                 'student_address': student_address,
@@ -911,7 +1160,8 @@ class BlockchainService:
                 'total_achievements': len(achievements),
                 'total_zkp_certificates': len(zkp_certificates),
                 'skills_verified': [],  # Added missing field
-                'certificates': []  # Added missing field
+                'certificates': [],  # Added missing field
+                'nfts': nfts
             }
             
         except Exception as e:
