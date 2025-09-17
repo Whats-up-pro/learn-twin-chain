@@ -446,6 +446,7 @@ const SubscriptionPage: React.FC = () => {
                 {t('subscription.Processing')}
               </div>
             ) : !learnerProfile ? (
+              <></>
             ) : currentSubscription?.plan === selectedPlan ? (
               <>{t('subscription.CurrentPlan')}</>
             ) : (
