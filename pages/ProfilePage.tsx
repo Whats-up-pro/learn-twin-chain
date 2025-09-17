@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { UserRole } from '../types';
 import toast from 'react-hot-toast';
-import StudentZKPSection from '../components/StudentZKPSection';
+// import StudentZKPSection from '../components/StudentZKPSection';
 import { useTranslation } from '../src/hooks/useTranslation';
 
 const ProfilePage: React.FC = () => {
@@ -443,7 +443,6 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      <StudentZKPSection />
     </div>
   );
 };
