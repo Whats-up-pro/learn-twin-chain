@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Body, HTTPException, UploadFile, File
+from fastapi import APIRouter, Body, HTTPException, UploadFile, File, Depends
 from ..services.learning_service import LearningService
 from ..services.blockchain_service import BlockchainService
 from ..utils.vc_utils import create_vc
 from ..services.ipfs_service import IPFSService
+from ..models.user import User
+from ..dependencies import get_current_user
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
 import os
@@ -375,13 +377,26 @@ def update_did_data(student_did: str = Body(...), student_address: str = Body(..
 # ===== RAG/AI TUTOR ENDPOINTS =====
 
 @router.post("/ai-tutor/query", response_model=RAGQueryResponse)
-async def query_ai_tutor(request: RAGQueryRequest):
+async def query_ai_tutor(
+    request: RAGQueryRequest,
+    current_user: User = Depends(get_current_user)
+):
     """
     Query the AI Tutor with RAG (Retrieval-Augmented Generation)
     
     This endpoint provides intelligent tutoring by combining knowledge from uploaded documents
     with Gemini 2.5 Pro's language capabilities.
     """
+    # Check AI query limit
+    from ..services.subscription_service import subscription_service
+    limit_info = await subscription_service.check_ai_query_limit(current_user.did)
+    
+    if not limit_info["can_query"]:
+        raise HTTPException(
+            status_code=429,
+            detail=f"AI Query Limit Reached. You have used {limit_info['queries_used']}/{limit_info['daily_limit']} queries today. Upgrade to {limit_info['plan_name']} for more queries."
+        )
+    
     rag_agent = get_rag_agent()
     if not rag_agent:
         raise HTTPException(
@@ -397,6 +412,9 @@ async def query_ai_tutor(request: RAGQueryRequest):
             temperature=request.temperature,
             top_k=request.top_k
         )
+        
+        # Increment query usage
+        await subscription_service.increment_ai_query_usage(current_user.did)
         
         return RAGQueryResponse(**result)
         

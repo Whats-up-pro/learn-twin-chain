@@ -495,6 +495,21 @@ async def check_course_access(
         logger.error(f"Failed to check course access: {e}")
         raise HTTPException(status_code=500, detail="Failed to check course access")
 
+@router.get("/ai-query-limit")
+async def check_ai_query_limit(current_user: User = Depends(get_current_user)):
+    """Check user's AI query limit status"""
+    try:
+        limit_info = await subscription_service.check_ai_query_limit(current_user.did)
+        
+        return {
+            "success": True,
+            "limit_info": limit_info
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to check AI query limit: {e}")
+        raise HTTPException(status_code=500, detail="Failed to check AI query limit")
+
 @router.get("/payment-history")
 async def get_payment_history(current_user: User = Depends(get_current_user)):
     """Get user's payment history"""

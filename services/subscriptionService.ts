@@ -319,6 +319,33 @@ class SubscriptionService {
   }
 
   /**
+   * Check AI query limit status
+   */
+  async checkAIQueryLimit(): Promise<{
+    can_query: boolean;
+    daily_limit: number;
+    queries_used: number;
+    queries_remaining: number;
+    plan_name: string;
+    unlimited: boolean;
+  }> {
+    try {
+      const response = await apiService.get('/subscription/ai-query-limit');
+      return response.limit_info;
+    } catch (error) {
+      console.error('Failed to check AI query limit:', error);
+      return {
+        can_query: false,
+        daily_limit: 0,
+        queries_used: 0,
+        queries_remaining: 0,
+        plan_name: 'Error',
+        unlimited: false
+      };
+    }
+  }
+
+  /**
    * Check if user can access a course based on difficulty
    */
   async canAccessCourse(difficultyLevel: string): Promise<boolean> {
