@@ -34,8 +34,15 @@ const FeatureAccessGate: React.FC<FeatureAccessGateProps> = ({
   const checkAccess = async () => {
     try {
       setLoading(true);
-      const canAccess = await subscriptionService.hasFeatureAccess(feature);
-      setHasAccess(canAccess);
+      
+      // Special handling for AI queries
+      if (feature === 'ai_queries') {
+        const limitInfo = await subscriptionService.checkAIQueryLimit();
+        setHasAccess(limitInfo.can_query);
+      } else {
+        const canAccess = await subscriptionService.hasFeatureAccess(feature);
+        setHasAccess(canAccess);
+      }
     } catch (error) {
       console.error('Failed to check feature access:', error);
       setHasAccess(false);
