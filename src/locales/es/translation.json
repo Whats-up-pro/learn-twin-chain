@@ -976,7 +976,7 @@
       "CurrentPlan": "Plan Actual",
       "Selected": "Seleccionado",
       "dayRemaining": "Quedan {{count}} días",
-      "Renewal": "Renovación: {{date}}",
+      "Renewal": "Renovación: ",
       "Active": "Activo",
       "Monthly": "Mensual",
       "Yearly": "Anual",

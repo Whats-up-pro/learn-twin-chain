@@ -974,7 +974,7 @@
       "CurrentPlan": "現在のプラン",
       "Selected": "選択済み",
       "dayRemaining": "残り{{count}}日",
-      "Renewal": "更新日: {{date}}",
+      "Renewal": "更新日: ",
       "Active": "有効",
       "Monthly": "月額",
       "Yearly": "年額",
