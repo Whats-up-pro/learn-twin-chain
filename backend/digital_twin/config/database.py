@@ -2,7 +2,6 @@
 Database configuration and connection management for MongoDB
 """
 import os
-import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from typing import Optional
@@ -35,44 +34,20 @@ class Database:
 database = Database()
 
 async def connect_to_mongo():
-    """Create database connection with improved timeout and retry logic"""
+    """Create database connection"""
     try:
         mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/learntwinchain")
         database_name = os.getenv("MONGODB_DB_NAME", "learntwinchain")
         
         logger.info(f"Connecting to MongoDB at {mongodb_uri}")
         
-        # Enhanced connection options for better reliability
-        connection_options = {
-            "serverSelectionTimeoutMS": 30000,  # 30 seconds
-            "connectTimeoutMS": 30000,          # 30 seconds
-            "socketTimeoutMS": 30000,           # 30 seconds
-            "maxPoolSize": 10,                  # Maximum number of connections
-            "minPoolSize": 1,                   # Minimum number of connections
-            "maxIdleTimeMS": 30000,             # Close connections after 30 seconds of inactivity
-            "retryWrites": True,                # Enable retryable writes
-            "retryReads": True,                 # Enable retryable reads
-            "heartbeatFrequencyMS": 10000,      # Send heartbeat every 10 seconds
-        }
-        
-        # Create connection with enhanced options
-        database.client = AsyncIOMotorClient(mongodb_uri, **connection_options)
+        # Create connection
+        database.client = AsyncIOMotorClient(mongodb_uri)
         database.database = database.client[database_name]
         
-        # Test connection with retry logic
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                await database.client.admin.command('ping')
-                logger.info("Successfully connected to MongoDB")
-                break
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    logger.warning(f"MongoDB connection attempt {attempt + 1} failed: {e}. Retrying...")
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
-                else:
-                    logger.error(f"Failed to connect to MongoDB after {max_retries} attempts: {e}")
-                    raise
+        # Test connection
+        await database.client.admin.command('ping')
+        logger.info("Successfully connected to MongoDB")
         
         # Initialize Beanie with document models
         await init_beanie(

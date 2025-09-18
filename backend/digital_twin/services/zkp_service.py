@@ -164,7 +164,7 @@ class ZKPService:
             # Calculate student_hash using student address + nonce (instead of private key)
             student_address_int = int(student_address.lower().replace('0x', ''), 16)
             try:
-            student_hash = self.poseidon_hash.hash([student_address_int, random_nonce])
+                student_hash = self.poseidon_hash.hash([student_address_int, random_nonce])
                 print(f"🔍 ZKP Debug - student_hash calculated: {student_hash}")
             except Exception as e:
                 print(f"🔍 ZKP Debug - Poseidon hash failed: {str(e)}")

@@ -107,31 +107,7 @@ async def generate_learning_roadmap(
         rag_agent = get_rag_agent()
         
         # Generate roadmap using RAG (strict JSON output)
-        schema_block = (
-            '{\n'
-            '  "program": string,\n'
-            '  "difficulty_progression": ["beginner"|"intermediate"|"advanced", ...],\n'
-            '  "steps": [\n'
-            '    {\n'
-            '      "id": string,\n'
-            '      "title": string,\n'
-            '      "description": string,\n'
-            '      "type": "skill"|"course"|"technology"|"certification",\n'
-            '      "difficulty": "beginner"|"intermediate"|"advanced",\n'
-            '      "estimated_hours": number,\n'
-            '      "prerequisites": [string, ...],\n'
-            '      "resources": [{"type": string, "title": string, "url": string}],\n'
-            '      "is_available": boolean,\n'
-            '      "course_id": string|null,\n'
-            '      "status": "pending"|"in_progress"|"completed",\n'
-            '      "checkpoints": [{"id": string, "title": string, "completed": boolean}]\n'
-            '    }\n'
-            '  ]\n'
-            '}'
-        )
-
-        roadmap_prompt = (
-            f"""
+        roadmap_prompt = f"""
         Generate a comprehensive learning roadmap for a student studying {user_program}.
         
         Student Context:
@@ -142,14 +118,32 @@ async def generate_learning_roadmap(
         
         Digital Twin Data:
         - Completed Modules: {digital_twin.get('completed_modules', []) if digital_twin else []}
-        - Current Skills: {digital_twin.get('skills', {}) if digital_twin else {}}
+        - Current Skills: {digital_twin.get('skills', {{}}) if digital_twin else {{}}}
         - Learning Progress: {digital_twin.get('learning_progress', []) if digital_twin else []}
         
         IMPORTANT: Return STRICT JSON only. No markdown, no commentary. It must be valid for json.loads.
         Exact schema:
+        {{
+          "program": string,
+          "difficulty_progression": ["beginner"|"intermediate"|"advanced", ...],
+          "steps": [
+            {{
+              "id": string,
+              "title": string,
+              "description": string,
+              "type": "skill"|"course"|"technology"|"certification",
+              "difficulty": "beginner"|"intermediate"|"advanced",
+              "estimated_hours": number,
+              "prerequisites": [string, ...],
+              "resources": [{{"type": string, "title": string, "url": string}}],
+              "is_available": boolean,
+              "course_id": string|null,
+              "status": "pending"|"in_progress"|"completed",
+              "checkpoints": [{{"id": string, "title": string, "completed": boolean}}]
+            }}
+          ]
+        }}
         """
-            + schema_block
-        )
         
         if rag_agent:
             rag_response = rag_agent.query(
