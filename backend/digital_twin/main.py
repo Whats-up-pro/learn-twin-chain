@@ -34,6 +34,10 @@ from digital_twin.api.video_settings_api import router as video_settings_router
 from digital_twin.api.search_api import router as search_router
 from digital_twin.api.subscription_api import router as subscription_router
 from digital_twin.api.ranking_api import router as ranking_router
+from digital_twin.api.ai_roadmap_api import router as ai_roadmap_router
+from digital_twin.api.ai_analysis_api import router as ai_analysis_router
+from digital_twin.api.ai_companion_api import router as ai_companion_router
+from digital_twin.api.ai_chat_api import router as ai_chat_router
 
 # Import configuration and services
 from .config.config import config
@@ -153,6 +157,10 @@ app.include_router(video_settings_router, prefix="/api/v1", tags=["Video Setting
 app.include_router(subscription_router, prefix="/api/v1", tags=["Subscription"])
 app.include_router(search_router, prefix="/api/v1", tags=["Search"])
 app.include_router(ranking_router, prefix="/api/v1", tags=["Ranking"])
+app.include_router(ai_roadmap_router, prefix="/api/v1/ai", tags=["AI Roadmap"])
+app.include_router(ai_analysis_router, prefix="/api/v1/ai", tags=["AI Analysis"])
+app.include_router(ai_companion_router, prefix="/api/v1/ai", tags=["AI Companion"])
+app.include_router(ai_chat_router, prefix="/api/v1/ai", tags=["AI Chat"])
 
 @app.get("/")
 async def root():

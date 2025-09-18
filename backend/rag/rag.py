@@ -148,7 +148,7 @@ class LearnTwinRAGAgent:
                 print("🤖 Initializing Gemini API...")
             
             genai.configure(api_key=self.gemini_api_key)
-            self.gemini_client = genai.GenerativeModel("gemini-1.5-flash")
+            self.gemini_client = genai.GenerativeModel("gemini-2.5-pro")
             
             if self.verbose > 0:
                 print("✅ Gemini API initialized successfully!")
@@ -636,7 +636,7 @@ class LearnTwinRAGAgent:
                 "source_documents": self._format_source_docs(docs),
                 "num_sources_used": len(docs),
                 "success": True,
-                "model_used": "Gemini 1.5 Flash"
+                "model_used": "Gemini 2.5 Pro"
             }
             
         except Exception as e:

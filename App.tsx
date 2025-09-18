@@ -37,6 +37,7 @@ import sessionMonitor from './services/sessionMonitorService';
 import './src/i18n';
 import { achievementService } from './services/achievementService';
 import { notificationService } from './services/notificationService';
+import GlobalAIChatWidget from './components/GlobalAIChatWidget';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; allowedRoles: UserRole[] }> = ({ children, allowedRoles }) => {
   const { role } = useAppContext();
@@ -409,6 +410,9 @@ const AppContent: React.FC = () => {
 
         {/* MetaMask Connection Notification */}
         <MetaMaskConnectionNotification />
+        
+        {/* Global AI Chat Widget - Available on all pages for logged-in users */}
+        {isLoggedIn && <GlobalAIChatWidget />}
         </div>
       </div>
   );

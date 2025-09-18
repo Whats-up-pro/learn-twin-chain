@@ -1,0 +1,23 @@
+{
+  "twin_id": "did:learntwin:tranduongminhdai",
+  "profile": {
+    "name": "tranduongminhdai",
+    "program": "Computer Science"
+  },
+  "skills": {
+    "python": 50,
+    "javascript": 45
+  },
+  "behavior": {
+    "timeSpent": 0,
+    "quizAccuracy": 0.0,
+    "lastLlmSession": null,
+    "preferredLearningStyle": null,
+    "mostAskedTopics": []
+  },
+  "learning_progress": [],
+  "learning_state": {
+    "progress": {},
+    "checkpoint_history": []
+  }
+}

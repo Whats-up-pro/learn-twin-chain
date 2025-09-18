@@ -163,7 +163,14 @@ class ZKPService:
             
             # Calculate student_hash using student address + nonce (instead of private key)
             student_address_int = int(student_address.lower().replace('0x', ''), 16)
+            try:
             student_hash = self.poseidon_hash.hash([student_address_int, random_nonce])
+                print(f"🔍 ZKP Debug - student_hash calculated: {student_hash}")
+            except Exception as e:
+                print(f"🔍 ZKP Debug - Poseidon hash failed: {str(e)}")
+                # Fallback to simple hash if Poseidon fails
+                student_hash = int(hashlib.sha256(f"{student_address_int}{random_nonce}".encode()).hexdigest()[:16], 16)
+                print(f"🔍 ZKP Debug - using fallback student_hash: {student_hash}")
             
             private_inputs = [score, time_spent, attempts, len(study_materials), student_address_int, random_nonce]
             commitment_hash = self._create_commitment_hash(private_inputs)
@@ -307,6 +314,11 @@ class ZKPService:
                 proof_data = json.load(f)
             with open(self.circuits_dir / "module_progress_public.json", 'r') as f:
                 public_data = json.load(f)
+            
+            # Debug logging
+            print(f"🔍 ZKP Debug - public_data type: {type(public_data)}")
+            print(f"🔍 ZKP Debug - public_data length: {len(public_data) if isinstance(public_data, list) else 'not a list'}")
+            print(f"🔍 ZKP Debug - public_data content: {public_data}")
             
             enhanced_proof = {
                 "success": True,

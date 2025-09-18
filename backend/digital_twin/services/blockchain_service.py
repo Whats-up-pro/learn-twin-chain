@@ -2277,9 +2277,13 @@ class BlockchainService:
 
             proof = zk_proof['proof']
             public_inputs = zk_proof['public_inputs']
+            # Debug logging
+            print(f"🔍 ZK Proof Debug - public_inputs type: {type(public_inputs)}")
+            print(f"🔍 ZK Proof Debug - public_inputs length: {len(public_inputs) if isinstance(public_inputs, list) else 'not a list'}")
+            print(f"🔍 ZK Proof Debug - public_inputs content: {public_inputs}")
             # Expect 8 inputs with index 6 equal to learningDataHash (uint256)
             if not isinstance(public_inputs, list) or len(public_inputs) != 8:
-                return {'success': False, 'error': 'Invalid public inputs: expected 8 values'}
+                return {'success': False, 'error': f'Invalid public inputs: expected 8 values, got {len(public_inputs) if isinstance(public_inputs, list) else "not a list"} (type: {type(public_inputs)})'}
             try:
                 public_inputs = [int(x) for x in public_inputs]
             except Exception:

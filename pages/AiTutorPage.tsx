@@ -10,6 +10,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { getCurrentVietnamTimeISO } from '../utils/dateUtils';
 import { useTranslation } from '../src/hooks/useTranslation';
+import AIRoadmapComponent from '../components/AIRoadmapComponent';
+import DigitalTwinAnalysisComponent from '../components/DigitalTwinAnalysisComponent';
+import AILearningCompanionComponent from '../components/AILearningCompanionComponent';
 
 const AiTutorPage: React.FC = () => {
   const { t } = useTranslation();
@@ -17,6 +20,7 @@ const AiTutorPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'roadmap' | 'analysis' | 'companion'>('roadmap');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -70,83 +74,141 @@ const AiTutorPage: React.FC = () => {
 
   return (
     <FeatureAccessGate feature="ai_queries" requiredPlan="basic">
-      <div className="flex flex-col h-[calc(100vh-150px)] max-w-3xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
-      <header className="bg-sky-600 text-white p-4 flex items-center space-x-2">
-        <h1 className="text-xl font-semibold">AI Tutor (Gemini)</h1>
-      </header>
-      
-      <div className="flex-grow p-4 space-y-4 overflow-y-auto bg-gray-50">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-lg lg:max-w-xl px-4 py-2 rounded-xl shadow ${
-                msg.sender === 'user' 
-                ? 'bg-sky-500 text-white' 
-                : 'bg-white text-gray-800 border border-gray-200'
-            }`}>
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  code({ node, inline, className, children, ...props }: any) {
-                    const match = /language-(\w+)/.exec(className || '');
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={dracula as any}
-                        language={match[1]}
-                        PreTag="div"
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  }
-                }}
-              >
-                {msg.text}
-              </Markdown>
-              <p className={`text-xs mt-1 ${msg.sender === 'user' ? 'text-sky-200' : 'text-gray-400'}`}>
-                {msg.timestamp.toLocaleTimeString()}
-              </p>
-            </div>
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Tutor Hub</h1>
+          <p className="text-gray-600">
+            Your comprehensive AI-powered learning companion with personalized roadmaps, analysis, and interactive sessions
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: 'roadmap', label: 'Learning Roadmap', icon: '🗺️' },
+                { id: 'analysis', label: 'Digital Twin Analysis', icon: '📊' },
+                { id: 'companion', label: 'AI Learning Companion', icon: '🤖' },
+                { id: 'chat', label: 'AI Chat', icon: '💬' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="text-lg">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
           </div>
-        ))}
-        {isLoading && (
-          <div className="flex items-center justify-center p-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-            <span className="ml-2 text-gray-600">AI is thinking...</span>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'roadmap' && (
+          <div className="space-y-6">
+            <AIRoadmapComponent />
           </div>
         )}
-        <div ref={messagesEndRef} />
-      </div>
-      
-      <div className="p-4 border-t border-gray-200 bg-white">
-        <div className="flex items-center space-x-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
-            placeholder="Ask about Python, concepts, or code..."
-            className="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-shadow"
-            disabled={isLoading}
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={isLoading || input.trim() === ''}
-            className="bg-sky-500 hover:bg-sky-600 text-white p-3 rounded-lg disabled:opacity-50 transition-colors shadow hover:shadow-md"
-            aria-label={t('pages.aiTutorPage.sendMessage')}
-          >
-            {isLoading ? (
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-            ) : (
-              <PaperAirplaneIcon className="h-6 w-6" />
-            )}
-          </button>
-        </div>
-      </div>
+
+        {activeTab === 'analysis' && (
+          <div className="space-y-6">
+            <DigitalTwinAnalysisComponent />
+          </div>
+        )}
+
+        {activeTab === 'companion' && (
+          <div className="space-y-6">
+            <AILearningCompanionComponent />
+          </div>
+        )}
+
+        {activeTab === 'chat' && (
+          <div className="flex flex-col h-[calc(100vh-300px)] max-w-4xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
+            <header className="bg-sky-600 text-white p-4 flex items-center space-x-2">
+              <h1 className="text-xl font-semibold">AI Chat Assistant</h1>
+            </header>
+            
+            <div className="flex-grow p-4 space-y-4 overflow-y-auto bg-gray-50">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-lg lg:max-w-xl px-4 py-2 rounded-xl shadow ${
+                      msg.sender === 'user' 
+                      ? 'bg-sky-500 text-white' 
+                      : 'bg-white text-gray-800 border border-gray-200'
+                  }`}>
+                    <Markdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        code({ node, inline, className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={dracula as any}
+                              language={match[1]}
+                              PreTag="div"
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        }
+                      }}
+                    >
+                      {msg.text}
+                    </Markdown>
+                    <p className={`text-xs mt-1 ${msg.sender === 'user' ? 'text-sky-200' : 'text-gray-400'}`}>
+                      {msg.timestamp.toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex items-center justify-center p-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                  <span className="ml-2 text-gray-600">AI is thinking...</span>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 bg-white">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
+                  placeholder="Ask about Python, concepts, or code..."
+                  className="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition-shadow"
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isLoading || input.trim() === ''}
+                  className="bg-sky-500 hover:bg-sky-600 text-white p-3 rounded-lg disabled:opacity-50 transition-colors shadow hover:shadow-md"
+                  aria-label={t('pages.aiTutorPage.sendMessage')}
+                >
+                  {isLoading ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                  ) : (
+                    <PaperAirplaneIcon className="h-6 w-6" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </FeatureAccessGate>
   );
